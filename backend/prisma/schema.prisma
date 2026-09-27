@@ -1,0 +1,173 @@
+// Belchicken · Phase 1 : commande en ligne
+// Montants en FCFA (entiers). Fuseau de référence : Africa/Ouagadougou (UTC+0).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // URL poolée Neon
+  directUrl = env("DIRECT_URL")   // URL directe Neon (migrations)
+}
+
+// ─────────────────────────── ENUMS ───────────────────────────
+
+enum OrderStatus {
+  EN_ATTENTE   // reçue, pas encore confirmée par l'équipe
+  CONFIRMEE
+  EN_LIVRAISON
+  LIVREE
+  ANNULEE
+}
+
+enum PaymentMethod {
+  ORANGE_MONEY
+  MOOV_MONEY
+  ESPECES
+}
+
+enum NotificationStatus {
+  ENVOYEE
+  ECHEC
+  IGNOREE // WhatsApp non configuré
+}
+
+// ─────────────────────────── MENU ───────────────────────────
+
+model Category {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  name        String
+  description String?
+  position    Int         @default(0)
+  isActive    Boolean     @default(true)
+  groups      MenuGroup[]
+  products    Product[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+// Sous-groupe d'une catégorie (ex. Burgers › Originals, XL, Bœuf)
+model MenuGroup {
+  id         String    @id @default(cuid())
+  categoryId String
+  category   Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name       String
+  note       String?   // ex. "N° 7 à 9"
+  position   Int       @default(0)
+  products   Product[]
+
+  @@unique([categoryId, name])
+}
+
+model Product {
+  id          String           @id @default(cuid())
+  slug        String           @unique
+  number      Int?             // numéro du menu papier (N° 7…)
+  name        String
+  description String?
+  composition String[]         // ce qui est inclus dans une formule
+  imageUrl    String?
+  isSpicy     Boolean          @default(false)
+  serves      String?          // "2 personnes"
+  choiceLabel String?          // ex. "Cuisson du poulet"
+  choices     String[]         // ex. ["Grillé", "Frit"]
+  isAvailable Boolean          @default(true)
+  position    Int              @default(0)
+  categoryId  String
+  category    Category         @relation(fields: [categoryId], references: [id])
+  groupId     String?
+  group       MenuGroup?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  variants    ProductVariant[]
+  orderItems  OrderItem[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([categoryId])
+}
+
+// Tout produit a au moins une variante : c'est elle qui porte le prix
+// (Menu / Seul, Taille L / XL, 4 pièces / 8 pièces, ou "standard").
+model ProductVariant {
+  id         String      @id @default(cuid())
+  productId  String
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  code       String      // "menu", "seul", "L", "4pc", "standard"
+  label      String
+  subLabel   String?
+  price      Int
+  position   Int         @default(0)
+  orderItems OrderItem[]
+
+  @@unique([productId, code])
+}
+
+// ─────────────────────────── COMMANDES ───────────────────────────
+
+model Order {
+  id        String      @id @default(cuid())
+  reference String      @unique // BC-7K2Q9M, communiquée au client
+  status    OrderStatus @default(EN_ATTENTE)
+
+  customerName  String
+  customerPhone String // normalisé +226XXXXXXXX
+
+  paymentMethod     PaymentMethod
+  paymentPayerPhone String?
+  paymentReference  String? // n° de transaction mobile money
+
+  latitude         Float?
+  longitude        Float?
+  locationAccuracy Int?    // en mètres
+  addressNote      String? // quartier et repères
+
+  itemsTotal Int // total des plats, calculé côté serveur
+
+  items         OrderItem[]
+  notifications NotificationLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Une transaction mobile money ne peut servir qu'à une seule commande
+  @@unique([paymentMethod, paymentReference])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id            String          @id @default(cuid())
+  orderId       String
+  order         Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId     String?
+  product       Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variantId     String?
+  variant       ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  // Copies figées au moment de la commande
+  productName   String
+  productNumber Int?
+  variantLabel  String?
+  choice        String?
+  note          String?
+  unitPrice     Int
+  quantity      Int
+  lineTotal     Int
+
+  @@index([orderId])
+}
+
+model NotificationLog {
+  id                String             @id @default(cuid())
+  orderId           String
+  order             Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  channel           String             @default("WHATSAPP")
+  recipient         String
+  template          String?
+  status            NotificationStatus
+  providerMessageId String?
+  error             String?
+  createdAt         DateTime           @default(now())
+
+  @@index([orderId])
+}
