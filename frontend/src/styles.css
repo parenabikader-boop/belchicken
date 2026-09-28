@@ -260,8 +260,8 @@ legend{font-size:14px;font-weight:700;margin-bottom:8px;padding:0}
 .f.bad input,.f.bad textarea{border-color:var(--bad);border-width:2px}
 .methods{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .methods .opt{padding:14px}
-.logo-om,.logo-mv,.logo-cash{width:34px;height:34px;border-radius:var(--r);display:grid;place-items:center;font-size:11px;font-weight:800;flex:none}
-.logo-om{background:#ff7900;color:#111}.logo-mv{background:#0a5fb4;color:#fff}.logo-cash{background:var(--ok-soft);color:var(--ok)}
+.logo-om,.logo-mv{width:34px;height:34px;border-radius:var(--r);display:grid;place-items:center;font-size:11px;font-weight:800;flex:none}
+.logo-om{background:#ff7900;color:#111}.logo-mv{background:#0a5fb4;color:#fff}
 .alert{display:flex;gap:10px;padding:12px 14px;border-radius:var(--r);font-size:14px;border-left:4px solid}
 .alert.info{background:var(--info-soft);border-color:var(--info)}
 .alert.err{background:var(--bad-soft);border-color:var(--bad);color:var(--bad);font-weight:600}
@@ -384,8 +384,6 @@ legend{font-size:14px;font-weight:700;margin-bottom:8px;padding:0}
 .orderbar .sum1 b{display:block;font-size:20px;font-weight:800;line-height:1.1}
 .orderbar .sum1 span{font-size:13px;color:var(--muted)}
 .orderbar .btn{margin-left:auto}
-.chips .row a{flex:none;border:1px solid var(--line-2);background:var(--panel);border-radius:var(--r);padding:8px 12px;font-size:14px;font-weight:600;white-space:nowrap;text-decoration:none;color:var(--text)}
-.chips .row a.on{background:var(--brand);border-color:var(--brand);color:#fff}
 .pager a{display:flex;flex-direction:column;gap:2px;padding:14px 18px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--panel);text-decoration:none;color:var(--text)}
 .pager a:last-child{text-align:right;align-items:flex-end}
 .pager a span{font-size:13px;color:var(--muted)}
@@ -434,18 +432,75 @@ legend{font-size:14px;font-weight:700;margin-bottom:8px;padding:0}
 }
 
 /* ===== Compléments React (hors maquette) ===== */
-/* Catégories en liens (la maquette utilisait des boutons) : mêmes styles */
-.side li a{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 16px;text-decoration:none;color:var(--text);text-align:left;font-size:15px;border-left:4px solid transparent}
-.side li a:hover{background:var(--panel-2)}
-.side li a span{font-size:12px;color:var(--muted);background:var(--panel-2);border-radius:999px;padding:1px 8px}
-.side li a.on{background:var(--brand-soft);border-left-color:var(--brand);color:var(--brand-ink);font-weight:700}
-.side li a.on span{background:var(--brand);color:#fff}
 /* Plats indisponibles : grisés et non cliquables */
 .card.off .ph{cursor:default;filter:grayscale(1);opacity:.55}
 .card.off:hover .ph img{transform:none}
 .card.off h4,.card.off .price{opacity:.6}
 .flag.off{background:var(--panel-2);color:var(--muted);border:1px solid var(--line-2)}
-.add:disabled{border-color:var(--line-2);color:var(--faint);background:var(--panel);cursor:not-allowed}/* Barre de commande mobile : le bouton reste sur une ligne */
+.add:disabled{border-color:var(--line-2);color:var(--faint);background:var(--panel);cursor:not-allowed}
+/* Barre de commande mobile : le bouton reste sur une ligne */
 .orderbar .btn{white-space:nowrap}
 .orderbar .sum1{min-width:0}
 @media (max-width:640px){.orderbar .sum1 span{display:block;line-height:1.3}}
+
+/* ===== Site centré sur la commande ===== */
+/* Hauteur de l'en-tête collant (76 px + liseré 4 px + bordure), pour coller les onglets dessous */
+:root{--hh:81px}
+
+/* Menu : rangée d'onglets collée sous l'en-tête, loupe au bout */
+.tabs{position:sticky;top:var(--hh);z-index:30;background:var(--panel);border-bottom:1px solid var(--line)}
+.tabs-in{display:flex;align-items:center;gap:10px;height:54px}
+.trow{display:flex;gap:2px;flex:1;min-width:0;align-self:stretch;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+.trow::-webkit-scrollbar{display:none}
+.trow a{flex:none;display:flex;align-items:center;padding:0 12px;font-size:15px;font-weight:600;color:var(--muted);text-decoration:none;white-space:nowrap;border-bottom:3px solid transparent}
+.trow a:hover{color:var(--text)}
+.trow a.on{color:var(--brand-ink);border-bottom-color:var(--brand);font-weight:700}
+.trow a:last-child{margin-right:24px}
+.tbtn{flex:none;width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);color:var(--text);font-size:24px;line-height:1;padding:0}
+.tbtn:hover{border-color:var(--brand);color:var(--brand-ink)}
+.tsearch{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:40px;border:1px solid var(--line-2);border-radius:var(--r);padding:0 12px;color:var(--muted)}
+.tsearch:focus-within{border-color:var(--brand);outline:2px solid var(--brand-line)}
+.tsearch input{border:0;outline:none;background:transparent;flex:1;min-width:0;color:var(--text)}
+.tsearch input::-webkit-search-cancel-button{display:none}
+.menu-body{padding-top:20px;padding-bottom:110px}
+.cat-title{font-size:22px;font-weight:800;margin-bottom:14px}
+.menu-body .grp{margin-top:0}
+.menu-body .grp+.grp{margin-top:28px}
+.menu-body .grp-h{padding-bottom:6px;margin-bottom:12px;border-bottom-width:1px}
+.menu-body .grp-h h3{font-size:16px}
+.dlg-note{margin:0;font-size:14px;color:var(--muted);background:var(--panel-2);border-radius:var(--r);padding:10px 12px}
+
+/* Tunnel (Ma commande, Vos informations, Confirmation) : en-tête réduit, titre simple, étapes compactes */
+header.top.tunnel .wrap{height:64px}
+header.tunnel .back{margin-left:auto;font-size:15px;font-weight:700;color:var(--brand-ink);text-decoration:none;padding:8px 0;white-space:nowrap}
+header.tunnel .back:hover{text-decoration:underline}
+.tunnel-body{padding-top:24px;padding-bottom:48px}
+.tunnel-head{margin-bottom:22px}
+.tunnel-head h1{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.tunnel-head p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.req-star{color:var(--bad);font-style:normal}
+.progress{list-style:none;padding:0;margin:14px 0 0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.progress li{border-top:4px solid var(--line);padding-top:6px;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.progress li.done{border-top-color:var(--brand);color:var(--text)}
+.progress li.cur{border-top-color:var(--brand);color:var(--text);font-weight:700}
+
+@media (max-width:640px){
+  :root{--hh:71px}
+  .tabs-in{height:50px;gap:8px}
+  .trow a{padding:0 10px;font-size:14px}
+  .menu-body{padding-top:16px}
+  .cat-title{font-size:20px;margin-bottom:12px}
+  header.top.tunnel .wrap{height:58px}
+  .tunnel-body{padding-top:18px}
+  .tunnel-head{margin-bottom:16px}
+  .tunnel-head h1{font-size:22px}
+  /* Sur téléphone, seul le nom de l'étape en cours est affiché */
+  .progress{gap:4px;margin-top:10px}
+  .progress li{font-size:0;padding-top:4px}
+  .progress li.cur{font-size:12px;overflow:visible}
+}
+
+/* Paiement : deux choix seulement (Orange Money, Moov Money), consigne au-dessus */
+.methods{grid-template-columns:repeat(2,1fr)}
+.pay-how{margin-bottom:18px;font-size:15px}
+@media (max-width:640px){.methods{grid-template-columns:1fr}}

@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useMenu } from '../context/MenuContext.jsx';
-import { PageHead, Progress } from '../components/PageParts.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import ProductDialog from '../components/ProductDialog.jsx';
 import OrderBar from '../components/OrderBar.jsx';
@@ -20,37 +19,18 @@ export default function Menu() {
   const [openId, setOpenId] = useState(null);
   const closeDialog = useCallback(() => setOpenId(null), []);
 
-  // Sur mobile, fait défiler la rangée de catégories jusqu'à la catégorie affichée
-  useEffect(() => {
-    const row = document.querySelector('.chips .row');
-    const on = row?.querySelector('a.on');
-    if (!row || !on) return;
-    const r = row.getBoundingClientRect(), o = on.getBoundingClientRect();
-    row.scrollLeft += o.left - r.left - (r.width - o.width) / 2;
-  }, [categorie, menu.status]);
-
-  const head = (
-    <PageHead crumbs={[{ label: 'Accueil', to: '/' }, { label: 'Menu' }]} title="Menu">
-      Choisissez une catégorie, puis ajoutez vos plats.
-    </PageHead>
-  );
-
   if (menu.status !== 'ready') {
     return (
-      <>
-        {head}
-        <div className="wrap pagebody">
-          <Progress step={0} />
-          {menu.status === 'loading' ? (
-            <div className="alert info" role="status"><span>Chargement du menu…</span></div>
-          ) : (
-            <div className="alert err" role="alert" style={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-              <span>{menu.error.message}</span>
-              <button className="btn btn-s" style={{ padding: '8px 14px' }} onClick={menu.reload}>Réessayer</button>
-            </div>
-          )}
-        </div>
-      </>
+      <div className="wrap menu-body">
+        {menu.status === 'loading' ? (
+          <div className="alert info" role="status"><span>Chargement du menu…</span></div>
+        ) : (
+          <div className="alert err" role="alert" style={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <span>{menu.error.message}</span>
+            <button className="btn btn-s" style={{ padding: '8px 14px' }} onClick={menu.reload}>Réessayer</button>
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -59,53 +39,75 @@ export default function Menu() {
   if (!current) return <Navigate to={`/menu/${categories[0].slug}`} replace />;
 
   const q = query.trim();
-  const resetSearch = () => setQuery('');
   const opened = openId && menu.products.get(openId);
   const openProduct = (p) => setOpenId(p.id);
 
-  const searchInput = (placeholder) => (
-    <input type="search" placeholder={placeholder} aria-label="Rechercher" value={query} onChange={(e) => setQuery(e.target.value)} />
-  );
-
   return (
     <>
-      {head}
-      <div className="wrap pagebody">
-        <Progress step={0} />
-
-        <div className="chips">
-          <label className="search"><SearchIcon size={18} />{searchInput('Rechercher un plat ou un numéro')}</label>
-          <div className="row">
-            {categories.map((c) => (
-              <Link key={c.id} to={`/menu/${c.slug}`} className={c.id === current.id && !q ? 'on' : undefined} onClick={resetSearch}>{c.name}</Link>
-            ))}
-          </div>
-        </div>
-
-        <div className="menu2">
-          <nav className="side" aria-label="Catégories">
-            <h3>Catégories</h3>
-            <label className="search"><SearchIcon size={16} />{searchInput('Plat ou numéro')}</label>
-            <ul>
-              {categories.map((c) => (
-                <li key={c.id}>
-                  <Link to={`/menu/${c.slug}`} className={c.id === current.id && !q ? 'on' : undefined} onClick={resetSearch}>
-                    {c.name}<span>{c.products.length}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          <div className="content">
-            {q ? <SearchResults categories={categories} query={q} onOpen={openProduct} /> : <Category categories={categories} current={current} onOpen={openProduct} onNavigate={resetSearch} />}
-          </div>
-        </div>
+      <CategoryTabs categories={categories} current={current} query={query} setQuery={setQuery} />
+      <div className="wrap menu-body">
+        {q ? <SearchResults categories={categories} query={q} onOpen={openProduct} /> : <Category categories={categories} current={current} onOpen={openProduct} />}
       </div>
-
       <OrderBar />
       {opened && <ProductDialog key={opened.id} product={opened} onClose={closeDialog} />}
     </>
+  );
+}
+
+// Rangée d'onglets collée sous l'en-tête. La loupe au bout ouvre la recherche à la place des onglets.
+function CategoryTabs({ categories, current, query, setQuery }) {
+  const [searching, setSearching] = useState(false);
+  const rowRef = useRef(null);
+
+  // Garde l'onglet de la catégorie affichée visible dans la rangée
+  useEffect(() => {
+    const row = rowRef.current;
+    const on = row?.querySelector('a.on');
+    if (!row || !on) return;
+    const r = row.getBoundingClientRect(), o = on.getBoundingClientRect();
+    row.scrollLeft += o.left - r.left - (r.width - o.width) / 2;
+  }, [current, searching]);
+
+  const closeSearch = () => {
+    setQuery('');
+    setSearching(false);
+  };
+
+  return (
+    <div className="tabs">
+      <div className="wrap tabs-in">
+        {searching ? (
+          <>
+            <label className="tsearch">
+              <SearchIcon size={18} />
+              <input
+                type="search"
+                autoFocus
+                placeholder="Rechercher un plat ou un numéro"
+                aria-label="Rechercher un plat ou un numéro"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Escape' && closeSearch()}
+              />
+            </label>
+            <button type="button" className="tbtn" onClick={closeSearch} aria-label="Fermer la recherche">×</button>
+          </>
+        ) : (
+          <>
+            <nav className="trow" ref={rowRef} aria-label="Catégories">
+              {categories.map((c) => (
+                <Link key={c.id} to={`/menu/${c.slug}`} className={c.id === current.id ? 'on' : undefined} aria-current={c.id === current.id ? 'page' : undefined}>
+                  {c.name}
+                </Link>
+              ))}
+            </nav>
+            <button type="button" className="tbtn" onClick={() => setSearching(true)} aria-label="Rechercher un plat">
+              <SearchIcon size={20} />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -113,19 +115,19 @@ function SearchResults({ categories, query, onOpen }) {
   const results = searchProducts(categories, query);
   return (
     <>
-      <div className="cat-head"><div><h2>Résultats</h2><p>{results.length} résultat{results.length > 1 ? 's' : ''} pour « {query} »</p></div></div>
+      <h2 className="cat-title">{results.length} résultat{results.length > 1 ? 's' : ''} pour « {query} »</h2>
       {results.length ? (
-        <div className="grid" style={{ marginTop: 20 }}>
+        <div className="grid">
           {results.map((p) => <ProductCard key={p.id} product={p} onOpen={onOpen} />)}
         </div>
       ) : (
-        <div className="alert info" style={{ marginTop: 20 }}><span>Aucun plat trouvé. Essayez un numéro, par exemple 7 ou 26.</span></div>
+        <div className="alert info"><span>Aucun plat trouvé. Essayez un numéro, par exemple 7 ou 26.</span></div>
       )}
     </>
   );
 }
 
-function Category({ categories, current: c, onOpen, onNavigate }) {
+function Category({ categories, current: c, onOpen }) {
   const i = categories.indexOf(c);
   const prev = categories[(i - 1 + categories.length) % categories.length];
   const next = categories[(i + 1) % categories.length];
@@ -136,7 +138,7 @@ function Category({ categories, current: c, onOpen, onNavigate }) {
 
   return (
     <>
-      <div className="cat-head"><div><h2>{c.name}</h2>{c.description && <p>{c.description}</p>}</div></div>
+      <h2 className="cat-title">{c.name}</h2>
       {groups.map((g) => (
         <section className="grp" key={g.id ?? 'autres'}>
           {groups.length > 1 && <div className="grp-h"><h3>{g.name}</h3>{g.note && <span>{g.note}</span>}</div>}
@@ -144,8 +146,8 @@ function Category({ categories, current: c, onOpen, onNavigate }) {
         </section>
       ))}
       <div className="pager">
-        <Link to={`/menu/${prev.slug}`} onClick={onNavigate}><span>Précédent</span><b>‹ {prev.name}</b></Link>
-        <Link to={`/menu/${next.slug}`} onClick={onNavigate}><span>Suivant</span><b>{next.name} ›</b></Link>
+        <Link to={`/menu/${prev.slug}`}><span>Précédent</span><b>‹ {prev.name}</b></Link>
+        <Link to={`/menu/${next.slug}`}><span>Suivant</span><b>{next.name} ›</b></Link>
       </div>
     </>
   );

@@ -63,7 +63,7 @@ Catégories actives dans l'ordre du menu, avec leurs sous-groupes, produits et v
 ```json
 {
   "customer": { "name": "Awa Ouédraogo", "phone": "76 12 34 56" },
-  "payment": { "method": "ORANGE_MONEY", "payerPhone": "76123456", "reference": "PP260926.1432.A58213" },
+  "payment": { "method": "ORANGE_MONEY", "payerPhone": "76123456" },
   "location": { "latitude": 11.1771, "longitude": -4.2979, "accuracy": 15 },
   "addressNote": "Secteur 22, portail bleu après la pharmacie",
   "items": [
@@ -73,7 +73,8 @@ Catégories actives dans l'ordre du menu, avec leurs sous-groupes, produits et v
 }
 ```
 
-- `payment.method` : `ORANGE_MONEY`, `MOOV_MONEY` ou `ESPECES`. Pour le mobile money, `payerPhone` et `reference` sont obligatoires.
+- `payment.method` : `ORANGE_MONEY` ou `MOOV_MONEY`. Le client paie avant la livraison : les espèces ne sont plus acceptées (la valeur `ESPECES` reste dans l'enum Prisma mais est refusée avec une erreur 400).
+- `payment.payerPhone` (le numéro qui a payé) est obligatoire. Il n'y a pas de numéro de transaction : l'équipe vérifie le paiement avec ce numéro et le montant.
 - Il faut `location` ou `addressNote` (5 caractères minimum), ou les deux.
 - Les prix sont recalculés côté serveur à partir de la base. Le client n'envoie jamais de prix.
 - Réponse `201` : `{ order: { reference: "BC-7K2Q9M", status, createdAt, itemsTotal, items } }`.
@@ -84,7 +85,6 @@ Erreurs, toujours au format `{ error: { code, message, details } }` avec un mess
 |-----------|-------------------------------|---------------------------------------|
 | 400       | `DONNEES_INVALIDES`           | Champ manquant ou invalide            |
 | 409       | `PRODUIT_INDISPONIBLE`        | Plat passé en indisponible entre-temps |
-| 409       | `TRANSACTION_DEJA_UTILISEE`   | Référence mobile money déjà utilisée  |
 | 429       | `TROP_DE_COMMANDES`           | Plus de 8 commandes en 10 min par IP  |
 
 ### `GET /api/orders/:reference`
@@ -112,7 +112,7 @@ Livraison : {{6}}
 
 4. Une fois le modèle approuvé, renseignez `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` et `WHATSAPP_TEAM_NUMBERS` dans `.env`.
 
-Le paramètre {{6}} contient un lien Google Maps quand le client a partagé sa position, suivi de ses repères.
+Le paramètre {{5}} indique le moyen de paiement, par exemple « Orange Money depuis +22676123456 ». Le paramètre {{6}} contient un lien Google Maps quand le client a partagé sa position, suivi de ses repères.
 
 ## Déploiement du backend sur Render
 

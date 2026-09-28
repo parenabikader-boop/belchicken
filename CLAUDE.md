@@ -36,6 +36,8 @@ Créer `frontend/` en React + Vite qui reproduit `docs/maquette.html` et se bran
 
 - Les prix sont toujours calculés par le serveur. Le frontend n'envoie jamais de prix.
 - Ne pas modifier le schéma Prisma ou l'API sans le signaler clairement.
+- Paiement : uniquement Orange Money ou Moov Money, payé avant la livraison. Plus d'espèces : `ESPECES` reste dans l'enum Prisma (pas de migration) mais l'API le refuse, et le site n'en parle nulle part.
+- Mobile money : le client donne seulement le numéro qui a payé, plus de numéro de transaction. L'équipe vérifie le paiement avec ce numéro et le montant. La colonne `paymentReference` (et sa contrainte unique) reste en base, vide, en attendant une future migration qui la supprimera.
 - Travailler étape par étape et vérifier que ça tourne avant de passer à la suite.
 
 ## Points en attente du client

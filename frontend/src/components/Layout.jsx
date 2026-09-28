@@ -4,6 +4,10 @@ import { useCart } from '../context/CartContext.jsx';
 
 // Numéro provisoire, en attente du numéro définitif du client (voir CLAUDE.md)
 export const WHATSAPP = '+226 70 00 00 01';
+// Numéro marchand Orange Money / Moov Money, provisoire lui aussi
+export const MERCHANT = '+226 70 00 00 00';
+
+const TUNNEL = /^\/(commande|valider|confirmation)(\/|$)/;
 
 function Brand({ subtitle }) {
   return (
@@ -24,6 +28,25 @@ export default function Layout() {
   }, [pathname]);
 
   const navClass = ({ isActive }) => (isActive ? 'on' : undefined);
+
+  // Tunnel de commande : en-tête réduit au logo et au retour au menu, sans pied de page
+  if (TUNNEL.test(pathname)) {
+    return (
+      <>
+        <header className="top tunnel">
+          <div className="wrap">
+            <Link className="brand" to="/" aria-label="Belchicken, accueil" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <Brand subtitle="Commande en ligne" />
+            </Link>
+            <Link className="back" to="/menu">‹ Retour au menu</Link>
+          </div>
+        </header>
+        <main>
+          <Outlet />
+        </main>
+      </>
+    );
+  }
 
   return (
     <>

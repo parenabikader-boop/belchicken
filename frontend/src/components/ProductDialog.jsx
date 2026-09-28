@@ -52,6 +52,9 @@ export default function ProductDialog({ product: p, onClose }) {
             </tbody></table>
           ) : p.description && <p className="muted" style={{ margin: '-6px 0 0' }}>{p.description}</p>}
 
+          {/* Phrase d'explication de la catégorie, retirée de la page Menu */}
+          {p.category.description && <p className="dlg-note">{p.category.description}</p>}
+
           {p.variants.length > 1 && (
             <fieldset><legend>Formule</legend>
               <div className="opts" role="radiogroup">

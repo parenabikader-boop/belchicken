@@ -4,5 +4,4 @@ export const formatFcfa = (n) =>
 export const PAYMENT_LABELS = {
   ORANGE_MONEY: 'Orange Money',
   MOOV_MONEY: 'Moov Money',
-  ESPECES: 'Espèces à la réception',
 };

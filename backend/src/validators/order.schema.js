@@ -30,16 +30,12 @@ const item = z.object({
   note: optionalText(200),
 });
 
+// Mobile money : le client donne seulement le numéro qui a payé. L'équipe vérifie
+// le paiement avec ce numéro et le montant (plus de numéro de transaction).
 const mobileMoney = (method) =>
   z.object({
     method: z.literal(method),
     payerPhone: phone('Le numéro ayant payé'),
-    reference: z
-      .string({ required_error: 'Le numéro de transaction est obligatoire.' })
-      .trim()
-      .min(6, 'Le numéro de transaction est trop court.')
-      .max(40)
-      .transform((v) => v.toUpperCase().replace(/\s+/g, '')),
   });
 
 export const createOrderSchema = z
@@ -48,11 +44,14 @@ export const createOrderSchema = z
       name: z.string().trim().min(2, 'Indiquez votre nom complet.').max(80),
       phone: phone('Le numéro WhatsApp'),
     }),
-    payment: z.discriminatedUnion('method', [
-      mobileMoney('ORANGE_MONEY'),
-      mobileMoney('MOOV_MONEY'),
-      z.object({ method: z.literal('ESPECES') }),
-    ]),
+    // Paiement obligatoire avant livraison : plus d'espèces (ESPECES reste dans l'enum Prisma,
+    // sans migration, mais n'est plus accepté)
+    payment: z.discriminatedUnion('method', [mobileMoney('ORANGE_MONEY'), mobileMoney('MOOV_MONEY')], {
+      errorMap: (issue, ctx) =>
+        issue.code === z.ZodIssueCode.invalid_union_discriminator
+          ? { message: 'Le paiement se fait uniquement par Orange Money ou Moov Money.' }
+          : { message: ctx.defaultError },
+    }),
     location: z
       .object({
         latitude: z.number().min(-90).max(90),

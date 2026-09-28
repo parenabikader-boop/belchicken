@@ -17,10 +17,7 @@ export function buildNewOrderParams(order) {
     })
     .join(', ');
 
-  const payment =
-    order.paymentMethod === 'ESPECES'
-      ? PAYMENT_LABELS.ESPECES
-      : `${PAYMENT_LABELS[order.paymentMethod]}, réf. ${order.paymentReference}, depuis ${order.paymentPayerPhone}`;
+  const payment = `${PAYMENT_LABELS[order.paymentMethod]} depuis ${order.paymentPayerPhone}`;
 
   const place = [
     order.latitude != null ? `https://maps.google.com/?q=${order.latitude},${order.longitude}` : null,

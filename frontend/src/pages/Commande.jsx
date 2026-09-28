@@ -1,11 +1,9 @@
 import { Link } from 'react-router-dom';
-import { PageHead, Progress } from '../components/PageParts.jsx';
+import { TunnelHead } from '../components/PageParts.jsx';
 import { useCart, useCartDetails, MAX_QTY } from '../context/CartContext.jsx';
 import { useMenu } from '../context/MenuContext.jsx';
 import { formatPrice, plural } from '../utils/format.js';
 import { photoBg } from '../utils/visuals.js';
-
-const CRUMBS = [{ label: 'Accueil', to: '/' }, { label: 'Menu', to: '/menu' }, { label: 'Ma commande' }];
 
 function EmptyCart() {
   return (
@@ -102,9 +100,8 @@ export default function Commande() {
 
   return (
     <>
-      <PageHead crumbs={CRUMBS} title="Ma commande">Vérifiez vos plats avant de renseigner vos informations.</PageHead>
-      <div className="wrap pagebody">
-        {items.length > 0 && <Progress step={1} />}
+      <div className="wrap pagebody tunnel-body">
+        <TunnelHead title="Ma commande" step={items.length > 0 ? 1 : null} />
         {body}
       </div>
     </>

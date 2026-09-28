@@ -5,9 +5,6 @@ import { newOrderReference } from '../utils/reference.js';
 import { priceItems } from './pricing.js';
 import { notifyTeamNewOrder } from './whatsapp.service.js';
 
-const DUPLICATE_PAYMENT = () =>
-  new AppError(409, 'Ce numéro de transaction a déjà été utilisé pour une autre commande.', 'TRANSACTION_DEJA_UTILISEE');
-
 export async function createOrder(input) {
   const productIds = [...new Set(input.items.map((i) => i.productId))];
   const products = await prisma.product.findMany({
@@ -17,22 +14,13 @@ export async function createOrder(input) {
   const { lines, itemsTotal } = priceItems(input.items, products);
 
   const { payment } = input;
-  const isMobileMoney = payment.method !== 'ESPECES';
-
-  if (isMobileMoney) {
-    const used = await prisma.order.findFirst({
-      where: { paymentMethod: payment.method, paymentReference: payment.reference },
-      select: { id: true },
-    });
-    if (used) throw DUPLICATE_PAYMENT();
-  }
 
   const data = {
     customerName: input.customer.name,
     customerPhone: input.customer.phone,
     paymentMethod: payment.method,
-    paymentPayerPhone: isMobileMoney ? payment.payerPhone : null,
-    paymentReference: isMobileMoney ? payment.reference : null,
+    paymentPayerPhone: payment.payerPhone,
+    // paymentReference n'est plus renseigné : colonne laissée vide, sans migration pour l'instant
     latitude: input.location?.latitude ?? null,
     longitude: input.location?.longitude ?? null,
     locationAccuracy: input.location?.accuracy != null ? Math.round(input.location.accuracy) : null,
@@ -50,11 +38,7 @@ export async function createOrder(input) {
         include: { items: true },
       });
     } catch (err) {
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        const target = String(err.meta?.target ?? '');
-        if (target.includes('paymentReference')) throw DUPLICATE_PAYMENT();
-        continue; // collision de référence
-      }
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') continue; // collision de référence
       throw err;
     }
   }
