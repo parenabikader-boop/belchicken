@@ -5,6 +5,7 @@ import ProductCard from '../components/ProductCard.jsx';
 import ProductDialog from '../components/ProductDialog.jsx';
 import OrderBar from '../components/OrderBar.jsx';
 import { searchProducts } from '../utils/product.js';
+import { categoryColor } from '../utils/visuals.js';
 
 const SearchIcon = ({ size }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -42,15 +43,16 @@ export default function Menu() {
   const opened = openId && menu.products.get(openId);
   const openProduct = (p) => setOpenId(p.id);
 
+  const color = categoryColor(current.slug);
   return (
-    <>
+    <div className="menu-page" style={color ? { '--cat': color } : undefined}>
       <CategoryTabs categories={categories} current={current} query={query} setQuery={setQuery} />
       <div className="wrap menu-body">
         {q ? <SearchResults categories={categories} query={q} onOpen={openProduct} /> : <Category categories={categories} current={current} onOpen={openProduct} />}
       </div>
       <OrderBar />
       {opened && <ProductDialog key={opened.id} product={opened} onClose={closeDialog} />}
-    </>
+    </div>
   );
 }
 

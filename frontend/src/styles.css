@@ -2,25 +2,14 @@
 :root{
   --brand:#a3161b;--brand-dark:#7c0f13;--brand-ink:#a3161b;--brand-soft:#fbeeee;--brand-line:#efc9ca;
   --gold:#f2b705;--gold-soft:#fff6d6;--gold-ink:#7a5a00;
-  --bg:#f5f5f6;--panel:#ffffff;--panel-2:#f0f0f2;--line:#dcdce1;--line-2:#c4c4cc;
-  --text:#1b1b20;--muted:#55555f;--faint:#8a8a95;
+  --bg:#fbf6ef;--panel:#ffffff;--panel-2:#f6efe6;--line:#eadfd3;--line-2:#d6c6b6;
+  --text:#2a140e;--muted:#6b5249;--faint:#9c8a80;
   --ok:#136c3d;--ok-soft:#e5f4ec;--bad:#b3261e;--bad-soft:#fdecea;--info-soft:#eef3fb;--info:#1f4e8c;
   --sans:"Public Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --display:"Bricolage Grotesque","Public Sans","Segoe UI",system-ui,sans-serif;
+  --script:"Kaushan Script","Brush Script MT",cursive;
+  --ink:#2a140e;--yellow:#ffc629;
   --r:6px;--r-lg:10px;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --brand:#b81c22;--brand-dark:#8d1318;--brand-ink:#ff8a8e;--brand-soft:#2c1415;--brand-line:#5a2427;
-  --gold-soft:#2f2608;--gold-ink:#f2c94c;
-  --bg:#111114;--panel:#1a1a1f;--panel-2:#232329;--line:#2e2e36;--line-2:#3d3d47;
-  --text:#ededf1;--muted:#a9a9b4;--faint:#777782;
-  --ok:#6fd49c;--ok-soft:#15301f;--bad:#f28b82;--bad-soft:#3a1714;--info-soft:#15233a;--info:#9cc0f2;
-}}
-:root[data-theme="dark"]{
-  --brand:#b81c22;--brand-dark:#8d1318;--brand-ink:#ff8a8e;--brand-soft:#2c1415;--brand-line:#5a2427;
-  --gold-soft:#2f2608;--gold-ink:#f2c94c;
-  --bg:#111114;--panel:#1a1a1f;--panel-2:#232329;--line:#2e2e36;--line-2:#3d3d47;
-  --text:#ededf1;--muted:#a9a9b4;--faint:#777782;
-  --ok:#6fd49c;--ok-soft:#15301f;--bad:#f28b82;--bad-soft:#3a1714;--info-soft:#15233a;--info:#9cc0f2;
 }
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 90px)}
@@ -504,3 +493,60 @@ header.tunnel .back:hover{text-decoration:underline}
 .methods{grid-template-columns:repeat(2,1fr)}
 .pay-how{margin-bottom:18px;font-size:15px}
 @media (max-width:640px){.methods{grid-template-columns:1fr}}
+
+/* ===== Charte Belchicken : couleurs et écritures ===== */
+/* Toujours en mode clair, même si l'appareil est en mode sombre */
+:root{color-scheme:light}
+
+/* Écritures : Bricolage Grotesque pour les titres et les prix, Kaushan Script pour le logo et les petits mots */
+h1,h2,h3,h4{font-family:var(--display);font-weight:800}
+.price b,.cl .p,.cp-line .pr,.sum td:last-child,.orderbar .sum1 b,.cart-f .row b,.opt .pp,.doc td.r,.doc-top .ref b,.cat-head .stat b{font-family:var(--display);font-weight:800}
+.sum td.muted{font-family:var(--sans);font-weight:400}
+.brand b{font-family:var(--script);font-weight:400;font-size:27px;letter-spacing:0;line-height:1}
+.mark span{font-family:var(--script);font-weight:400;font-size:26px}
+.kicker,.pagehead .crumb{font-family:var(--script);font-weight:400;font-size:17px;letter-spacing:.01em}
+@media (max-width:640px){.brand b{font-size:23px}}
+
+/* Bandeau du haut et pied de page brun foncé */
+.util{background:#1c0c08;color:#e9d9cc}
+header.top{background:var(--ink);border-bottom-color:var(--ink);color:#fff}
+header.top .brand small{color:#cdb8aa}
+.nav a{color:#f3e7dd}
+.nav a:hover,.nav a.on{color:var(--yellow);border-bottom-color:var(--yellow)}
+.nav a .n{background:var(--yellow);color:var(--ink)}
+.hbtn{background:transparent;border-color:var(--yellow);color:var(--yellow)}
+.hbtn .n{background:var(--yellow);color:var(--ink)}
+header.tunnel .back{color:var(--yellow)}
+footer{background:var(--ink);color:#dccbbf;margin-top:0}
+footer a{color:#dccbbf}
+footer .legal{border-top-color:#4a2c22;color:#a89082}
+footer .brand small{color:#b8a194}
+main.p-home,main.p-menu,main.p-infos{padding-bottom:50px}
+
+/* Accueil */
+main.p-home{background:#fff1d6}
+main.p-home .hero{background:#fff1d6;border-bottom-color:#f1dcb4}
+main.p-home .steps,main.p-home .step{border-color:#f1dcb4}
+
+/* Menu : chaque catégorie a sa couleur (--cat, posée par la page Menu) */
+.menu-page{--cat:var(--brand)}
+.menu-page .cat-title,.menu-page .grp-h h3{color:var(--cat)}
+.menu-page .grp-h{border-bottom-color:var(--cat)}
+.trow a.on{color:var(--cat);border-bottom-color:var(--cat)}
+
+/* Barre "Voir ma commande" : fond brun foncé, bouton jaune */
+.orderbar{background:var(--ink);border-top-color:var(--ink);color:#fff}
+.orderbar .sum1 span{color:#d8c4b6}
+.orderbar .btn{background:var(--yellow);color:var(--ink)}
+.orderbar .btn:hover{background:#ffd65c}
+
+/* Tunnel (Ma commande, Vos informations) : fond blanc, sobre */
+main.p-tunnel,main.p-confirmation{background:#fff}
+body:has(main.p-tunnel),body:has(main.p-confirmation){background:#fff}
+
+/* Confirmation : bandeau vert clair */
+main.p-confirmation .tunnel-head{background:#e6f4e4;box-shadow:0 0 0 100vmax #e6f4e4;clip-path:inset(-24px -100vmax 0);padding-bottom:18px;margin-bottom:24px}
+
+/* Infos pratiques : bandeau jaune */
+main.p-infos .pagehead{background:var(--yellow);color:var(--ink)}
+main.p-infos .pagehead .crumb,main.p-infos .pagehead .crumb a,main.p-infos .pagehead p{color:var(--ink)}

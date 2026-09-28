@@ -16,3 +16,10 @@ const WIDE = ['chefs', 'boneless', 'choice', 'xl', 'special', 'fuego', 'pieces',
 export const photoKey = (url) => (url ? url.split('/').pop().replace(/\.\w+$/, '') : null);
 export const photoBg = (url) => PHOTO_BG[photoKey(url)] || 'var(--panel-2)';
 export const isWide = (url) => WIDE.includes(photoKey(url));
+
+// Couleur de chaque catégorie du menu (titre, onglet actif, sous-groupes), par slug
+const CATEGORY_COLOR = {
+  burgers: '#e8750f', poulet: '#c4451a', combos: '#c8201a', buckets: '#8e1b2b', wraps: '#b7791f',
+  'rice-box': '#9a4b24', salades: '#2f7d32', 'bel-kids': '#8e2ba3', extras: '#4e342e',
+};
+export const categoryColor = (slug) => CATEGORY_COLOR[slug];

@@ -9,6 +9,15 @@ export const MERCHANT = '+226 70 00 00 00';
 
 const TUNNEL = /^\/(commande|valider|confirmation)(\/|$)/;
 
+// Partie du site, pour la couleur de fond de la page (voir styles.css)
+function pageClass(pathname) {
+  if (pathname.startsWith('/confirmation')) return 'p-confirmation';
+  if (TUNNEL.test(pathname)) return 'p-tunnel';
+  if (pathname.startsWith('/menu')) return 'p-menu';
+  if (pathname.startsWith('/infos')) return 'p-infos';
+  return 'p-home';
+}
+
 function Brand({ subtitle }) {
   return (
     <>
@@ -41,7 +50,7 @@ export default function Layout() {
             <Link className="back" to="/menu">‹ Retour au menu</Link>
           </div>
         </header>
-        <main>
+        <main className={pageClass(pathname)}>
           <Outlet />
         </main>
       </>
@@ -71,7 +80,7 @@ export default function Layout() {
         </div>
       </header>
 
-      <main>
+      <main className={pageClass(pathname)}>
         <Outlet />
       </main>
 
