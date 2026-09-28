@@ -7,13 +7,14 @@ Projet indépendant de TWIA FOOD : aucun code partagé.
 | Partie   | Stack                               | Déploiement | Port local |
 |----------|-------------------------------------|-------------|------------|
 | backend  | Node.js, Express, Prisma 6, Zod      | Render      | 3006       |
-| frontend | React, Vite (étape suivante)         | Vercel      | 5173       |
+| frontend | React, Vite, React Router            | Vercel      | 5173       |
 | base     | PostgreSQL                           | Neon        | –          |
 
 ## Structure
 
 ```
 belchicken/
+├── package.json               npm run dev : backend + frontend ensemble
 ├── backend/
 │   ├── prisma/
 │   │   ├── schema.prisma      Menu, commandes, journal WhatsApp
@@ -51,6 +52,31 @@ npm run dev                 # http://localhost:3006
 3. Vérifiez : `http://localhost:3006/api/health` puis `http://localhost:3006/api/menu`.
 
 Tests : `npm test`.
+
+4. Installez le frontend :
+
+```bash
+cd frontend
+npm install
+```
+
+Par défaut, le site appelle l'API sur `http://localhost:3006`. Pour une autre adresse, copiez `.env.example` en `.env` et changez `VITE_API_URL`.
+
+## Démarrer le projet en local
+
+Une fois l'installation faite, une seule commande à la racine du projet démarre le backend et le frontend ensemble :
+
+```bash
+npm install     # la première fois seulement, à la racine
+npm run dev
+```
+
+- API : `http://localhost:3006`
+- Site : `http://localhost:5173`
+
+Les messages des deux serveurs s'affichent dans le même terminal, préfixés par `[api]` et `[site]`. `Ctrl+C` arrête les deux. Si l'un des deux plante au démarrage (port déjà pris, base injoignable…), l'autre s'arrête aussi. Le backend redémarre tout seul quand un fichier change, et le site se met à jour dans le navigateur.
+
+On peut toujours lancer une seule partie avec `npm run dev` dans `backend/` ou `frontend/`.
 
 ## API
 
