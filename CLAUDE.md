@@ -20,7 +20,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 - `npm run dev` à la racine lance le backend et le frontend ensemble.
 - `backend/prisma/menu-data.js` contient le menu officiel complet. Ne pas inventer de plats ni de prix.
 - Photos : plats dans `frontend/public/menu/` (provisoires, de mauvaise qualité), accueil dans `frontend/public/accueil/`, logo dans `frontend/public/brand/`. Sources dans `docs/photos/` et `docs/`.
-- Chaque catégorie du menu a sa couleur, son petit titre et sa photo vedette (`frontend/src/utils/visuals.js`), pour l'instant en dur.
+- Une seule ambiance sur tout le site (fond crème, rouge Belchicken, brun foncé) : le client ne veut pas de couleur par catégorie. Chaque catégorie du menu se distingue par son petit titre, sa photo vedette (`frontend/src/utils/visuals.js`, pour l'instant en dur) et la forme de ses cartes.
 - `docs/maquette.html` est la maquette validée par le client (couleurs, typographie, pages, parcours). Elle parle encore d'espèces et de numéro de transaction : ces deux points sont abandonnés, ne pas les reprendre.
 
 ## Règles
@@ -58,7 +58,7 @@ Ordre de construction : connexion, commandes, menu et photos, tableau de bord.
    - Statut modifiable : Nouvelle, Payée, En livraison, Livrée, Annulée. L'enum Prisma actuel (`EN_ATTENTE`, `CONFIRMEE`, `EN_LIVRAISON`, `LIVREE`, `ANNULEE`) n'a pas de statut « Payée » : migration à prévoir et à signaler.
    - Recherche par référence, nom ou téléphone.
 3. **Menu et photos.**
-   - Créer, modifier et supprimer plats et catégories : nom, numéro, description, composition, prix, formules, couleur, petit titre, ordre. La couleur, le petit titre et la photo vedette des catégories passent alors de `visuals.js` à la base.
+   - Créer, modifier et supprimer plats et catégories : nom, numéro, description, composition, prix, formules, petit titre, ordre. Le petit titre et la photo vedette des catégories passent alors de `visuals.js` à la base.
    - Disponibilité d'un plat en un clic.
    - Changer les photos des plats, les 3 photos de l'accueil et la photo vedette de chaque catégorie.
    - Photos stockées sur Cloudinary, pas sur Render (son disque est effacé à chaque déploiement), et redimensionnées automatiquement. Les photos actuelles sont provisoires et de mauvaise qualité.
