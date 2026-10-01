@@ -1,0 +1,63 @@
+import { env } from '../config/env.js';
+import { getSessionUser } from '../services/staff.service.js';
+
+export const SESSION_COOKIE = 'bc_equipe';
+// Le cookie n'est envoyé qu'aux routes de l'espace équipe, jamais au reste de l'API
+const COOKIE_PATH = '/api/staff';
+
+// "a=1; b=2" -> { a: '1', b: '2' }
+export function parseCookies(header) {
+  const out = {};
+  for (const part of (header || '').split(';')) {
+    const i = part.indexOf('=');
+    if (i < 1) continue;
+    const name = part.slice(0, i).trim();
+    try {
+      out[name] = decodeURIComponent(part.slice(i + 1).trim());
+    } catch {
+      /* valeur mal encodée : ignorée */
+    }
+  }
+  return out;
+}
+
+// httpOnly : illisible par le JavaScript de la page. SameSite=Lax : pas envoyé par un autre site.
+// Secure en production : seulement en HTTPS.
+export function sessionCookie(token, expiresAt) {
+  const attrs = [`${SESSION_COOKIE}=${token}`, `Path=${COOKIE_PATH}`, 'HttpOnly', 'SameSite=Lax'];
+  if (expiresAt) attrs.push(`Expires=${expiresAt.toUTCString()}`);
+  else attrs.push('Max-Age=0');
+  if (env.isProd) attrs.push('Secure');
+  return attrs.join('; ');
+}
+
+export const readSessionToken = (req) => parseCookies(req.headers.cookie)[SESSION_COOKIE] || null;
+
+const unauthorized = (res) =>
+  res.status(401).json({ error: { code: 'NON_CONNECTE', message: "Connectez-vous pour accéder à l'espace équipe." } });
+const forbidden = (res) =>
+  res.status(403).json({ error: { code: 'ACCES_REFUSE', message: "Votre compte n'a pas accès à cette page." } });
+
+// 'ok', 'non-connecte' ou 'refuse' : qui a droit à une route de l'espace équipe
+export function accessFor(user, roles) {
+  if (!user) return 'non-connecte';
+  if (roles.length && !roles.includes(user.role)) return 'refuse';
+  return 'ok';
+}
+
+// Protège une route de l'espace équipe. Sans rôle : tout compte connecté.
+// Avec rôles : requireStaff('PATRON') réserve la route au patron.
+export function requireStaff(...roles) {
+  return async (req, res, next) => {
+    try {
+      const user = await getSessionUser(readSessionToken(req));
+      const access = accessFor(user, roles);
+      if (access === 'non-connecte') return unauthorized(res);
+      if (access === 'refuse') return forbidden(res);
+      req.staff = user;
+      next();
+    } catch (e) {
+      next(e);
+    }
+  };
+}

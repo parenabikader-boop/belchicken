@@ -171,3 +171,40 @@ model NotificationLog {
 
   @@index([orderId])
 }
+
+// ─────────────────────────── ESPACE ÉQUIPE ───────────────────────────
+
+enum StaffRole {
+  PATRON     // tout
+  OPERATEUR  // commandes et disponibilité des plats ; ni chiffre d'affaires, ni prix, ni menu
+}
+
+model StaffUser {
+  id           String    @id @default(cuid())
+  name         String
+  phone        String    @unique // normalisé +226XXXXXXXX, sert d'identifiant de connexion
+  role         StaffRole
+  passwordHash String // scrypt, voir src/services/staff-auth.js
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions StaffSession[]
+}
+
+// Une ligne par appareil connecté. Le navigateur garde le jeton dans un cookie httpOnly ;
+// la base n'en garde que l'empreinte (SHA-256), inutilisable si elle fuitait.
+model StaffSession {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  userId     String
+  user       StaffUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  lastSeenAt DateTime  @default(now())
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}

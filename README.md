@@ -154,6 +154,20 @@ Livraison : {{6}}
 
 Le paramètre {{5}} indique le moyen de paiement, par exemple « Orange Money depuis +22676123456 ». Le paramètre {{6}} contient un lien Google Maps quand le client a partagé sa position, suivi de ses repères.
 
+## Espace équipe
+
+Pages réservées à l'équipe sous `/equipe` (aucun lien depuis le site public, non indexées).
+Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (tout) et `OPERATEUR`
+(commandes et disponibilité des plats, sans chiffre d'affaires ni prix ni menu).
+
+- Créer le compte Patron (ou changer son mot de passe) : `npm run equipe:patron` dans `backend/`.
+- API : `POST /api/staff/login`, `POST /api/staff/logout`, `GET /api/staff/me`. Les routes protégées utilisent
+  `requireStaff()` (tout compte connecté) ou `requireStaff('PATRON')` (`src/middlewares/staff-auth.js`).
+- Session : jeton aléatoire dans un cookie `httpOnly` limité à `/api/staff`, valable 14 jours ; la base ne garde que son empreinte.
+  Mots de passe hachés avec scrypt. 8 essais ratés par numéro (20 par adresse IP) toutes les 15 minutes.
+- Le site appelle `/api/staff` sur sa propre adresse : Vite relaie vers l'API en local (`vite.config.js`), Vercel en ligne
+  (`frontend/vercel.json`, à mettre à jour si l'adresse Render change). Ainsi le cookie n'est pas bloqué par Safari.
+
 ## Mise en ligne
 
 Le code est sur GitHub ; Render (API) et Vercel (site) se mettent à jour tout seuls à chaque `git push`.

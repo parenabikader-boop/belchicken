@@ -11,10 +11,10 @@ export class ApiError extends Error {
   }
 }
 
-async function request(path, options = {}) {
+async function request(path, options = {}, base = BASE) {
   let res;
   try {
-    res = await fetch(BASE + path, {
+    res = await fetch(base + path, {
       ...options,
       headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...options.headers },
     });
@@ -37,4 +37,15 @@ export const api = {
   getMenu: () => request('/api/menu').then((d) => d.categories),
   createOrder: (payload) => request('/api/orders', { method: 'POST', body: JSON.stringify(payload) }).then((d) => d.order),
   getOrder: (reference) => request(`/api/orders/${encodeURIComponent(reference)}`).then((d) => d.order),
+};
+
+// Espace équipe : appels sur la même adresse que le site (/api/staff/...), relayés vers l'API
+// par Vite en local (vite.config.js) et par Vercel en ligne (vercel.json). Le cookie de session
+// reste ainsi un cookie « du site », que Safari ne bloque pas.
+const staffRequest = (path, options) => request('/api/staff' + path, { credentials: 'same-origin', ...options }, '');
+
+export const staffApi = {
+  me: () => staffRequest('/me').then((d) => d.user),
+  login: (phone, password) => staffRequest('/login', { method: 'POST', body: JSON.stringify({ phone, password }) }).then((d) => d.user),
+  logout: () => staffRequest('/logout', { method: 'POST' }),
 };

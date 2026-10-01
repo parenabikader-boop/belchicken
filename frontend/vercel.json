@@ -1,3 +1,6 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/api/staff/:path*", "destination": "https://belchicken-api.onrender.com/api/staff/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

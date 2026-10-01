@@ -18,6 +18,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 - `backend/` est fait et testé (`npm test`) : menu, création de commande, alerte WhatsApp, nouveaux essais automatiques pendant le réveil de Neon (`src/lib/db-retry.js`). Voir `README.md` pour l'API.
 - `frontend/` est fait : Accueil `/`, Menu `/menu/:categorie`, Ma commande `/commande`, Vos informations `/valider`, Confirmation `/confirmation/:reference`, Infos pratiques `/infos`. Parcours complet testé avec une vraie commande en base.
 - `npm run dev` à la racine lance le backend et le frontend ensemble.
+- Espace équipe commencé : connexion (rôles PATRON / OPERATEUR, `npm run equipe:patron`), pages sous `/equipe` (`frontend/src/staff/`, chargées à part), API sous `/api/staff` protégée par `requireStaff()`. Voir README.md. Prochaine page : Commandes.
 - `backend/prisma/menu-data.js` contient le menu officiel complet. Ne pas inventer de plats ni de prix.
 - Photos : plats dans `frontend/public/menu/` (provisoires, de mauvaise qualité), accueil dans `frontend/public/accueil/`, logo dans `frontend/public/brand/`. Sources dans `docs/photos/` et `docs/`.
 - Une seule ambiance sur tout le site (fond crème, rouge Belchicken, brun foncé) : le client ne veut pas de couleur par catégorie. Chaque catégorie du menu se distingue par son petit titre, sa photo vedette (`frontend/src/utils/visuals.js`, pour l'instant en dur) et la forme de ses cartes.
