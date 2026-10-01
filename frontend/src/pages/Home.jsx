@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom';
-import { PHOTO_BG } from '../utils/visuals.js';
-
-const MOSAIC = ['finest', 'wings12', 'friends'];
+// Photos de l'accueil (sources dans docs/photos/) : grande image à gauche, deux petites à droite.
+// pos : partie de la photo gardée visible quand la case la recadre.
+const MOSAIC = [
+  { src: '/accueil/burger.webp', w: 760, h: 950, pos: 'center 62%' },
+  { src: '/accueil/wings.webp', w: 763, h: 348, pos: 'center' },
+  { src: '/accueil/bucket.webp', w: 763, h: 354, pos: 'center 40%' },
+];
 
 export default function Home() {
   return (
@@ -17,9 +21,9 @@ export default function Home() {
             </div>
           </div>
           <div className="mosaic">
-            {MOSAIC.map((k, i) => (
-              <div key={k} style={{ background: PHOTO_BG[k] }}>
-                <img src={`/menu/${k}.jpg`} alt="" fetchPriority={i === 0 ? 'high' : undefined} />
+            {MOSAIC.map((m, i) => (
+              <div key={m.src}>
+                <img src={m.src} alt="" width={m.w} height={m.h} style={{ objectPosition: m.pos }} fetchPriority={i === 0 ? 'high' : undefined} />
               </div>
             ))}
           </div>
@@ -50,11 +54,14 @@ export default function Home() {
 
       <section className="wrap home-steps">
         <div className="sec-h"><div><h2>Comment commander</h2></div></div>
-        <div className="steps">
+        <div className="steps-wrap">
+          <img className="steps-ph" src="/accueil/livraison.webp" width="763" height="301" alt="Un livreur Belchicken remet une commande à une cliente" loading="lazy" />
+          <div className="steps">
           <div className="step"><b>Choisissez vos plats</b><p>Parcourez le menu par catégorie.</p></div>
           <div className="step"><b>Vérifiez votre commande</b><p>Ajustez les quantités si besoin.</p></div>
           <div className="step"><b>Indiquez vos informations</b><p>Coordonnées, paiement et position.</p></div>
           <div className="step"><b>Recevez la confirmation</b><p>Notre équipe vous contacte sur WhatsApp.</p></div>
+          </div>
         </div>
       </section>
     </>
