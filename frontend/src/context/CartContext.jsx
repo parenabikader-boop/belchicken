@@ -51,7 +51,8 @@ export function CartProvider({ children }) {
     const changeQty = (key, delta) =>
       setLines((ls) => ls.map((l) => (l.key === key ? { ...l, quantity: cap(l.quantity + delta) } : l)).filter((l) => l.quantity > 0));
     const remove = (key) => setLines((ls) => ls.filter((l) => l.key !== key));
-    const clear = () => setLines([]);
+    // Sans effet sur un panier déjà vide (évite un rendu en boucle si on l'appelle dans un effet)
+    const clear = () => setLines((ls) => (ls.length ? [] : ls));
     const count = lines.reduce((s, l) => s + l.quantity, 0);
     return { lines, count, add, changeQty, remove, clear };
   }, [lines]);

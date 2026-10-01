@@ -104,7 +104,7 @@ const PinIcon = () => (
 
 export default function Valider() {
   const navigate = useNavigate();
-  const { lines, clear } = useCart();
+  const { lines } = useCart();
   const { items, total, ready } = useCartDetails();
   const { status, error: menuError, reload } = useMenu();
   const [form, setForm] = useState(readDraft);
@@ -219,9 +219,10 @@ export default function Valider() {
         geo: !!form.geo,
         addr: payload.addressNote || '',
       };
-      navigate(`/confirmation/${order.reference}`, { replace: true, state: { order, recap } });
-      clear();
+      // Le panier est vidé par la page de confirmation : le vider ici ferait d'abord revenir
+      // cette page, panier vide, sur Ma commande
       clearDraft();
+      navigate(`/confirmation/${order.reference}`, { replace: true, state: { order, recap } });
     } catch (err) {
       setSending(false);
       const fieldErrors = {};

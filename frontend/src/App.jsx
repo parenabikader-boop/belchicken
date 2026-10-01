@@ -4,7 +4,8 @@ import Home from './pages/Home.jsx';
 import Menu from './pages/Menu.jsx';
 import Commande from './pages/Commande.jsx';
 import Valider from './pages/Valider.jsx';
-import Placeholder from './pages/Placeholder.jsx';
+import Confirmation from './pages/Confirmation.jsx';
+import Infos from './pages/Infos.jsx';
 
 export default function App() {
   return (
@@ -14,8 +15,8 @@ export default function App() {
         <Route path="menu/:categorie?" element={<Menu />} />
         <Route path="commande" element={<Commande />} />
         <Route path="valider" element={<Valider />} />
-        <Route path="confirmation/:reference" element={<Placeholder title="Confirmation" step={3} />} />
-        <Route path="infos" element={<Placeholder title="Infos pratiques" />} />
+        <Route path="confirmation/:reference" element={<Confirmation />} />
+        <Route path="infos" element={<Infos />} />
         <Route path="*" element={<Home />} />
       </Route>
     </Routes>
