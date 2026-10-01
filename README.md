@@ -154,13 +154,29 @@ Livraison : {{6}}
 
 Le paramètre {{5}} indique le moyen de paiement, par exemple « Orange Money depuis +22676123456 ». Le paramètre {{6}} contient un lien Google Maps quand le client a partagé sa position, suivi de ses repères.
 
-## Déploiement du backend sur Render
+## Mise en ligne
 
-- Root Directory : `backend`
-- Build Command : `npm install && npx prisma migrate deploy`
-- Start Command : `npm start`
-- Variables : celles de `.env.example`, avec `NODE_ENV=production` et `CORS_ORIGINS` égal à l'URL Vercel du frontend.
-- Après le premier déploiement, chargez le menu une fois depuis le Shell Render : `npm run db:seed`.
+Le code est sur GitHub ; Render (API) et Vercel (site) se mettent à jour tout seuls à chaque `git push`.
+Ordre : Render d'abord (pour connaître l'adresse de l'API), puis Vercel, puis l'adresse Vercel dans `CORS_ORIGINS` sur Render.
+
+### Backend sur Render
+
+`render.yaml` (à la racine) décrit tout le service : sur Render, **New > Blueprint** puis choisir le dépôt.
+Render demande alors seulement :
+
+- `DATABASE_URL` : URL Neon **poolée** (l'hôte contient `-pooler`) ;
+- `DIRECT_URL` : URL Neon **directe** (même URL sans `-pooler`), utilisée pour les migrations ;
+- `CORS_ORIGINS` : adresse du site Vercel, sans slash final.
+
+À chaque déploiement, le build applique les migrations (`npm run db:deploy`, qui réessaie si Neon dort) puis met le menu à jour depuis `prisma/menu-data.js` (`npm run db:seed`). Pas besoin du Shell Render.
+
+Offre gratuite : le service s'endort après 15 minutes sans visite et met jusqu'à une minute à se réveiller. Pour l'ouverture, passer au plan Starter.
+
+### Frontend sur Vercel
+
+- Root Directory : `frontend` (Vercel reconnaît Vite tout seul).
+- Variable : `VITE_API_URL` = adresse Render de l'API, sans slash final (ex. `https://belchicken-api.onrender.com`).
+- `frontend/vercel.json` renvoie toutes les adresses vers l'application, pour que les liens comme `/menu/burgers` fonctionnent après un rechargement.
 
 ## Menu
 

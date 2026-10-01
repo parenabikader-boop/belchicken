@@ -1,0 +1,37 @@
+# Configuration Render du backend (API Belchicken).
+# Sur Render : New > Blueprint, puis choisir ce dépôt GitHub. Render lit ce fichier
+# et demande seulement les valeurs marquées sync: false (secrets).
+services:
+  - type: web
+    name: belchicken-api
+    runtime: node
+    rootDir: backend
+    # Ohio (us-east-2) : même région que la base Neon, pour des requêtes rapides
+    region: ohio
+    plan: free
+    # db:deploy applique les migrations (en réessayant si Neon dort) ; db:seed remet le menu de prisma/menu-data.js
+    # à jour (sans doublons, sans toucher à la disponibilité des plats).
+    # À retirer quand l'espace équipe gérera le menu, sinon chaque déploiement écraserait ses changements.
+    buildCommand: npm install && npm run db:deploy && npm run db:seed
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      # Adresse du site Vercel, par exemple https://belchicken.vercel.app (sans slash final)
+      - key: CORS_ORIGINS
+        sync: false
+      # Alerte WhatsApp : laissée vide pour l'instant (les commandes fonctionnent sans)
+      - key: WHATSAPP_API_VERSION
+        value: v21.0
+      - key: WHATSAPP_TEMPLATE_NEW_ORDER
+        value: nouvelle_commande
+      - key: WHATSAPP_TEMPLATE_LANG
+        value: fr
