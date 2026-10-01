@@ -4,6 +4,7 @@
   "private": true,
   "description": "Site de commande en ligne Belchicken : lance le backend et le frontend ensemble",
   "scripts": {
+    "predev": "node scripts/ensure-deps.js && node scripts/check-ports.js",
     "dev": "concurrently --kill-others-on-fail --names api,site --prefix-colors red,yellow \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\""
   },
   "devDependencies": {

@@ -15,6 +15,8 @@ Projet indépendant de TWIA FOOD : aucun code partagé.
 ```
 belchicken/
 ├── package.json               npm run dev : backend + frontend ensemble
+├── scripts/ensure-deps.js     Installe les dépendances manquantes avant npm run dev
+├── scripts/check-ports.js     Vérifie que les ports 3006 et 5173 sont libres
 ├── backend/
 │   ├── prisma/
 │   │   ├── schema.prisma      Menu, commandes, journal WhatsApp
@@ -62,19 +64,31 @@ npm install
 
 Par défaut, le site appelle l'API sur `http://localhost:3006`. Pour une autre adresse, copiez `.env.example` en `.env` et changez `VITE_API_URL`.
 
-## Démarrer le projet en local
+## Lancer le site en une commande
 
-Une fois l'installation faite, une seule commande à la racine du projet démarre le backend et le frontend ensemble :
+Une fois la base configurée (étapes 1 et 2 ci-dessus), depuis la racine du projet :
 
 ```bash
-npm install     # la première fois seulement, à la racine
 npm run dev
 ```
 
-- API : `http://localhost:3006`
-- Site : `http://localhost:5173`
+C'est la seule commande à taper. Au premier lancement, elle installe d'elle-même les dépendances qui manquent (racine, `backend/`, `frontend/`) ; cela prend une minute, puis les lancements suivants sont immédiats.
 
-Les messages des deux serveurs s'affichent dans le même terminal, préfixés par `[api]` et `[site]`. `Ctrl+C` arrête les deux. Si l'un des deux plante au démarrage (port déjà pris, base injoignable…), l'autre s'arrête aussi. Le backend redémarre tout seul quand un fichier change, et le site se met à jour dans le navigateur.
+Quand les deux lignes suivantes apparaissent, le site est prêt :
+
+```
+[api] API Belchicken sur http://localhost:3006
+[site]   ➜  Local:   http://localhost:5173/
+```
+
+Ouvrez alors **http://localhost:5173** dans le navigateur.
+
+- Les messages des deux serveurs s'affichent dans le même terminal, préfixés par `[api]` et `[site]`.
+- `Ctrl+C` arrête les deux.
+- Le backend redémarre tout seul quand un fichier de `backend/src/` change, et le site se met à jour dans le navigateur.
+- Si un serveur plante au démarrage, l'autre s'arrête aussi : lisez le message au-dessus.
+
+« Le port 3006 (ou 5173) est déjà utilisé » : le projet tourne déjà, souvent dans un autre terminal de VS Code. Arrêtez-le avec `Ctrl+C` dans ce terminal, puis relancez `npm run dev`. La commande refuse de démarrer dans ce cas, car le site ne pourrait pas joindre l'API.
 
 On peut toujours lancer une seule partie avec `npm run dev` dans `backend/` ou `frontend/`.
 

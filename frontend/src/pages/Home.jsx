@@ -13,7 +13,7 @@ export default function Home() {
             <p className="lead">Choisissez vos plats, envoyez votre commande, et notre équipe vous confirme tout sur WhatsApp.</p>
             <div className="cta">
               <Link className="btn btn-p" to="/menu">Voir le menu</Link>
-              <Link className="btn btn-s" to="/infos">Livraison et paiement</Link>
+              <Link className="lnk" to="/infos">Livraison et paiement ›</Link>
             </div>
           </div>
           <div className="mosaic">

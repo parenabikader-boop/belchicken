@@ -6,7 +6,7 @@
   "description": "API de commande en ligne Belchicken",
   "engines": { "node": ">=20" },
   "scripts": {
-    "dev": "node --watch src/server.js",
+    "dev": "node --watch-path=src src/server.js",
     "start": "node src/server.js",
     "test": "node --test test/*.test.js",
     "postinstall": "prisma generate",

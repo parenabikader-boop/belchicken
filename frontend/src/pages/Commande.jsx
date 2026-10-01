@@ -78,7 +78,7 @@ export default function Commande() {
               {g.items.map((item) => <CartLine key={item.key} item={item} />)}
             </section>
           ))}
-          <Link className="btn btn-s" to="/menu">Ajouter d'autres plats</Link>
+          <Link className="lnk" to="/menu">‹ Ajouter d'autres plats</Link>
         </div>
         <aside className="box sum">
           <div className="box-h"><h2>Total</h2></div>

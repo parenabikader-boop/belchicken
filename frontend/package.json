@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Site de commande en ligne Belchicken",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --strictPort",
     "build": "vite build",
     "preview": "vite preview"
   },

@@ -5,7 +5,7 @@ import ProductCard from '../components/ProductCard.jsx';
 import ProductDialog from '../components/ProductDialog.jsx';
 import OrderBar from '../components/OrderBar.jsx';
 import { searchProducts } from '../utils/product.js';
-import { categoryColor } from '../utils/visuals.js';
+import { cardLayout, categoryBanner, categoryColor } from '../utils/visuals.js';
 
 const SearchIcon = ({ size }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -47,8 +47,12 @@ export default function Menu() {
   return (
     <div className="menu-page" style={color ? { '--cat': color } : undefined}>
       <CategoryTabs categories={categories} current={current} query={query} setQuery={setQuery} />
-      <div className="wrap menu-body">
-        {q ? <SearchResults categories={categories} query={q} onOpen={openProduct} /> : <Category categories={categories} current={current} onOpen={openProduct} />}
+      {/* key : le contenu est remonté à chaque changement de catégorie, ce qui rejoue le fondu */}
+      <div className="cat-fade" key={q ? 'recherche' : current.slug}>
+        {!q && <CategoryBanner category={current} />}
+        <div className="wrap menu-body">
+          {q ? <SearchResults categories={categories} query={q} onOpen={openProduct} /> : <Category categories={categories} current={current} onOpen={openProduct} />}
+        </div>
       </div>
       <OrderBar />
       {opened && <ProductDialog key={opened.id} product={opened} onClose={closeDialog} />}
@@ -113,6 +117,23 @@ function CategoryTabs({ categories, current, query, setQuery }) {
   );
 }
 
+// Bandeau pleine largeur à la couleur de la catégorie, avec la photo du plat vedette à droite
+function CategoryBanner({ category: c }) {
+  const banner = categoryBanner(c.slug);
+  return (
+    <div className="cat-banner">
+      <div className="wrap cat-banner-in">
+        <div className="cat-banner-txt">
+          {banner && <span className="cat-script">{banner.script}</span>}
+          <h1>{c.name}</h1>
+          {c.description && <p>{c.description}</p>}
+        </div>
+        {banner && <img className={`cat-banner-ph${banner.small ? ' small' : ''}`} src={banner.photo} alt="" />}
+      </div>
+    </div>
+  );
+}
+
 function SearchResults({ categories, query, onOpen }) {
   const results = searchProducts(categories, query);
   return (
@@ -133,6 +154,7 @@ function Category({ categories, current: c, onOpen }) {
   const i = categories.indexOf(c);
   const prev = categories[(i - 1 + categories.length) % categories.length];
   const next = categories[(i + 1) % categories.length];
+  const layout = cardLayout(c.slug);
   // Produits sans sous-groupe affichés à la fin, pour ne jamais en perdre un
   const groups = [...c.groups, { id: null, name: 'Autres' }]
     .map((g) => ({ ...g, items: c.products.filter((p) => (p.groupId ?? null) === g.id) }))
@@ -140,16 +162,15 @@ function Category({ categories, current: c, onOpen }) {
 
   return (
     <>
-      <h2 className="cat-title">{c.name}</h2>
       {groups.map((g) => (
         <section className="grp" key={g.id ?? 'autres'}>
           {groups.length > 1 && <div className="grp-h"><h3>{g.name}</h3>{g.note && <span>{g.note}</span>}</div>}
-          <div className="grid">{g.items.map((p) => <ProductCard key={p.id} product={p} onOpen={onOpen} />)}</div>
+          <div className={`grid grid-${layout}`}>{g.items.map((p) => <ProductCard key={p.id} product={p} onOpen={onOpen} layout={layout} />)}</div>
         </section>
       ))}
       <div className="pager">
-        <Link to={`/menu/${prev.slug}`}><span>Précédent</span><b>‹ {prev.name}</b></Link>
-        <Link to={`/menu/${next.slug}`}><span>Suivant</span><b>{next.name} ›</b></Link>
+        <Link className="lnk" to={`/menu/${prev.slug}`}>‹ {prev.name}</Link>
+        <Link className="lnk" to={`/menu/${next.slug}`}>{next.name} ›</Link>
       </div>
     </>
   );

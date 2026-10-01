@@ -23,3 +23,29 @@ const CATEGORY_COLOR = {
   'rice-box': '#9a4b24', salades: '#2f7d32', 'bel-kids': '#8e2ba3', extras: '#4e342e',
 };
 export const categoryColor = (slug) => CATEGORY_COLOR[slug];
+
+// Forme des cartes selon le type de plat (voir ProductCard)
+const CATEGORY_LAYOUT = {
+  burgers: 'big', wraps: 'big', salades: 'big',
+  combos: 'wide', buckets: 'wide', 'rice-box': 'wide', 'bel-kids': 'wide',
+  extras: 'row',
+};
+export const cardLayout = (slug) => CATEGORY_LAYOUT[slug] || 'std';
+
+// Bandeau de chaque catégorie : petit titre repris du menu papier et photo du plat vedette
+const CATEGORY_BANNER = {
+  burgers: { script: 'Originals & XL', photo: 'finest' },
+  poulet: { script: 'Chicken Deals', photo: 'wings12' },
+  combos: { script: 'Le choix du chef', photo: 'chefs' },
+  buckets: { script: 'À partager', photo: 'family' },
+  wraps: { script: 'Wraps', photo: 'wrap_fuego' },
+  'rice-box': { script: 'Rice Box', photo: 'rice_belgrill' },
+  salades: { script: '100 % Fresh', photo: 'salad_chicken' },
+  'bel-kids': { script: 'Pour les petits', photo: 'kids' },
+  // small : photo de petite taille, affichée sans être agrandie pour rester nette
+  extras: { script: 'Pour compléter', photo: 'beignets', small: true },
+};
+export const categoryBanner = (slug) => {
+  const b = CATEGORY_BANNER[slug];
+  return b ? { ...b, photo: `/menu/${b.photo}.jpg` } : null;
+};

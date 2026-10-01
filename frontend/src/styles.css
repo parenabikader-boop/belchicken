@@ -550,3 +550,130 @@ main.p-confirmation .tunnel-head{background:#e6f4e4;box-shadow:0 0 0 100vmax #e6
 /* Infos pratiques : bandeau jaune */
 main.p-infos .pagehead{background:var(--yellow);color:var(--ink)}
 main.p-infos .pagehead .crumb,main.p-infos .pagehead .crumb a,main.p-infos .pagehead p{color:var(--ink)}
+
+/* ===== Une forme de carte par type de plat ===== */
+/* Burgers, wraps, salades : grande photo, prix du menu en gros, prix seul en petit */
+.grid-big{grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px}
+.card-big .ph{aspect-ratio:4/3}
+.card-big h4{font-size:19px}
+.card-big .foot{flex-direction:row;align-items:flex-end}
+.card-big .price .lbl{display:block;font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cat,var(--muted))}
+.card-big .price b{font-size:28px;line-height:1.1}
+.card-big .add{width:auto;padding:11px 20px}
+
+/* Plateaux, buckets, rice box, Bel Kids : carte large, composition visible */
+.grid-wide{grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:18px}
+.card-wide{flex-direction:row}
+.card-wide .ph{flex:0 0 44%;aspect-ratio:auto;min-height:230px;position:relative}
+.card-wide .ph img{position:absolute;inset:0}
+.card-wide h4{font-size:19px}
+.compo{list-style:none;margin:4px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font-size:14px}
+.compo li{position:relative;padding-left:16px;line-height:1.4}
+.compo li::before{content:"";position:absolute;left:0;top:.5em;width:7px;height:7px;border-radius:2px;background:var(--cat,var(--brand))}
+.card-wide .foot{flex-direction:row;align-items:flex-end}
+.card-wide .price b{font-size:24px}
+.card-wide .add{width:auto;padding:11px 20px}
+
+/* Extras : liste compacte avec petite photo */
+.grid-row{display:block;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
+.xrow{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:14px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.xrow:last-child{border-bottom:0}
+.xph{width:64px;height:52px;border-radius:var(--r);overflow:hidden;background:var(--panel-2);display:grid;place-items:center;cursor:pointer}
+.xph img{width:100%;height:100%;object-fit:cover}
+.xph span{font-size:10px;line-height:1.2;text-align:center;color:var(--faint);padding:0 4px}
+.xbody{min-width:0}
+.xbody h4{font-size:16px}
+.xbody small{display:block;font-size:13px;color:var(--muted);line-height:1.35}
+.xbody .flag{position:static;display:inline-block;margin-top:4px;padding:1px 8px}
+.xend{display:flex;align-items:center;gap:14px}
+.xend .price b{font-size:17px;white-space:nowrap}
+.xend .add{padding:8px 14px;width:auto}
+.xrow.off .xph{filter:grayscale(1);opacity:.55;cursor:default}
+.xrow.off h4,.xrow.off .price{opacity:.6}
+
+@media (max-width:640px){
+  .grid-big,.grid-wide{grid-template-columns:minmax(0,1fr);gap:14px}
+  .card-big .ph{aspect-ratio:16/11}
+  .card-big .body,.card-wide .body{padding:12px 14px 14px}
+  .card-big h4,.card-wide h4{font-size:18px}
+  .card-big .price b{font-size:24px}
+  .card-wide{flex-direction:column}
+  .card-wide .ph{flex:none;aspect-ratio:16/10;min-height:0}
+  .card-wide .ph img{position:static}
+  .xrow{grid-template-columns:56px minmax(0,1fr);gap:4px 12px;padding:10px 12px}
+  .xph{width:56px;height:48px;grid-row:span 2}
+  .xend{grid-column:2;justify-content:space-between}
+}
+
+/* ===== Boutons : principal = rouge plein, secondaire = contour, navigation = lien texte ===== */
+.add{background:var(--brand);border-color:var(--brand);color:#fff}
+.add:hover{background:var(--brand-dark);border-color:var(--brand-dark);color:#fff}
+.add:disabled{background:var(--panel-2)}
+.lnk{display:inline-flex;align-items:center;gap:4px;padding:8px 0;border:0;background:none;color:var(--brand-ink);font-weight:700;font-size:15px;text-decoration:underline;text-decoration-color:transparent;text-underline-offset:4px}
+.lnk:hover{text-decoration-color:currentColor}
+.lnk-center{display:flex;justify-content:center;margin-top:8px}
+.cta{align-items:center;gap:12px 22px}
+.pager{grid-template-columns:1fr 1fr;border-top:1px solid var(--line);padding-top:6px}
+.pager a.lnk{border:0;background:none;border-radius:0;padding:8px 0;flex-direction:row;color:var(--cat,var(--brand-ink));font-size:16px}
+.pager a.lnk:last-child{justify-self:end}
+
+/* ===== Messages : jaune = information, vert = réussite, rouge = erreur ===== */
+:root{--info-soft:#fff6d6;--info:#ffc629;--gold-soft:#fff6d6}
+.alert.info{background:var(--info-soft);border-color:var(--info);color:var(--text)}
+.alert.ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok);font-weight:600}
+.notice{background:var(--info-soft);border-left-color:var(--info)}
+.dlg-note{background:var(--info-soft);border-left:4px solid var(--info);border-radius:0 var(--r) var(--r) 0}
+
+/* ===== Liseré sous l'en-tête : rouge puis jaune, une seule fois ===== */
+/* Le soulignement du lien actif ne descend plus sur le liseré (il y ajoutait un second morceau de jaune) */
+.nav a{margin-bottom:0;border-bottom:0;text-decoration:underline;text-decoration-color:transparent;text-decoration-thickness:3px;text-underline-offset:10px}
+.nav a:hover,.nav a.on{text-decoration-color:var(--yellow)}
+
+/* ===== Menu : chaque catégorie est un univers à part ===== */
+/* --cat-ink : la couleur de la catégorie un peu foncée, pour garder un texte blanc lisible dessus */
+.menu-page{--cat-ink:color-mix(in srgb,var(--cat) 82%,#000);background:color-mix(in srgb,var(--cat) 7%,#fff);transition:background-color .3s ease}
+main.p-menu{padding-bottom:0}
+
+/* Onglet actif rempli */
+.trow{align-items:center}
+.trow a{align-self:stretch;margin:8px 0;border-bottom:0;border-radius:var(--r)}
+.trow a.on{background:var(--cat-ink);color:#fff}
+.trow a.on:hover{color:#fff}
+
+/* Bandeau : petit titre manuscrit, nom en gros, photo du plat vedette */
+.cat-banner{position:relative;background:var(--cat);color:#fff;overflow:hidden}
+.cat-banner-in{display:flex;align-items:center;height:200px}
+.cat-banner-txt{max-width:56%;position:relative;z-index:1}
+.cat-script{font-family:var(--script);font-size:24px;line-height:1.2;color:#fff;opacity:.92;white-space:nowrap}
+.cat-banner h1{font-family:var(--display);font-weight:800;font-size:56px;line-height:1;letter-spacing:-.03em;margin:2px 0 0;color:#fff}
+.cat-banner p{margin:10px 0 0;font-size:15px;max-width:44ch;color:#fff;opacity:.9}
+.cat-banner-ph{position:absolute;top:0;right:0;width:min(46%,640px);height:100%;object-fit:cover;-webkit-mask-image:linear-gradient(90deg,transparent,#000 38%);mask-image:linear-gradient(90deg,transparent,#000 38%)}
+.cat-banner-ph.small{width:auto;max-width:46%;-webkit-mask-image:linear-gradient(90deg,transparent,#000 30%);mask-image:linear-gradient(90deg,transparent,#000 30%)}
+.menu-page .menu-body{padding-top:24px}
+
+/* Cartes : numéro, prix et bouton Ajouter à la couleur de la catégorie */
+.menu-page .num{background:var(--cat-ink);border-color:var(--cat-ink);color:#fff}
+.menu-page .price b{color:var(--cat-ink)}
+.menu-page .add:not(:disabled){background:var(--cat-ink);border-color:var(--cat-ink);color:#fff}
+.menu-page .add:not(:disabled):hover{background:color-mix(in srgb,var(--cat) 62%,#000);border-color:color-mix(in srgb,var(--cat) 62%,#000)}
+.menu-page .card.off .num{background:var(--panel-2);border-color:var(--line);color:var(--muted)}
+.menu-page .off .price b{color:var(--text)}
+
+/* Fondu au changement de catégorie, sauf si l'appareil demande moins d'animations */
+.cat-fade{animation:cat-in .28s ease-out}
+@keyframes cat-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .cat-fade{animation:none}
+  .menu-page{transition:none}
+}
+
+@media (max-width:640px){
+  .trow a{margin:7px 0}
+  .cat-banner-in{height:136px}
+  .cat-banner-txt{max-width:60%}
+  .cat-script{font-size:19px}
+  .cat-banner h1{font-size:36px}
+  .cat-banner p{display:none}
+  .cat-banner-ph{width:50%}
+  .menu-page .menu-body{padding-top:16px}
+}

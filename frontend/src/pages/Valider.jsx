@@ -351,7 +351,7 @@ export default function Valider() {
                 <button type="submit" className="btn btn-p btn-block" style={{ marginTop: 16 }} disabled={sending || blocked}>
                   {sending ? 'Envoi en cours…' : 'Envoyer ma commande'}
                 </button>
-                <Link className="btn btn-s btn-block" style={{ marginTop: 10 }} to="/commande">Retour</Link>
+                <Link className="lnk lnk-center" to="/commande">‹ Retour à ma commande</Link>
               </div>
             </aside>
           </form>
