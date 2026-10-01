@@ -113,6 +113,16 @@ export default function Valider() {
   const [geoState, setGeoState] = useState(null); // null | 'searching' | 'denied' | 'unsupported'
   const watchRef = useRef(null);
   const [sending, setSending] = useState(false);
+  // Envoi long (base qui se réveille, réseau lent) : on rassure le client au lieu de le laisser douter
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!sending) return undefined;
+    const timer = setTimeout(() => setSlow(true), 2500);
+    return () => {
+      clearTimeout(timer);
+      setSlow(false);
+    };
+  }, [sending]);
   const alertRef = useRef(null);
 
   useEffect(() => saveDraft(form), [form]);
@@ -352,6 +362,7 @@ export default function Valider() {
                 <button type="submit" className="btn btn-p btn-block" style={{ marginTop: 16 }} disabled={sending || blocked}>
                   {sending ? 'Envoi en cours…' : 'Envoyer ma commande'}
                 </button>
+                {slow && <div className="alert info" role="status" style={{ marginTop: 12 }}><span>Envoi en cours, merci de patienter…</span></div>}
                 <Link className="lnk lnk-center" to="/commande">‹ Retour à ma commande</Link>
               </div>
             </aside>

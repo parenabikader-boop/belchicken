@@ -1,5 +1,6 @@
 import { ZodError } from 'zod';
 import { AppError } from '../utils/AppError.js';
+import { isConnectionError } from '../lib/db-retry.js';
 
 export function notFound(req, res) {
   res.status(404).json({ error: { code: 'INTROUVABLE', message: 'Ressource introuvable.' } });
@@ -18,6 +19,13 @@ export function errorHandler(err, req, res, next) {
   }
   if (err?.type === 'entity.parse.failed') {
     return res.status(400).json({ error: { code: 'JSON_INVALIDE', message: 'Requête mal formée.' } });
+  }
+  // Base toujours injoignable après les nouveaux essais (voir lib/db-retry.js)
+  if (isConnectionError(err)) {
+    console.error('[base] injoignable après plusieurs essais', err.code || err.errorCode || err.name);
+    return res.status(503).json({
+      error: { code: 'SERVICE_INDISPONIBLE', message: 'Le service est momentanément indisponible. Réessayez dans une minute.' },
+    });
   }
   console.error(err);
   res.status(500).json({ error: { code: 'ERREUR_SERVEUR', message: 'Une erreur est survenue. Réessayez dans un instant.' } });
