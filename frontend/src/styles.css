@@ -677,3 +677,20 @@ main.p-menu{padding-bottom:0}
   .cat-banner-ph{width:50%}
   .menu-page .menu-body{padding-top:16px}
 }
+
+/* ===== Accueil : bandeau du logo, brun foncé, orange du logo pour le petit titre et le bouton ===== */
+.brand-band{background:#2a140e;color:#fff}
+.brand-band .wrap{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);align-items:center;gap:56px;padding-top:48px;padding-bottom:48px}
+.brand-logo{display:block;width:100%;height:auto}
+.brand-script{display:block;font-family:var(--script);font-size:26px;line-height:1.2;color:#f7941d}
+.brand-txt h2{font-family:var(--display);font-weight:800;font-size:42px;line-height:1.05;letter-spacing:-.02em;color:#fff;margin:6px 0 12px}
+.brand-txt p{font-size:17px;color:#e9d9cc;margin:0 0 24px;max-width:42ch}
+.brand-btn{background:#f7941d;color:#2a140e}
+.brand-btn:hover{background:#ffa83d;color:#2a140e}
+@media (max-width:640px){
+  .brand-band .wrap{grid-template-columns:1fr;justify-items:center;text-align:center;gap:18px;padding-top:32px;padding-bottom:36px}
+  .brand-logo{width:260px}
+  .brand-script{font-size:21px}
+  .brand-txt h2{font-size:30px}
+  .brand-txt p{font-size:16px;margin:0 auto 20px}
+}

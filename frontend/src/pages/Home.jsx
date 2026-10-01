@@ -26,6 +26,28 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Le vrai logo, sur fond brun foncé (il est prévu pour un fond sombre) */}
+      <section className="brand-band">
+        <div className="wrap">
+          <img
+            className="brand-logo"
+            src="/brand/logo-belchicken-560.webp"
+            srcSet="/brand/logo-belchicken-560.webp 560w, /brand/logo-belchicken-1120.webp 1120w"
+            sizes="(max-width: 640px) 260px, 440px"
+            width="560"
+            height="452"
+            alt="Belchicken"
+            loading="lazy"
+          />
+          <div className="brand-txt">
+            <span className="brand-script">Fresh fried chicken</span>
+            <h2>Le chef Belchicken vous régale</h2>
+            <p>Poulet croustillant, burgers et buckets, préparés à la commande.</p>
+            <Link className="btn brand-btn" to="/menu">Voir le menu</Link>
+          </div>
+        </div>
+      </section>
+
       <section className="wrap home-steps">
         <div className="sec-h"><div><h2>Comment commander</h2></div></div>
         <div className="steps">
