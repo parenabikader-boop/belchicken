@@ -15,22 +15,13 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 
 ## État actuel
 
-- `backend/` est fait et testé (`npm test`) : menu, création de commande, alerte WhatsApp. Voir `README.md` pour l'API.
+- `backend/` est fait et testé (`npm test`) : menu, création de commande, alerte WhatsApp, nouveaux essais automatiques pendant le réveil de Neon (`src/lib/db-retry.js`). Voir `README.md` pour l'API.
+- `frontend/` est fait : Accueil `/`, Menu `/menu/:categorie`, Ma commande `/commande`, Vos informations `/valider`, Confirmation `/confirmation/:reference`, Infos pratiques `/infos`. Parcours complet testé avec une vraie commande en base.
+- `npm run dev` à la racine lance le backend et le frontend ensemble.
 - `backend/prisma/menu-data.js` contient le menu officiel complet. Ne pas inventer de plats ni de prix.
-- `frontend/public/menu/` contient les photos des plats.
-- `docs/maquette.html` est la maquette validée par le client. Le frontend doit la reproduire fidèlement (couleurs, typographie Public Sans, pages, parcours).
-
-## Prochaine tâche : le frontend
-
-Créer `frontend/` en React + Vite qui reproduit `docs/maquette.html` et se branche sur l'API :
-
-1. Pages séparées avec React Router : Accueil `/`, Menu `/menu/:categorie`, Ma commande `/commande`, Vos informations `/valider`, Confirmation `/confirmation/:reference`, Infos pratiques `/infos`.
-2. Le menu vient de `GET /api/menu` (plus de données en dur). Les plats indisponibles sont grisés et ne peuvent pas être ajoutés.
-3. Panier dans un contexte React, sauvegardé dans localStorage pour survivre à un rechargement.
-4. Envoi avec `POST /api/orders` (format dans README.md). Afficher les erreurs de l'API telles quelles, elles sont déjà en français.
-5. Page de confirmation rechargeable via `GET /api/orders/:reference`.
-6. URL de l'API dans `VITE_API_URL` (`.env.example` à fournir).
-7. Mobile d'abord : la plupart des clients commandent depuis leur téléphone.
+- Photos : plats dans `frontend/public/menu/` (provisoires, de mauvaise qualité), accueil dans `frontend/public/accueil/`, logo dans `frontend/public/brand/`. Sources dans `docs/photos/` et `docs/`.
+- Chaque catégorie du menu a sa couleur, son petit titre et sa photo vedette (`frontend/src/utils/visuals.js`), pour l'instant en dur.
+- `docs/maquette.html` est la maquette validée par le client (couleurs, typographie, pages, parcours). Elle parle encore d'espèces et de numéro de transaction : ces deux points sont abandonnés, ne pas les reprendre.
 
 ## Règles
 
@@ -44,3 +35,37 @@ Créer `frontend/` en React + Vite qui reproduit `docs/maquette.html` et se bran
 
 - Prix des Fuego Wings 8 pièces à la carte (10 000 F sur le visuel, plus cher que le menu N° 30 à 9 500 F).
 - Vraies descriptions des burgers, adresse du restaurant, numéros WhatsApp et marchand définitifs.
+
+## Prochaines étapes
+
+### Ordre global
+
+1. Mise en ligne : backend sur Render, frontend sur Vercel (voir README.md).
+2. Alerte WhatsApp : application Meta, modèle `nouvelle_commande` approuvé, variables WhatsApp sur Render.
+3. Espace équipe (cahier des charges ci-dessous).
+4. Vraies informations du restaurant : adresse, numéros WhatsApp et marchand, horaires, descriptions des burgers, prix des Fuego Wings 8 pièces.
+5. Préparation de l'ouverture : vider les commandes de test (dont `BC-K98QKH`, client « TEST Claude (à supprimer) »), changer le mot de passe Neon et mettre à jour `DATABASE_URL` sur Render.
+
+### Espace équipe : cahier des charges
+
+Pages réservées à l'équipe, protégées par connexion, jamais visibles des clients ni liées depuis le site public.
+Ordre de construction : connexion, commandes, menu et photos, tableau de bord.
+
+1. **Connexion sécurisée.** Comptes à confirmer par le client : probablement un rôle **Patron** (tout) et un rôle **Opérateur** (commandes seulement, sans chiffre d'affaires ni modification des prix). Les droits sont vérifiés par l'API, pas seulement masqués dans les pages.
+2. **Commandes.**
+   - Liste en temps réel, avec une alerte à chaque nouvelle commande.
+   - Détail complet : client, téléphone, plats, total, numéro ayant payé, lien Google Maps de la position, repères.
+   - Statut modifiable : Nouvelle, Payée, En livraison, Livrée, Annulée. L'enum Prisma actuel (`EN_ATTENTE`, `CONFIRMEE`, `EN_LIVRAISON`, `LIVREE`, `ANNULEE`) n'a pas de statut « Payée » : migration à prévoir et à signaler.
+   - Recherche par référence, nom ou téléphone.
+3. **Menu et photos.**
+   - Créer, modifier et supprimer plats et catégories : nom, numéro, description, composition, prix, formules, couleur, petit titre, ordre. La couleur, le petit titre et la photo vedette des catégories passent alors de `visuals.js` à la base.
+   - Disponibilité d'un plat en un clic.
+   - Changer les photos des plats, les 3 photos de l'accueil et la photo vedette de chaque catégorie.
+   - Photos stockées sur Cloudinary, pas sur Render (son disque est effacé à chaque déploiement), et redimensionnées automatiquement. Les photos actuelles sont provisoires et de mauvaise qualité.
+4. **Tableau de bord.**
+   - Commandes et chiffre d'affaires par jour, semaine et mois.
+   - Plats et catégories les plus vendus.
+   - Heures et jours de pointe.
+   - Répartition Orange Money / Moov Money.
+   - Panier moyen.
+   - Commandes annulées.
