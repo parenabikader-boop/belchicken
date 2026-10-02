@@ -138,7 +138,7 @@ function CropEditor({ src, sw, sh, crop, onChange }) {
 }
 
 // Format du recadrage selon l'endroit où la photo s'affiche sur le site
-const CROP_RATIO = { card: 4 / 3, banner: 3 / 2, wide: 16 / 9, tall: 4 / 5 };
+const CROP_RATIO = { card: 4 / 3, banner: 3 / 2, tall: 9 / 10, tile: 3 / 2 };
 
 export default function PhotoPicker({ title, currentUrl, shape = 'card', onSave, onRemove, removeLabel = 'Retirer la photo', emptyLabel = 'Aucune photo' }) {
   const [photo, setPhoto] = useState(null); // { source, width, height, small, url }

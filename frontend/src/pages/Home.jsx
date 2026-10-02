@@ -1,13 +1,38 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-// Photos de l'accueil (sources dans docs/photos/) : grande image à gauche, deux petites à droite.
-// pos : partie de la photo gardée visible quand la case la recadre.
-const MOSAIC = [
-  { src: '/accueil/burger.webp', w: 760, h: 950, pos: 'center 62%' },
-  { src: '/accueil/wings.webp', w: 763, h: 348, pos: 'center' },
-  { src: '/accueil/bucket.webp', w: 763, h: 354, pos: 'center 40%' },
-];
+import { api } from '../api/client.js';
+import { photoProps } from '../utils/visuals.js';
+
+// Photos de l'accueil, changées par le Patron depuis l'espace équipe (API /api/home) :
+// grande image à gauche (case 1), deux petites à droite (cases 2 et 3).
+// Photos d'origine (sources dans docs/photos/) : taille et partie gardée visible quand la case les recadre.
+// Celles envoyées depuis l'espace équipe sont déjà recadrées au format de leur case.
+const ORIGINAL = {
+  '/accueil/burger.webp': { w: 760, h: 950, pos: 'center 62%' },
+  '/accueil/wings.webp': { w: 763, h: 348, pos: 'center' },
+  '/accueil/bucket.webp': { w: 763, h: 354, pos: 'center 40%' },
+};
+const FALLBACK = Object.keys(ORIGINAL).map((imageUrl, i) => ({ slot: i + 1, imageUrl, alt: '' }));
+const SIZES = {
+  1: [[400, 640, 900], '(max-width: 980px) 55vw, 330px'],
+  2: [[320, 520, 760], '(max-width: 980px) 45vw, 270px'],
+  3: [[320, 520, 760], '(max-width: 980px) 45vw, 270px'],
+};
+
+function useHomePhotos() {
+  const [photos, setPhotos] = useState(null);
+  useEffect(() => {
+    let on = true;
+    api.getHomePhotos().then((p) => on && setPhotos(p), () => on && setPhotos(FALLBACK));
+    return () => {
+      on = false;
+    };
+  }, []);
+  return photos;
+}
 
 export default function Home() {
+  const photos = useHomePhotos();
   return (
     <>
       <section className="hero">
@@ -21,11 +46,24 @@ export default function Home() {
             </div>
           </div>
           <div className="mosaic">
-            {MOSAIC.map((m, i) => (
-              <div key={m.src}>
-                <img src={m.src} alt="" width={m.w} height={m.h} style={{ objectPosition: m.pos }} fetchPriority={i === 0 ? 'high' : undefined} />
-              </div>
-            ))}
+            {(photos || FALLBACK).map((m) => {
+              const o = ORIGINAL[m.imageUrl];
+              // Tant que les photos ne sont pas connues, les cases restent vides (pas d'ancienne photo qui clignote)
+              return (
+                <div key={m.slot}>
+                  {photos && (
+                    <img
+                      {...photoProps(m.imageUrl, ...SIZES[m.slot])}
+                      alt={m.alt || ''}
+                      width={o?.w}
+                      height={o?.h}
+                      style={o ? { objectPosition: o.pos } : undefined}
+                      fetchPriority={m.slot === 1 ? 'high' : undefined}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

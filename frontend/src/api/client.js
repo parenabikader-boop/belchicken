@@ -35,6 +35,7 @@ async function request(path, options = {}, base = BASE) {
 
 export const api = {
   getMenu: () => request('/api/menu').then((d) => d.categories),
+  getHomePhotos: () => request('/api/home').then((d) => d.photos),
   createOrder: (payload) => request('/api/orders', { method: 'POST', body: JSON.stringify(payload) }).then((d) => d.order),
   getOrder: (reference) => request(`/api/orders/${encodeURIComponent(reference)}`).then((d) => d.order),
 };
@@ -79,4 +80,9 @@ export const staffApi = {
   setCategoryPhoto: (id, blob) =>
     staffRequest(`/menu/categories/${id}/photo`, { method: 'PUT', body: blob, headers: { 'Content-Type': blob.type || 'image/jpeg' } }).then((d) => d.category),
   removeCategoryPhoto: (id) => staffRequest(`/menu/categories/${id}/photo`, { method: 'DELETE' }).then((d) => d.category),
+  // Photos de l'accueil (cases 1 à 3) ; retirer = remettre la photo d'origine
+  getHomePhotos: () => staffRequest('/home').then((d) => d.photos),
+  setHomePhoto: (slot, blob) =>
+    staffRequest(`/home/${slot}/photo`, { method: 'PUT', body: blob, headers: { 'Content-Type': blob.type || 'image/jpeg' } }).then((d) => d.photo),
+  resetHomePhoto: (slot) => staffRequest(`/home/${slot}/photo`, { method: 'DELETE' }).then((d) => d.photo),
 };

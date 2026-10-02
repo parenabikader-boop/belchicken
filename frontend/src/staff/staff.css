@@ -286,3 +286,15 @@
   .ph-new.cropping{flex-basis:100%}
   .ph-actions .btn-p{flex-basis:100%}
 }
+
+/* ===== Photos de l'accueil : rappel de la mosaïque du site, cases numérotées ===== */
+.hm-intro{margin:0 0 14px}
+.hm-mosaic{display:grid;grid-template-columns:1.25fr 1fr;grid-template-rows:1fr 1fr;gap:6px;height:220px;max-width:440px;margin-bottom:14px}
+.hm-mosaic div{position:relative;border-radius:var(--r-lg);overflow:hidden;background:var(--panel-2)}
+.hm-mosaic div:first-child{grid-row:1/3}
+.hm-mosaic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hm-mosaic span{position:absolute;top:8px;left:8px;width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;font-weight:700;font-size:13px;display:grid;place-items:center}
+.hm .mn-photo{margin-top:14px}
+.ph-frame.tall{width:200px;aspect-ratio:9/10}
+.ph-frame.tile{width:280px;aspect-ratio:3/2}
+@media (max-width:640px){.hm-mosaic{height:180px}}

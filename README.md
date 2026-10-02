@@ -182,6 +182,9 @@ Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (t
   Rangées sur Cloudinary dans `<CLOUDINARY_FOLDER>/plats` et `/categories` ; l'ancienne photo est supprimée au remplacement.
   Le site propose plusieurs tailles en WebP/AVIF (`srcset`, `sizedPhoto()` dans `frontend/src/utils/visuals.js`) :
   le téléphone télécharge la petite.
+- Photos de l'accueil (Patron) : `GET /api/staff/home`, `PUT /api/staff/home/:slot/photo` (cases 1 à 3, mêmes règles),
+  `DELETE /api/staff/home/:slot/photo` remet la photo d'origine (`homePhotos` de `prisma/menu-data.js`).
+  Le site les lit avec `GET /api/home` (table `HomePhoto`) ; page `/equipe/accueil` (`frontend/src/staff/home/`).
 - Statuts : `PAIEMENT_A_VERIFIER` → `PAYEE` → `EN_PREPARATION` → `EN_LIVRAISON` → `LIVREE`, ou `ANNULEE` avec un motif.
   Historique dans la table `OrderStatusChange`.
 - Le site appelle `/api/staff` sur sa propre adresse : Vite relaie vers l'API en local (`vite.config.js`), Vercel en ligne

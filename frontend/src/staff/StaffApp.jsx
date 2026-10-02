@@ -9,6 +9,7 @@ import OrderDetail from './orders/OrderDetail.jsx';
 import MenuAdmin from './menu/MenuAdmin.jsx';
 import ProductForm from './menu/ProductForm.jsx';
 import CategoryForm from './menu/CategoryForm.jsx';
+import HomeAdmin from './home/HomeAdmin.jsx';
 import './staff.css';
 
 // Espace équipe, sous /equipe. Chargé à part (voir App.jsx) : le code n'est jamais
@@ -43,6 +44,7 @@ export default function StaffApp() {
               <Route path="menu/plats/:id" element={<ProductForm />} />
               <Route path="menu/categories/nouvelle" element={<CategoryForm />} />
               <Route path="menu/categories/:id" element={<CategoryForm />} />
+              <Route path="accueil" element={<HomeAdmin />} />
             </Route>
           </Route>
         </Route>
@@ -106,6 +108,7 @@ function StaffShell() {
               {unseen.size > 0 && <span className="st-badge" aria-label={`${unseen.size} nouvelles`}>{unseen.size}</span>}
             </NavLink>
             <NavLink to="/equipe/menu">Menu</NavLink>
+            {user.role === 'PATRON' && <NavLink to="/equipe/accueil">Accueil</NavLink>}
           </nav>
           <div className="st-user">
             <span className="st-name">{user.name}<small>{ROLE_LABEL[user.role]}</small></span>
