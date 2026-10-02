@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { detectImageType } from '../src/services/photo.service.js';
+import { detectImageType, ownsPhoto } from '../src/services/photo.service.js';
 
 const pad = (head) => Buffer.concat([Buffer.from(head), Buffer.alloc(16)]);
 
@@ -16,4 +16,12 @@ test('detectImageType refuse le reste (HEIC, PDF, texte, vide)', () => {
   assert.equal(detectImageType(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>')), null);
   assert.equal(detectImageType(Buffer.alloc(0)), null);
   assert.equal(detectImageType(null), null);
+});
+
+test('ownsPhoto : seules les photos du dossier de ce serveur peuvent être supprimées', () => {
+  assert.equal(ownsPhoto('belchicken/plats/abc', 'belchicken'), true);
+  assert.equal(ownsPhoto('belchicken/plats/abc', 'belchicken-dev'), false); // photo du vrai site vue depuis le développement
+  assert.equal(ownsPhoto('belchicken-dev/plats/abc', 'belchicken'), false);
+  assert.equal(ownsPhoto('belchicken-dev/plats/abc', 'belchicken-dev'), true);
+  assert.equal(ownsPhoto(null, 'belchicken'), false);
 });

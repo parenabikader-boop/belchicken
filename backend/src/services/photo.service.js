@@ -52,9 +52,18 @@ export function uploadPhoto(buf, subfolder) {
   });
 }
 
+// Une photo n'est supprimée que si elle est rangée dans le dossier de ce serveur. La base de développement
+// (branche Neon « dev », copie du vrai site) pointe vers les photos du vrai site : en local, CLOUDINARY_FOLDER
+// vaut « belchicken-dev », et remplacer une photo copiée ne doit jamais effacer celle du vrai site.
+export const ownsPhoto = (publicId, folder = env.cloudinary.folder) => Boolean(publicId) && publicId.startsWith(`${folder}/`);
+
 // Ménage sans bloquer : une photo orpheline sur Cloudinary ne doit jamais faire échouer l'action de l'équipe
 export async function deletePhoto(publicId) {
   if (!publicId || !cloudinaryEnabled()) return;
+  if (!ownsPhoto(publicId)) {
+    console.log('[cloudinary] photo gardée (autre dossier)', publicId);
+    return;
+  }
   try {
     await cloudinary.uploader.destroy(publicId, { resource_type: 'image', invalidate: true });
   } catch (e) {

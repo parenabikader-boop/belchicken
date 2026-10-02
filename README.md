@@ -199,6 +199,15 @@ Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (t
 Le code est sur GitHub ; Render (API) et Vercel (site) se mettent à jour tout seuls à chaque `git push`.
 Ordre : Render d'abord (pour connaître l'adresse de l'API), puis Vercel, puis l'adresse Vercel dans `CORS_ORIGINS` sur Render.
 
+### Deux bases séparées (branches Neon)
+
+- Branche principale de Neon : la base du **vrai site**, utilisée seulement par Render.
+- Branche `dev` : copie faite au moment de sa création, utilisée par `backend/.env` sur l'ordinateur.
+  Les essais (commandes de test, prix, photos) n'y touchent jamais le vrai site.
+- Photos : `CLOUDINARY_FOLDER=belchicken-dev` sur l'ordinateur, `belchicken` sur Render. Le serveur ne supprime
+  que les photos de son propre dossier (`ownsPhoto()` dans `src/services/photo.service.js`) : la base `dev` contient
+  des photos copiées du vrai site, et les remplacer en local ne les efface pas.
+
 ### Backend sur Render
 
 `render.yaml` (à la racine) décrit tout le service : sur Render, **New > Blueprint** puis choisir le dépôt.
