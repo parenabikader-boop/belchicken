@@ -13,9 +13,13 @@ datasource db {
 
 // ─────────────────────────── ENUMS ───────────────────────────
 
+// Parcours : PAIEMENT_A_VERIFIER -> PAYEE -> EN_PREPARATION -> EN_LIVRAISON -> LIVREE,
+// ANNULEE possible à tout moment avant LIVREE. PAYEE est toujours posé à la main par l'équipe,
+// après vérification sur le téléphone marchand. Règles dans src/services/order-status.js.
 enum OrderStatus {
-  EN_ATTENTE   // reçue, pas encore confirmée par l'équipe
-  CONFIRMEE
+  PAIEMENT_A_VERIFIER // départ de toute nouvelle commande
+  PAYEE
+  EN_PREPARATION
   EN_LIVRAISON
   LIVREE
   ANNULEE
@@ -108,7 +112,7 @@ model ProductVariant {
 model Order {
   id        String      @id @default(cuid())
   reference String      @unique // BC-7K2Q9M, communiquée au client
-  status    OrderStatus @default(EN_ATTENTE)
+  status    OrderStatus @default(PAIEMENT_A_VERIFIER)
 
   customerName  String
   customerPhone String // normalisé +226XXXXXXXX
@@ -126,6 +130,7 @@ model Order {
 
   items         OrderItem[]
   notifications NotificationLog[]
+  statusChanges OrderStatusChange[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -155,6 +160,24 @@ model OrderItem {
   lineTotal     Int
 
   @@index([orderId])
+}
+
+// Historique des statuts : chaque changement, quand et par qui.
+// staffUserId vide = action du système (création de la commande). staffName est une copie figée,
+// pour garder l'historique lisible même si le compte est supprimé.
+model OrderStatusChange {
+  id          String       @id @default(cuid())
+  orderId     String
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus  OrderStatus?
+  toStatus    OrderStatus
+  reason      String? // motif d'annulation
+  staffUserId String?
+  staffUser   StaffUser?   @relation(fields: [staffUserId], references: [id], onDelete: SetNull)
+  staffName   String?
+  createdAt   DateTime     @default(now())
+
+  @@index([orderId, createdAt])
 }
 
 model NotificationLog {
@@ -190,7 +213,8 @@ model StaffUser {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  sessions StaffSession[]
+  sessions      StaffSession[]
+  statusChanges OrderStatusChange[]
 }
 
 // Une ligne par appareil connecté. Le navigateur garde le jeton dans un cookie httpOnly ;

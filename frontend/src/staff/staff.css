@@ -22,7 +22,7 @@
 .st-name small{display:block;font-weight:500;font-size:12px;color:var(--yellow)}
 .st-out{background:transparent;border:1.5px solid #6b4a3c;color:#f3e7dd;border-radius:var(--r);padding:7px 12px;font-weight:700;font-size:13px;cursor:pointer}
 .st-out:hover{border-color:var(--yellow);color:var(--yellow)}
-.st-main{padding-top:28px;padding-bottom:48px}
+.st-main{padding-top:28px;padding-bottom:72px} /* 72 px : rien ne reste caché sous le rappel du son */
 .st-empty{margin-top:24px;background:var(--panel);border:1px dashed #e3c999;border-radius:var(--r-lg);padding:36px 24px;text-align:center}
 .st-empty b{font-size:17px}
 .st-empty p{margin:6px 0 0;color:var(--muted);font-size:14px}
@@ -32,4 +32,124 @@
   .st-top .st-brand small{display:none}
   .st-name{display:none}
   .st-main{padding-top:20px}
+}
+
+/* ===== En-tête : navigation et badge des nouvelles commandes ===== */
+.st-nav{display:flex;gap:4px;margin-left:auto}
+.st-nav a{display:flex;align-items:center;gap:8px;color:#f3e7dd;text-decoration:none;font-weight:700;font-size:15px;padding:8px 10px;border-radius:var(--r)}
+.st-nav a.active{color:var(--yellow)}
+.st-badge{min-width:22px;height:22px;border-radius:999px;background:var(--brand);color:#fff;font-size:12px;font-weight:800;display:inline-grid;place-items:center;padding:0 6px;animation:st-pop .4s ease-out}
+@keyframes st-pop{from{transform:scale(.4)}to{transform:scale(1)}}
+/* Rappel « activer le son » : posé par-dessus la page, en bas, pour que sa disparition au premier toucher
+   ne décale pas la page (sinon ce premier toucher tombait à côté du bouton visé) */
+.st-sound{position:fixed;left:0;right:0;bottom:0;z-index:50;margin:0;background:var(--yellow);color:var(--ink);text-align:center;font-size:13px;font-weight:600;padding:10px 12px;box-shadow:0 -2px 8px rgba(0,0,0,.15)}
+
+/* ===== Liste des commandes ===== */
+.st-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px}
+.st-live{display:inline-flex;align-items:center;gap:6px;font-size:12px;margin:0}
+.st-dot{width:8px;height:8px;border-radius:50%;background:#2f9e44;box-shadow:0 0 0 3px rgba(47,158,68,.18)}
+.st-verify{display:flex;align-items:center;gap:8px;width:100%;border:0;border-radius:var(--r-lg);background:#e0a100;color:var(--ink);font-size:16px;font-weight:600;padding:14px 16px;margin-bottom:14px;cursor:pointer;text-align:left}
+.st-verify b{font-size:20px;font-weight:800}
+.st-verify span{margin-left:auto;font-weight:800}
+.st-search{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line-2);border-radius:var(--r);padding:0 12px;color:var(--muted)}
+.st-search:focus-within{border-color:var(--brand);outline:2px solid var(--brand-line)}
+.st-search input{flex:1;min-width:0;border:0;outline:none;background:transparent;height:46px;font-size:16px;color:var(--text)}
+.st-chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:12px -20px 14px;padding:0 20px 2px}
+.st-chips::-webkit-scrollbar{display:none}
+.st-chip{flex:none;display:inline-flex;align-items:center;gap:6px;border:1px solid #e3c999;background:var(--panel);color:var(--text);border-radius:999px;padding:8px 13px;font-size:14px;font-weight:600;cursor:pointer}
+.st-chip span{font-size:12px;font-weight:800;color:var(--muted)}
+.st-chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.st-chip.on span{color:var(--yellow)}
+.st-chip.warn:not(.on){border-color:#e0a100;background:#fff4d6}
+.st-chip.warn span{color:#8a5a00}
+.st-orders{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px}
+.st-order{display:block;background:var(--panel);border:1px solid #f1dcb4;border-left:5px solid #f1dcb4;border-radius:var(--r-lg);padding:12px 14px;color:var(--text);text-decoration:none}
+.st-order:hover{border-color:#e3c999}
+.st-order.verify{border-color:#e0a100;border-left-color:#e0a100;background:#fffaf0;box-shadow:0 2px 0 rgba(224,161,0,.25)}
+.st-order.s-ANNULEE,.st-order.s-LIVREE{opacity:.75}
+.st-order-top{display:flex;align-items:center;gap:8px}
+.st-ref{font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:.02em}
+.st-new{background:var(--brand);color:#fff;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;border-radius:999px;padding:2px 8px}
+.st-time{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
+.st-order-name{font-weight:700;font-size:16px;margin:4px 0 6px}
+.st-order-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px;color:var(--muted);flex-wrap:wrap}
+.st-order-bottom b{color:var(--text)}
+
+/* Pastilles de statut */
+.st-pill{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800;white-space:nowrap;background:#eee;color:#555}
+.st-pill.p-PAIEMENT_A_VERIFIER{background:#e0a100;color:var(--ink)}
+.st-pill.p-PAYEE{background:#e3f1e1;color:#2b6e2f}
+.st-pill.p-EN_PREPARATION{background:#ffe5cc;color:#9a4300}
+.st-pill.p-EN_LIVRAISON{background:#fbe3e3;color:var(--brand)}
+.st-pill.p-LIVREE{background:#e9ecef;color:#495057}
+.st-pill.p-ANNULEE{background:#ececec;color:#6c757d;text-decoration:line-through}
+
+/* ===== Détail d'une commande ===== */
+.st-back{display:inline-block;color:var(--brand-ink);font-weight:700;text-decoration:none;padding:4px 0;margin-bottom:8px}
+.st-detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+.st-detail-head .st-pill{font-size:13px;padding:5px 12px;margin-top:6px}
+.st-action{background:var(--panel);border:2px solid var(--ink);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:14px}
+.st-action.confirm{border-color:#e0a100;background:#fffaf0}
+.st-action.cancel{border-color:var(--bad)}
+.st-action p{margin:6px 0 0;font-size:15px}
+.st-action textarea{width:100%;min-height:80px;margin-top:8px;border:1px solid var(--line-2);border-radius:var(--r);padding:10px 12px;font:inherit;resize:vertical}
+.st-action-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:12px}
+.st-action-row .btn{flex:1;min-width:200px;font-size:16px;padding:14px 18px}
+.st-verify-hint{background:#fff4d6;border-radius:var(--r);padding:10px 12px;margin:0 0 4px!important}
+.st-text-btn{border:0;background:none;color:var(--muted);font-weight:700;font-size:14px;padding:8px 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.st-text-btn.danger{color:var(--bad)}
+.st-btn-danger{background:var(--bad);color:#fff}
+.st-btn-danger:disabled{opacity:.5}
+.st-err{color:var(--bad);font-weight:700}
+.st-since{font-size:12px;margin-top:8px!important}
+.st-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+.st-box{background:var(--panel);border:1px solid #f1dcb4;border-radius:var(--r-lg);padding:14px 16px}
+.st-box h2{font-family:var(--sans);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.st-box h3{font-size:14px;margin:12px 0 2px}
+.st-box p{margin:0}
+.st-big{font-size:19px;font-weight:800}
+.st-phone{font-size:16px;margin-top:2px!important}
+.st-links{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.st-link{display:inline-flex;flex-direction:column;justify-content:center;border:1.5px solid var(--ink);border-radius:var(--r);padding:9px 14px;font-weight:700;color:var(--ink);text-decoration:none}
+.st-link.wa{border-color:#1f9e55;color:#17834a}
+.st-link.maps{width:100%;border-color:var(--brand);color:var(--brand-ink)}
+.st-link small{font-weight:500;color:var(--muted);font-size:12px}
+.st-dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:15px}
+.st-dl dt{color:var(--muted)}
+.st-dl dd{margin:0;font-weight:600}
+.st-dl a{color:var(--brand-ink)}
+.st-note{font-size:13px;color:var(--muted);margin-top:10px!important}
+.st-items{grid-row:span 2}
+.st-items ul{list-style:none;margin:0;padding:0}
+.st-items li{display:grid;grid-template-columns:auto 1fr auto;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.st-qty{font-weight:800}
+.st-item small{display:block;color:var(--muted);font-size:13px}
+.st-item em{display:block;font-style:normal;font-size:13px;background:#fff4d6;border-radius:4px;padding:2px 6px;margin-top:3px}
+.st-amount{white-space:nowrap;font-weight:600}
+.st-total{display:flex;justify-content:space-between;padding-top:10px;font-size:16px}
+.st-total b{font-family:var(--display);font-size:20px}
+.st-history{list-style:none;margin:0;padding:0}
+.st-history li{position:relative;padding:0 0 12px 18px;border-left:2px solid var(--line);margin-left:5px}
+.st-history li:last-child{padding-bottom:0}
+.st-history li::before{content:"";position:absolute;left:-6px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--muted)}
+.st-history li.p-PAIEMENT_A_VERIFIER::before{background:#e0a100}
+.st-history li.p-PAYEE::before{background:#2f9e44}
+.st-history li.p-ANNULEE::before{background:var(--bad)}
+.st-history b{display:block;font-size:14px}
+.st-history span{font-size:13px;color:var(--muted)}
+.st-history em{display:block;font-style:normal;font-size:13px;margin-top:2px}
+
+@media (max-width:760px){
+  .st-grid{grid-template-columns:minmax(0,1fr)}
+  .st-items{grid-row:auto}
+}
+@media (max-width:640px){
+  .st-wrap{padding:0 14px}
+  .st-chips{margin:10px -14px 12px;padding:0 14px 2px}
+  .st-orders{grid-template-columns:minmax(0,1fr)}
+  .st-nav a{padding:6px 4px;font-size:14px}
+  .st-out{padding:6px 9px;font-size:12px}
+  /* Logo seul : la place va au lien Commandes, à son badge et à Déconnexion */
+  .st-top .st-brand > span:last-child{display:none}
+  .st-action-row .btn{min-width:0;width:100%}
 }

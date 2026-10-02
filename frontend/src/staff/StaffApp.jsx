@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
-import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { ROLE_LABEL, StaffProvider, useStaff } from './StaffContext.jsx';
 import { StaffScreen } from './StaffScreen.jsx';
 import Login from './pages/Login.jsx';
-import StaffHome from './pages/StaffHome.jsx';
+import { OrdersFeedProvider, useOrdersFeed } from './orders/OrdersFeed.jsx';
+import OrdersList from './orders/OrdersList.jsx';
+import OrderDetail from './orders/OrderDetail.jsx';
 import './staff.css';
 
 // Espace équipe, sous /equipe. Chargé à part (voir App.jsx) : le code n'est jamais
@@ -29,7 +31,9 @@ export default function StaffApp() {
         <Route path="connexion" element={<Login />} />
         <Route element={<RequireStaff />}>
           <Route element={<StaffLayout />}>
-            <Route index element={<StaffHome />} />
+            <Route index element={<Navigate to="commandes" replace />} />
+            <Route path="commandes" element={<OrdersList />} />
+            <Route path="commandes/:reference" element={<OrderDetail />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/equipe" replace />} />
@@ -56,18 +60,43 @@ function RequireStaff() {
 }
 
 function StaffLayout() {
+  return (
+    <OrdersFeedProvider>
+      <StaffShell />
+    </OrdersFeedProvider>
+  );
+}
+
+function StaffShell() {
   const { user, logout } = useStaff();
+  const { unseen, soundReady } = useOrdersFeed();
+  const { pathname } = useLocation();
+
+  // Chaque page s'ouvre en haut
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
   return (
     <div className="st-app">
       <header className="st-top">
         <div className="st-wrap">
-          <div className="st-brand"><span className="mark"><span>B</span></span><span><b>Belchicken</b><small>Espace équipe</small></span></div>
+          <Link to="/equipe/commandes" className="st-brand" style={{ color: 'inherit', textDecoration: 'none' }}>
+            <span className="mark"><span>B</span></span><span><b>Belchicken</b><small>Espace équipe</small></span>
+          </Link>
+          <nav className="st-nav" aria-label="Espace équipe">
+            <NavLink to="/equipe/commandes">
+              Commandes
+              {unseen.size > 0 && <span className="st-badge" aria-label={`${unseen.size} nouvelles`}>{unseen.size}</span>}
+            </NavLink>
+          </nav>
           <div className="st-user">
             <span className="st-name">{user.name}<small>{ROLE_LABEL[user.role]}</small></span>
-            <button type="button" className="st-out" onClick={logout}>Se déconnecter</button>
+            <button type="button" className="st-out" onClick={logout}>Déconnexion</button>
           </div>
         </div>
       </header>
+      {!soundReady && <p className="st-sound">Touchez l'écran une fois pour activer le son des nouvelles commandes.</p>}
       <main className="st-wrap st-main">
         <Outlet />
       </main>

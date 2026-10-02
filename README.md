@@ -165,6 +165,11 @@ Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (t
   `requireStaff()` (tout compte connecté) ou `requireStaff('PATRON')` (`src/middlewares/staff-auth.js`).
 - Session : jeton aléatoire dans un cookie `httpOnly` limité à `/api/staff`, valable 14 jours ; la base ne garde que son empreinte.
   Mots de passe hachés avec scrypt. 8 essais ratés par numéro (20 par adresse IP) toutes les 15 minutes.
+- Commandes (Patron et Opérateur) : `GET /api/staff/orders?status=EN_COURS|TOUTES|<statut>&q=<recherche>`,
+  `GET /api/staff/orders/:reference`, `POST /api/staff/orders/:reference/status` avec `{ from, to, reason }`.
+  `from` est le statut affiché à l'écran : si un collègue l'a changé entre-temps, l'API répond 409 au lieu d'écraser.
+- Statuts : `PAIEMENT_A_VERIFIER` → `PAYEE` → `EN_PREPARATION` → `EN_LIVRAISON` → `LIVREE`, ou `ANNULEE` avec un motif.
+  Historique dans la table `OrderStatusChange`.
 - Le site appelle `/api/staff` sur sa propre adresse : Vite relaie vers l'API en local (`vite.config.js`), Vercel en ligne
   (`frontend/vercel.json`, à mettre à jour si l'adresse Render change). Ainsi le cookie n'est pas bloqué par Safari.
 

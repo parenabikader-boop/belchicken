@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { newOrderReference } from '../utils/reference.js';
 import { priceItems } from './pricing.js';
+import { INITIAL_STATUS } from './order-status.js';
 import { notifyTeamNewOrder } from './whatsapp.service.js';
 
 export async function createOrder(input) {
@@ -27,6 +28,8 @@ export async function createOrder(input) {
     addressNote: input.addressNote ?? null,
     itemsTotal,
     items: { create: lines },
+    // Première ligne de l'historique : commande reçue, paiement à vérifier par l'équipe
+    statusChanges: { create: { toStatus: INITIAL_STATUS } },
   };
 
   // La référence est aléatoire : on réessaie en cas de collision (très improbable)

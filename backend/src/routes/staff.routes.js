@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { normalizePhone } from '../utils/phone.js';
 import { readSessionToken, requireStaff, sessionCookie } from '../middlewares/staff-auth.js';
 import { login, logout, toPublicStaff } from '../services/staff.service.js';
+import { staffOrdersRouter } from './staff-orders.routes.js';
 
 export const staffRouter = Router();
 
@@ -64,3 +65,5 @@ staffRouter.post('/logout', async (req, res, next) => {
 staffRouter.get('/me', requireStaff(), (req, res) => {
   res.json({ user: toPublicStaff(req.staff) });
 });
+
+staffRouter.use('/orders', staffOrdersRouter);

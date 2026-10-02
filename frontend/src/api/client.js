@@ -48,4 +48,13 @@ export const staffApi = {
   me: () => staffRequest('/me').then((d) => d.user),
   login: (phone, password) => staffRequest('/login', { method: 'POST', body: JSON.stringify({ phone, password }) }).then((d) => d.user),
   logout: () => staffRequest('/logout', { method: 'POST' }),
+  orders: ({ status, q } = {}) => {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (q) params.set('q', q);
+    return staffRequest(`/orders?${params}`);
+  },
+  order: (reference) => staffRequest(`/orders/${encodeURIComponent(reference)}`).then((d) => d.order),
+  setStatus: (reference, body) =>
+    staffRequest(`/orders/${encodeURIComponent(reference)}/status`, { method: 'POST', body: JSON.stringify(body) }).then((d) => d.order),
 };

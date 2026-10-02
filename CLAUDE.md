@@ -18,7 +18,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 - `backend/` est fait et testé (`npm test`) : menu, création de commande, alerte WhatsApp, nouveaux essais automatiques pendant le réveil de Neon (`src/lib/db-retry.js`). Voir `README.md` pour l'API.
 - `frontend/` est fait : Accueil `/`, Menu `/menu/:categorie`, Ma commande `/commande`, Vos informations `/valider`, Confirmation `/confirmation/:reference`, Infos pratiques `/infos`. Parcours complet testé avec une vraie commande en base.
 - `npm run dev` à la racine lance le backend et le frontend ensemble.
-- Espace équipe commencé : connexion (rôles PATRON / OPERATEUR, `npm run equipe:patron`), pages sous `/equipe` (`frontend/src/staff/`, chargées à part), API sous `/api/staff` protégée par `requireStaff()`. Voir README.md. Prochaine page : Commandes.
+- Espace équipe commencé : connexion (rôles PATRON / OPERATEUR, `npm run equipe:patron`), pages sous `/equipe` (`frontend/src/staff/`, chargées à part), API sous `/api/staff` protégée par `requireStaff()`. Page Commandes faite (liste mise à jour toutes les 5 s, son et badge, filtres, recherche, détail, changement de statut). Voir README.md.
 - `backend/prisma/menu-data.js` contient le menu officiel complet. Ne pas inventer de plats ni de prix.
 - Photos : plats dans `frontend/public/menu/` (provisoires, de mauvaise qualité), accueil dans `frontend/public/accueil/`, logo dans `frontend/public/brand/`. Sources dans `docs/photos/` et `docs/`.
 - Une seule ambiance sur tout le site (fond crème, rouge Belchicken, brun foncé) : le client ne veut pas de couleur par catégorie. Chaque catégorie du menu se distingue par son petit titre, sa photo vedette (`frontend/src/utils/visuals.js`, pour l'instant en dur) et la forme de ses cartes.
@@ -30,6 +30,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 - Ne pas modifier le schéma Prisma ou l'API sans le signaler clairement.
 - Paiement : uniquement Orange Money ou Moov Money, payé avant la livraison. Plus d'espèces : `ESPECES` reste dans l'enum Prisma (pas de migration) mais l'API le refuse, et le site n'en parle nulle part.
 - Mobile money : le client donne seulement le numéro qui a payé, plus de numéro de transaction. L'équipe vérifie le paiement avec ce numéro et le montant. La colonne `paymentReference` (et sa contrainte unique) reste en base, vide, en attendant une future migration qui la supprimera.
+- Statuts de commande : `PAIEMENT_A_VERIFIER` (départ de toute nouvelle commande) → `PAYEE` → `EN_PREPARATION` → `EN_LIVRAISON` → `LIVREE`, et `ANNULEE` (motif obligatoire) à tout moment avant `LIVREE`. Une étape à la fois, jamais de retour en arrière. `PAYEE` est toujours posé à la main par l'équipe après vérification sur le téléphone marchand, jamais automatiquement. Chaque changement est enregistré dans `OrderStatusChange` (qui, quand, motif). Règles dans `backend/src/services/order-status.js`.
 - Travailler étape par étape et vérifier que ça tourne avant de passer à la suite.
 
 ## Points en attente du client
@@ -56,7 +57,7 @@ Ordre de construction : connexion, commandes, menu et photos, tableau de bord.
 2. **Commandes.**
    - Liste en temps réel, avec une alerte à chaque nouvelle commande.
    - Détail complet : client, téléphone, plats, total, numéro ayant payé, lien Google Maps de la position, repères.
-   - Statut modifiable : Nouvelle, Payée, En livraison, Livrée, Annulée. L'enum Prisma actuel (`EN_ATTENTE`, `CONFIRMEE`, `EN_LIVRAISON`, `LIVREE`, `ANNULEE`) n'a pas de statut « Payée » : migration à prévoir et à signaler.
+   - Statut modifiable (fait) : voir les statuts dans « Règles ».
    - Recherche par référence, nom ou téléphone.
 3. **Menu et photos.**
    - Créer, modifier et supprimer plats et catégories : nom, numéro, description, composition, prix, formules, petit titre, ordre. Le petit titre et la photo vedette des catégories passent alors de `visuals.js` à la base.

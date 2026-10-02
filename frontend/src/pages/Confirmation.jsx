@@ -8,8 +8,9 @@ import { formatPrice } from '../utils/format.js';
 
 const METHOD_LABEL = { ORANGE_MONEY: 'Orange Money', MOOV_MONEY: 'Moov Money' };
 const STATUS_LABEL = {
-  EN_ATTENTE: 'Paiement en cours de vérification',
-  CONFIRMEE: 'Confirmée',
+  PAIEMENT_A_VERIFIER: 'Paiement en cours de vérification',
+  PAYEE: 'Paiement reçu',
+  EN_PREPARATION: 'En préparation',
   EN_LIVRAISON: 'En livraison',
   LIVREE: 'Livrée',
   ANNULEE: 'Annulée',
