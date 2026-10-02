@@ -7,6 +7,7 @@ import { login, logout, toPublicStaff } from '../services/staff.service.js';
 import { staffOrdersRouter } from './staff-orders.routes.js';
 import { staffMenuRouter } from './staff-menu.routes.js';
 import { staffHomeRouter } from './staff-home.routes.js';
+import { staffDashboardRouter } from './staff-dashboard.routes.js';
 
 export const staffRouter = Router();
 
@@ -71,3 +72,4 @@ staffRouter.get('/me', requireStaff(), (req, res) => {
 staffRouter.use('/orders', staffOrdersRouter);
 staffRouter.use('/menu', staffMenuRouter);
 staffRouter.use('/home', staffHomeRouter);
+staffRouter.use('/dashboard', staffDashboardRouter);

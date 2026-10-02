@@ -84,5 +84,7 @@ export const staffApi = {
   getHomePhotos: () => staffRequest('/home').then((d) => d.photos),
   setHomePhoto: (slot, blob) =>
     staffRequest(`/home/${slot}/photo`, { method: 'PUT', body: blob, headers: { 'Content-Type': blob.type || 'image/jpeg' } }).then((d) => d.photo),
+  // Tableau de bord (Patron) : period = day | week | month, offset = 0 (en cours), -1 (précédente)…
+  getDashboard: (period, offset) => staffRequest(`/dashboard?period=${period}&offset=${offset}`),
   resetHomePhoto: (slot) => staffRequest(`/home/${slot}/photo`, { method: 'DELETE' }).then((d) => d.photo),
 };

@@ -185,6 +185,10 @@ Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (t
 - Photos de l'accueil (Patron) : `GET /api/staff/home`, `PUT /api/staff/home/:slot/photo` (cases 1 à 3, mêmes règles),
   `DELETE /api/staff/home/:slot/photo` remet la photo d'origine (`homePhotos` de `prisma/menu-data.js`).
   Le site les lit avec `GET /api/home` (table `HomePhoto`) ; page `/equipe/accueil` (`frontend/src/staff/home/`).
+- Tableau de bord (Patron) : `GET /api/staff/dashboard?period=day|week|month&offset=0|-1|…`, page `/equipe/tableau-de-bord`.
+  Chiffre d'affaires = commandes `PAYEE`, `EN_PREPARATION`, `EN_LIVRAISON`, `LIVREE` seulement. La période en cours est comparée
+  au même moment de la précédente (aujourd'hui jusqu'à 14 h contre hier jusqu'à 14 h). Heure du Burkina = UTC.
+  Calculs dans `src/services/dashboard.js` (testés), lecture en base dans `src/services/dashboard.service.js`.
 - Statuts : `PAIEMENT_A_VERIFIER` → `PAYEE` → `EN_PREPARATION` → `EN_LIVRAISON` → `LIVREE`, ou `ANNULEE` avec un motif.
   Historique dans la table `OrderStatusChange`.
 - Le site appelle `/api/staff` sur sa propre adresse : Vite relaie vers l'API en local (`vite.config.js`), Vercel en ligne
