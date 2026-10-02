@@ -14,7 +14,16 @@ export const env = {
     templateLang: process.env.WHATSAPP_TEMPLATE_LANG || 'fr',
     teamNumbers: list(process.env.WHATSAPP_TEAM_NUMBERS),
   },
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    apiKey: process.env.CLOUDINARY_API_KEY || '',
+    apiSecret: process.env.CLOUDINARY_API_SECRET || '',
+    folder: process.env.CLOUDINARY_FOLDER || 'belchicken',
+  },
 };
 
 export const whatsappEnabled = () =>
   Boolean(env.whatsapp.token && env.whatsapp.phoneNumberId && env.whatsapp.teamNumbers.length);
+
+export const cloudinaryEnabled = () =>
+  Boolean(env.cloudinary.cloudName && env.cloudinary.apiKey && env.cloudinary.apiSecret);

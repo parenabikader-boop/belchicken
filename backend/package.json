@@ -16,13 +16,15 @@
     "db:deploy": "node scripts/migrate-deploy.js",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "equipe:patron": "node scripts/create-patron.js"
+    "equipe:patron": "node scripts/create-patron.js",
+    "cloudinary:check": "node scripts/cloudinary-check.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
+    "cloudinary": "^2.11.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
