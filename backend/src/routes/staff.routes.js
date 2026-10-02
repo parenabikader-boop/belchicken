@@ -5,6 +5,7 @@ import { normalizePhone } from '../utils/phone.js';
 import { readSessionToken, requireStaff, sessionCookie } from '../middlewares/staff-auth.js';
 import { login, logout, toPublicStaff } from '../services/staff.service.js';
 import { staffOrdersRouter } from './staff-orders.routes.js';
+import { staffMenuRouter } from './staff-menu.routes.js';
 
 export const staffRouter = Router();
 
@@ -67,3 +68,4 @@ staffRouter.get('/me', requireStaff(), (req, res) => {
 });
 
 staffRouter.use('/orders', staffOrdersRouter);
+staffRouter.use('/menu', staffMenuRouter);

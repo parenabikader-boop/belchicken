@@ -153,3 +153,96 @@
   .st-top .st-brand > span:last-child{display:none}
   .st-action-row .btn{min-width:0;width:100%}
 }
+
+/* ===== Menu (liste, fiches plat et catégorie) ===== */
+.mn-head-actions{display:flex;gap:8px}
+.mn-btn{padding:9px 14px;font-size:14px}
+.mn-intro{margin:-6px 0 12px}
+.mn-notice{margin-bottom:12px}
+.mn-hidden-tag{font-style:normal;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}
+.st-chip.on .mn-hidden-tag{color:#cdb8aa}
+.mn-cat{margin-top:4px}
+.mn-cat-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:6px 0 10px}
+.mn-cat-head h2{font-family:var(--display);font-size:22px;font-weight:800;margin:0}
+.mn-script{font-family:var(--script);color:var(--brand);font-size:18px}
+.mn-cat-actions{display:flex;align-items:center;gap:8px}
+.mn-warn{background:#fff4d6;border-radius:var(--r);padding:6px 10px;font-size:14px;font-weight:600;margin:6px 0 0;display:inline-block}
+.mn-section{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--brand-ink);margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid #e3c999}
+.mn-section span{text-transform:none;letter-spacing:0;font-weight:600;color:var(--muted)}
+.mn-none{margin:4px 0 8px}
+.mn-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.mn-row{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--panel);border:1px solid #f1dcb4;border-radius:var(--r-lg);padding:8px 12px 8px 8px}
+.mn-row.off{background:#f6f1ea;border-style:dashed}
+.mn-row.off .mn-th img{filter:grayscale(1);opacity:.6}
+.mn-row.off .mn-info b{color:var(--muted)}
+.mn-th{width:56px;height:56px;border-radius:8px;overflow:hidden;background:var(--panel-2);display:grid;place-items:center}
+.mn-th img{width:100%;height:100%;object-fit:cover}
+.mn-th span{font-size:10px;color:var(--faint);text-align:center;padding:2px}
+.mn-th.big{width:160px;height:120px;margin-bottom:8px}
+.mn-info b{display:block;font-size:16px;line-height:1.25}
+.mn-num{display:inline-block;background:var(--brand);color:#fff;font-size:11px;font-weight:800;border-radius:4px;padding:1px 5px;margin-right:6px;vertical-align:2px}
+.mn-info small{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.mn-info .mn-in{color:var(--brand-ink);font-weight:600}
+.mn-actions{display:flex;align-items:center;gap:14px}
+.mn-edit{display:flex;align-items:center;gap:8px}
+.mn-link{font-weight:700;color:var(--brand-ink);font-size:14px;padding:8px 4px}
+
+/* Interrupteur de disponibilité : grand, pour le doigt */
+.mn-switch{position:relative;display:inline-flex;align-items:center;gap:8px;cursor:pointer;min-height:44px;user-select:none}
+.mn-switch input{position:absolute;opacity:0;width:52px;height:30px;margin:0;cursor:pointer}
+.mn-track{width:52px;height:30px;border-radius:999px;background:#c9b8aa;position:relative;transition:background .15s;flex:none}
+.mn-track::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.mn-switch input:checked + .mn-track{background:#2f9e44}
+.mn-switch input:checked + .mn-track::after{transform:translateX(22px)}
+.mn-switch input:focus-visible + .mn-track{outline:2px solid var(--brand);outline-offset:2px}
+.mn-switch.saving{opacity:.6}
+.mn-state{font-size:13px;font-weight:700;width:76px}
+.mn-switch input:not(:checked) ~ .mn-state{color:var(--bad)}
+.mn-switch input:checked ~ .mn-state{color:#2b6e2f}
+
+.mn-arrows{display:inline-flex;border:1px solid var(--line-2);border-radius:var(--r);overflow:hidden;flex:none}
+.mn-arrows button{width:34px;height:34px;border:0;background:var(--panel);font-size:16px;font-weight:700;cursor:pointer;color:var(--text)}
+.mn-arrows button + button{border-left:1px solid var(--line-2)}
+.mn-arrows button:disabled{color:#cbbdb2;cursor:default}
+
+.mn-archived{margin-top:28px;background:var(--panel);border:1px solid #f1dcb4;border-radius:var(--r-lg);padding:12px 16px}
+.mn-archived summary{font-weight:700;cursor:pointer}
+.mn-archived ul{list-style:none;margin:8px 0 0;padding:0}
+.mn-archived li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
+
+/* Fiches */
+.mn-form{max-width:760px}
+.mn-box{margin-top:14px}
+.mn-box h2 .mn-req{color:var(--bad);font-style:normal}
+.mn-help{margin:-4px 0 10px}
+.mn-form select{border:1px solid var(--line-2);border-radius:var(--r);padding:11px 13px;min-height:46px;background:var(--panel);font:inherit}
+.mn-form select:focus{border-color:var(--brand);outline:2px solid var(--brand-line)}
+.mn-variants{display:grid;gap:10px;margin-bottom:6px}
+.mn-variant{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 130px 40px;gap:10px;align-items:start;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.mn-groupline{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto 40px}
+.mn-groupline .mn-arrows,.mn-variant .mn-remove{margin-top:29px}
+.mn-price small{font-size:12px;color:var(--muted)}
+.mn-remove{width:40px;height:46px;border:1px solid var(--line-2);border-radius:var(--r);background:var(--panel);font-size:22px;color:var(--bad);cursor:pointer}
+.mn-remove:disabled{color:#cbbdb2;cursor:default}
+.mn-check{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;align-self:end;min-height:46px;flex-wrap:wrap}
+.mn-check input{width:20px;height:20px;accent-color:var(--brand)}
+.mn-check small{flex-basis:100%;font-weight:400;color:var(--muted);font-size:13px;margin-top:-6px;padding-left:30px}
+.mn-check.full{grid-column:1/-1}
+.mn-photo p{margin:0}
+.mn-bar{display:flex;gap:10px;margin-top:18px}
+.mn-bar .btn{min-width:160px}
+.mn-danger{margin-top:18px}
+
+@media (max-width:640px){
+  .mn-head-actions .mn-btn{padding:8px 10px}
+  .mn-row{grid-template-columns:48px minmax(0,1fr);row-gap:6px}
+  .mn-th{width:48px;height:48px}
+  .mn-actions{grid-column:1/-1;justify-content:space-between;border-top:1px solid var(--line);padding-top:4px}
+  .mn-cat-head{flex-direction:column}
+  .mn-variant{grid-template-columns:minmax(0,1fr) 110px 40px}
+  .mn-variant > .f:nth-child(2){grid-column:1/-1;grid-row:2}
+  .mn-groupline{grid-template-columns:minmax(0,1fr) auto 40px}
+  .mn-groupline > .f:nth-child(2){grid-column:1/-1;grid-row:2}
+  .mn-form .fields{grid-template-columns:minmax(0,1fr)}
+  .mn-bar .btn{flex:1;min-width:0}
+}

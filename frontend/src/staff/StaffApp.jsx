@@ -6,6 +6,9 @@ import Login from './pages/Login.jsx';
 import { OrdersFeedProvider, useOrdersFeed } from './orders/OrdersFeed.jsx';
 import OrdersList from './orders/OrdersList.jsx';
 import OrderDetail from './orders/OrderDetail.jsx';
+import MenuAdmin from './menu/MenuAdmin.jsx';
+import ProductForm from './menu/ProductForm.jsx';
+import CategoryForm from './menu/CategoryForm.jsx';
 import './staff.css';
 
 // Espace équipe, sous /equipe. Chargé à part (voir App.jsx) : le code n'est jamais
@@ -34,6 +37,13 @@ export default function StaffApp() {
             <Route index element={<Navigate to="commandes" replace />} />
             <Route path="commandes" element={<OrdersList />} />
             <Route path="commandes/:reference" element={<OrderDetail />} />
+            <Route path="menu" element={<MenuAdmin />} />
+            <Route element={<RequirePatron />}>
+              <Route path="menu/plats/nouveau" element={<ProductForm />} />
+              <Route path="menu/plats/:id" element={<ProductForm />} />
+              <Route path="menu/categories/nouvelle" element={<CategoryForm />} />
+              <Route path="menu/categories/:id" element={<CategoryForm />} />
+            </Route>
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/equipe" replace />} />
@@ -57,6 +67,12 @@ function RequireStaff() {
   }
   if (status === 'anon') return <Navigate to={`/equipe/connexion?suite=${encodeURIComponent(pathname)}`} replace />;
   return <Outlet />;
+}
+
+// Pages réservées au Patron (l'API le vérifie aussi) : l'Opérateur revient à la liste du menu
+function RequirePatron() {
+  const { user } = useStaff();
+  return user.role === 'PATRON' ? <Outlet /> : <Navigate to="/equipe/menu" replace />;
 }
 
 function StaffLayout() {
@@ -89,6 +105,7 @@ function StaffShell() {
               Commandes
               {unseen.size > 0 && <span className="st-badge" aria-label={`${unseen.size} nouvelles`}>{unseen.size}</span>}
             </NavLink>
+            <NavLink to="/equipe/menu">Menu</NavLink>
           </nav>
           <div className="st-user">
             <span className="st-name">{user.name}<small>{ROLE_LABEL[user.role]}</small></span>

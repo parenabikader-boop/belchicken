@@ -57,4 +57,19 @@ export const staffApi = {
   order: (reference) => staffRequest(`/orders/${encodeURIComponent(reference)}`).then((d) => d.order),
   setStatus: (reference, body) =>
     staffRequest(`/orders/${encodeURIComponent(reference)}/status`, { method: 'POST', body: JSON.stringify(body) }).then((d) => d.order),
+
+  // Menu : disponibilité pour toute l'équipe, le reste pour le Patron (vérifié par l'API)
+  menu: () => staffRequest('/menu'),
+  setAvailability: (id, isAvailable) =>
+    staffRequest(`/menu/products/${id}/availability`, { method: 'PATCH', body: JSON.stringify({ isAvailable }) }).then((d) => d.product),
+  createProduct: (body) => staffRequest('/menu/products', { method: 'POST', body: JSON.stringify(body) }).then((d) => d.product),
+  updateProduct: (id, body) => staffRequest(`/menu/products/${id}`, { method: 'PUT', body: JSON.stringify(body) }).then((d) => d.product),
+  deleteProduct: (id) => staffRequest(`/menu/products/${id}`, { method: 'DELETE' }),
+  restoreProduct: (id) => staffRequest(`/menu/products/${id}/restore`, { method: 'POST' }).then((d) => d.product),
+  reorderProducts: (categoryId, ids) =>
+    staffRequest(`/menu/categories/${categoryId}/products/order`, { method: 'PUT', body: JSON.stringify({ ids }) }),
+  createCategory: (body) => staffRequest('/menu/categories', { method: 'POST', body: JSON.stringify(body) }).then((d) => d.id),
+  updateCategory: (id, body) => staffRequest(`/menu/categories/${id}`, { method: 'PUT', body: JSON.stringify(body) }).then((d) => d.id),
+  deleteCategory: (id) => staffRequest(`/menu/categories/${id}`, { method: 'DELETE' }),
+  reorderCategories: (ids) => staffRequest('/menu/categories/order', { method: 'PUT', body: JSON.stringify({ ids }) }),
 };

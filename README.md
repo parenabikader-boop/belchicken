@@ -169,6 +169,12 @@ Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (t
 - Commandes (Patron et Opérateur) : `GET /api/staff/orders?status=EN_COURS|TOUTES|<statut>&q=<recherche>`,
   `GET /api/staff/orders/:reference`, `POST /api/staff/orders/:reference/status` avec `{ from, to, reason }`.
   `from` est le statut affiché à l'écran : si un collègue l'a changé entre-temps, l'API répond 409 au lieu d'écraser.
+- Menu (`/equipe/menu`) : `GET /api/staff/menu` et `PATCH /api/staff/menu/products/:id/availability` `{ isAvailable }`
+  pour le Patron et l'Opérateur. Réservé au Patron : `POST /api/staff/menu/products`, `PUT|DELETE /api/staff/menu/products/:id`,
+  `POST /api/staff/menu/products/:id/restore`, `POST /api/staff/menu/categories`, `PUT|DELETE /api/staff/menu/categories/:id`,
+  `PUT /api/staff/menu/categories/order` et `PUT /api/staff/menu/categories/:id/products/order` avec `{ ids }`.
+  Supprimer un plat jamais commandé le supprime ; un plat déjà commandé est retiré du menu (`archivedAt`) et peut être remis.
+  Une catégorie ne se supprime que vide ; sinon on la masque (`isActive`). Règles et validations : `src/services/menu-edit.js`.
 - Statuts : `PAIEMENT_A_VERIFIER` → `PAYEE` → `EN_PREPARATION` → `EN_LIVRAISON` → `LIVREE`, ou `ANNULEE` avec un motif.
   Historique dans la table `OrderStatusChange`.
 - Le site appelle `/api/staff` sur sa propre adresse : Vite relaie vers l'API en local (`vite.config.js`), Vercel en ligne
