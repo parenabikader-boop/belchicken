@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatPrice } from '../../utils/format.js';
+import { photoUrl } from '../../utils/visuals.js';
 import { useStaff } from '../StaffContext.jsx';
 
 // Menu de l'espace équipe. Toute l'équipe : disponibilité d'un plat en un clic.
@@ -241,7 +242,7 @@ function ProductRows({ items, isPatron, onToggle, onMove, showCategory }) {
     <ul className="mn-list">
       {items.map(({ p, c }, i) => (
         <li key={p.id} className={`mn-row${p.isAvailable ? '' : ' off'}`}>
-          <div className="mn-th">{p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" /> : <span>Photo à venir</span>}</div>
+          <div className="mn-th">{p.imageUrl ? <img src={photoUrl(p.imageUrl, 160)} alt="" loading="lazy" /> : <span>Photo à venir</span>}</div>
           <div className="mn-info">
             <b>{p.number != null && <span className="mn-num">N° {p.number}</span>}{p.name}</b>
             <small>{p.variants.map((v) => (p.variants.length > 1 ? `${v.label} ${formatPrice(v.price)}` : formatPrice(v.price))).join(' · ')}</small>

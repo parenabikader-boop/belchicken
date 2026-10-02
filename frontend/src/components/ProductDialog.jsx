@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MAX_QTY, useCart } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils/format.js';
-import { photoBg } from '../utils/visuals.js';
+import { photoBg, sizedPhoto } from '../utils/visuals.js';
 
 // Fiche produit : formule, choix éventuel, note pour la cuisine, quantité.
 export default function ProductDialog({ product: p, onClose }) {
@@ -38,7 +38,7 @@ export default function ProductDialog({ product: p, onClose }) {
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT">
         <div className="ph" style={{ background: photoBg(p.imageUrl) }}>
-          {p.imageUrl && <img src={p.imageUrl} alt={p.name} />}
+          {p.imageUrl && <img {...sizedPhoto(p.imageUrl, 'dialog')} alt={p.name} />}
         </div>
         <div className="in">
           <div className="top">

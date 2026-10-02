@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
+import PhotoPicker from './PhotoPicker.jsx';
 
 const newGroup = () => ({ key: Math.random().toString(36).slice(2), name: '', note: '' });
 
@@ -119,11 +120,19 @@ export default function CategoryForm() {
       </section>
 
       {!isNew && (
-        <section className="st-box mn-box mn-photo">
-          <h2>Photo vedette du bandeau</h2>
-          <div className="mn-th big">{form.heroImageUrl ? <img src={form.heroImageUrl} alt="" /> : <span>Aucune photo</span>}</div>
-          <p className="st-muted">Le changement de photo arrive à l'étape suivante.</p>
-        </section>
+        <PhotoPicker
+          title="Photo vedette du bandeau"
+          shape="banner"
+          currentUrl={form.heroImageUrl}
+          onSave={async (blob) => {
+            const c = await staffApi.setCategoryPhoto(id, blob);
+            setForm((f) => ({ ...f, heroImageUrl: c.heroImageUrl }));
+          }}
+          onRemove={async () => {
+            await staffApi.removeCategoryPhoto(id);
+            setForm((f) => ({ ...f, heroImageUrl: null }));
+          }}
+        />
       )}
 
       <section className="st-box mn-box">

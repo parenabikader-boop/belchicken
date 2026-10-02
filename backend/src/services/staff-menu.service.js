@@ -3,6 +3,7 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { planVariants, sameItems, slugify, uniqueSlug } from './menu-edit.js';
+import { deletePhoto, uploadPhoto } from './photo.service.js';
 
 const variantSelect = { id: true, code: true, label: true, subLabel: true, price: true, position: true };
 
@@ -165,6 +166,7 @@ export async function deleteProduct(id) {
   const ordered = await prisma.orderItem.count({ where: { productId: product.id } });
   if (ordered === 0) {
     await prisma.product.delete({ where: { id: product.id } });
+    await deletePhoto(product.imagePublicId);
     return { result: 'SUPPRIME' };
   }
   await prisma.product.update({ where: { id: product.id }, data: { archivedAt: new Date() } });
@@ -255,6 +257,7 @@ export async function deleteCategory(id) {
     throw new AppError(409, 'Cette catégorie garde des plats déjà commandés (retirés du menu). Masquez-la plutôt.', 'CATEGORIE_NON_VIDE');
   }
   await prisma.category.delete({ where: { id: category.id } });
+  await deletePhoto(category.heroImagePublicId);
 }
 
 export async function reorderCategories(ids) {
@@ -263,4 +266,50 @@ export async function reorderCategories(ids) {
     throw new AppError(409, 'Le menu a changé entre-temps. Rechargez la page.', 'ORDRE_PERIME');
   }
   await prisma.$transaction(ids.map((id, position) => prisma.category.update({ where: { id }, data: { position } })));
+}
+
+// ─── Photos : Patron ───
+// La nouvelle photo est enregistrée avant de supprimer l'ancienne : en cas d'échec, rien n'est perdu.
+
+export async function setProductPhoto(id, buffer) {
+  const product = await findProduct(id);
+  const photo = await uploadPhoto(buffer, 'plats');
+  try {
+    await prisma.product.update({ where: { id: product.id }, data: { imageUrl: photo.url, imagePublicId: photo.publicId } });
+  } catch (e) {
+    await deletePhoto(photo.publicId);
+    throw e;
+  }
+  await deletePhoto(product.imagePublicId);
+  return readProduct(product.id);
+}
+
+export async function removeProductPhoto(id) {
+  const product = await findProduct(id);
+  await prisma.product.update({ where: { id: product.id }, data: { imageUrl: null, imagePublicId: null } });
+  await deletePhoto(product.imagePublicId);
+  return readProduct(product.id);
+}
+
+const toPhoto = (c) => ({ id: c.id, heroImageUrl: c.heroImageUrl });
+
+export async function setCategoryPhoto(id, buffer) {
+  const category = await findCategory(id);
+  const photo = await uploadPhoto(buffer, 'categories');
+  let updated;
+  try {
+    updated = await prisma.category.update({ where: { id: category.id }, data: { heroImageUrl: photo.url, heroImagePublicId: photo.publicId } });
+  } catch (e) {
+    await deletePhoto(photo.publicId);
+    throw e;
+  }
+  await deletePhoto(category.heroImagePublicId);
+  return toPhoto(updated);
+}
+
+export async function removeCategoryPhoto(id) {
+  const category = await findCategory(id);
+  const updated = await prisma.category.update({ where: { id: category.id }, data: { heroImageUrl: null, heroImagePublicId: null } });
+  await deletePhoto(category.heroImagePublicId);
+  return toPhoto(updated);
 }

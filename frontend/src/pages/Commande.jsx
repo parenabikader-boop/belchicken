@@ -3,7 +3,7 @@ import { TunnelHead } from '../components/PageParts.jsx';
 import { useCart, useCartDetails, MAX_QTY } from '../context/CartContext.jsx';
 import { useMenu } from '../context/MenuContext.jsx';
 import { formatPrice, plural } from '../utils/format.js';
-import { photoBg } from '../utils/visuals.js';
+import { photoBg, sizedPhoto } from '../utils/visuals.js';
 
 function EmptyCart() {
   return (
@@ -23,7 +23,7 @@ function CartLine({ item }) {
   const { product: p, quantity } = item;
   return (
     <div className="cp-line">
-      <div className="th" style={{ background: photoBg(p.imageUrl) }}>{p.imageUrl && <img src={p.imageUrl} alt="" />}</div>
+      <div className="th" style={{ background: photoBg(p.imageUrl) }}>{p.imageUrl && <img {...sizedPhoto(p.imageUrl, 'thumb')} alt="" />}</div>
       <div>
         <b>{p.number != null && `N° ${p.number} · `}{p.name}</b>
         {item.options && <div className="v">{item.options}</div>}

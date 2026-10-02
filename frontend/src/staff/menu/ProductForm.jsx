@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatPrice } from '../../utils/format.js';
+import PhotoPicker from './PhotoPicker.jsx';
 
 const lines = (text) => text.split('\n').map((s) => s.trim()).filter(Boolean);
 // "5 500" -> 5500 ; autre chose est envoyé tel quel pour que l'API explique l'erreur
@@ -91,9 +92,14 @@ export default function ProductForm() {
       variants: form.variants.map((v) => ({ ...(v.id ? { id: v.id } : {}), label: v.label, subLabel: v.subLabel, price: toPrice(v.price) })),
     };
     try {
-      if (isNew) await staffApi.createProduct(body);
-      else await staffApi.updateProduct(id, body);
-      navigate(backTo, { replace: true });
+      if (isNew) {
+        // Le plat existe : on reste sur sa fiche pour ajouter sa photo
+        const created = await staffApi.createProduct(body);
+        navigate(`/equipe/menu/plats/${created.id}?nouveau=1`, { replace: true });
+      } else {
+        await staffApi.updateProduct(id, body);
+        navigate(backTo, { replace: true });
+      }
     } catch (err) {
       setError(err);
       setSaving(false);
@@ -119,6 +125,27 @@ export default function ProductForm() {
       {!isNew && !form.isAvailable && <p className="mn-warn">Ce plat est actuellement indisponible sur le site.</p>}
 
       {error && <div className="alert err" role="alert" style={{ margin: '12px 0' }}><span>{error.message}</span></div>}
+      {!isNew && params.get('nouveau') && !error && (
+        <div className="alert ok" role="status" style={{ margin: '12px 0' }}><span>Plat ajouté au menu. Ajoutez maintenant sa photo.</span></div>
+      )}
+
+      {isNew ? (
+        <p className="st-muted mn-photo-later">Photo : vous pourrez l'ajouter juste après avoir enregistré le plat.</p>
+      ) : (
+        <PhotoPicker
+          title="Photo du plat"
+          currentUrl={form.imageUrl}
+          emptyLabel="Photo à venir"
+          onSave={async (blob) => {
+            const p = await staffApi.setProductPhoto(id, blob);
+            setForm((f) => ({ ...f, imageUrl: p.imageUrl }));
+          }}
+          onRemove={async () => {
+            await staffApi.removeProductPhoto(id);
+            setForm((f) => ({ ...f, imageUrl: null }));
+          }}
+        />
+      )}
 
       <section className="st-box mn-box">
         <h2>Le plat</h2>
@@ -209,14 +236,6 @@ export default function ProductForm() {
           </div>
         </div>
       </section>
-
-      {!isNew && (
-        <section className="st-box mn-box mn-photo">
-          <h2>Photo</h2>
-          <div className="mn-th big">{form.imageUrl ? <img src={form.imageUrl} alt="" /> : <span>Photo à venir</span>}</div>
-          <p className="st-muted">Le changement de photo arrive à l'étape suivante.</p>
-        </section>
-      )}
 
       <div className="mn-bar">
         <button type="submit" className="btn btn-p" disabled={saving}>{saving ? 'Enregistrement…' : isNew ? 'Ajouter le plat' : 'Enregistrer'}</button>

@@ -12,6 +12,31 @@ export const PHOTO_BG = {
 // Visuels au format paysage, affichés en entier plutôt que recadrés
 const WIDE = ['chefs', 'boneless', 'choice', 'xl', 'special', 'fuego', 'pieces', 'rice_belicious'];
 
+// Photos Cloudinary : taille et format choisis à la demande (WebP/AVIF selon le navigateur, qualité automatique).
+// Les photos d'origine (/menu/…, /accueil/…) sont servies telles quelles.
+export const photoUrl = (url, width) =>
+  url && url.includes('res.cloudinary.com/') && url.includes('/upload/')
+    ? url.replace('/upload/', `/upload/f_auto,q_auto,c_limit,w_${width}/`)
+    : url;
+
+// Attributs <img> en plusieurs tailles : le navigateur choisit selon l'écran (petite photo sur téléphone).
+// widths : tailles proposées en px ; sizes : largeur affichée (syntaxe HTML « sizes »).
+const isCloudinary = (url) => url && url.includes('res.cloudinary.com/') && url.includes('/upload/');
+export const photoProps = (url, widths, sizes) =>
+  isCloudinary(url)
+    ? { src: photoUrl(url, widths[widths.length - 1]), srcSet: widths.map((w) => `${photoUrl(url, w)} ${w}w`).join(', '), sizes }
+    : { src: url };
+
+// Tailles du site public
+export const PHOTO_SIZES = {
+  card: [[320, 480, 720, 960], '(max-width: 640px) 92vw, (max-width: 1100px) 45vw, 300px'],
+  row: [[160, 320], '110px'],
+  dialog: [[480, 720, 960, 1200], '(max-width: 760px) 100vw, 450px'],
+  banner: [[400, 700, 1000, 1300], '(max-width: 640px) 50vw, 46vw'],
+  thumb: [[160], '80px'],
+};
+export const sizedPhoto = (url, kind) => photoProps(url, ...PHOTO_SIZES[kind]);
+
 // "/menu/finest.jpg" -> "finest"
 export const photoKey = (url) => (url ? url.split('/').pop().replace(/\.\w+$/, '') : null);
 export const photoBg = (url) => PHOTO_BG[photoKey(url)] || 'var(--panel-2)';

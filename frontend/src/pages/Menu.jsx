@@ -5,7 +5,7 @@ import ProductCard from '../components/ProductCard.jsx';
 import ProductDialog from '../components/ProductDialog.jsx';
 import OrderBar from '../components/OrderBar.jsx';
 import { searchProducts } from '../utils/product.js';
-import { cardLayout, categoryBanner } from '../utils/visuals.js';
+import { cardLayout, categoryBanner, sizedPhoto } from '../utils/visuals.js';
 
 const SearchIcon = ({ size }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -127,7 +127,7 @@ function CategoryBanner({ category: c }) {
           <h1>{c.name}</h1>
           {c.description && <p>{c.description}</p>}
         </div>
-        {banner?.photo && <img className={`cat-banner-ph${banner.small ? ' small' : ''}`} src={banner.photo} alt="" />}
+        {banner?.photo && <img className={`cat-banner-ph${banner.small ? ' small' : ''}`} {...sizedPhoto(banner.photo, 'banner')} alt="" />}
       </div>
     </div>
   );

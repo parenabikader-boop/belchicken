@@ -72,4 +72,11 @@ export const staffApi = {
   updateCategory: (id, body) => staffRequest(`/menu/categories/${id}`, { method: 'PUT', body: JSON.stringify(body) }).then((d) => d.id),
   deleteCategory: (id) => staffRequest(`/menu/categories/${id}`, { method: 'DELETE' }),
   reorderCategories: (ids) => staffRequest('/menu/categories/order', { method: 'PUT', body: JSON.stringify({ ids }) }),
+  // Photos : le fichier (déjà réduit en JPEG par PhotoPicker) est envoyé tel quel
+  setProductPhoto: (id, blob) =>
+    staffRequest(`/menu/products/${id}/photo`, { method: 'PUT', body: blob, headers: { 'Content-Type': blob.type || 'image/jpeg' } }).then((d) => d.product),
+  removeProductPhoto: (id) => staffRequest(`/menu/products/${id}/photo`, { method: 'DELETE' }).then((d) => d.product),
+  setCategoryPhoto: (id, blob) =>
+    staffRequest(`/menu/categories/${id}/photo`, { method: 'PUT', body: blob, headers: { 'Content-Type': blob.type || 'image/jpeg' } }).then((d) => d.category),
+  removeCategoryPhoto: (id) => staffRequest(`/menu/categories/${id}/photo`, { method: 'DELETE' }).then((d) => d.category),
 };

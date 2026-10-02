@@ -1,7 +1,7 @@
 import { useCart } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils/format.js';
 import { displayPrice, isMultiSize, priceSub } from '../utils/product.js';
-import { isWide, photoBg } from '../utils/visuals.js';
+import { isWide, photoBg, sizedPhoto } from '../utils/visuals.js';
 
 // layout : 'big' (burgers, wraps, salades), 'wide' (plateaux et box, composition visible),
 // 'row' (extras, liste compacte) ou 'std' (poulet)
@@ -29,7 +29,7 @@ export default function ProductCard({ product: p, onOpen, layout = 'std' }) {
     return (
       <article className={`xrow${off ? ' off' : ''}`} aria-disabled={off || undefined}>
         <div className="xph" style={p.imageUrl ? { background: photoBg(p.imageUrl) } : undefined} onClick={open}>
-          {p.imageUrl ? <img src={p.imageUrl} alt="" loading="lazy" /> : <span>Photo à venir</span>}
+          {p.imageUrl ? <img {...sizedPhoto(p.imageUrl, 'row')} alt="" loading="lazy" /> : <span>Photo à venir</span>}
         </div>
         <div className="xbody">
           <h4>{p.name}</h4>
@@ -48,7 +48,7 @@ export default function ProductCard({ product: p, onOpen, layout = 'std' }) {
     <article className={`card card-${layout}${off ? ' off' : ''}`} aria-disabled={off || undefined}>
       <div className="ph" style={p.imageUrl ? { background: photoBg(p.imageUrl) } : undefined} onClick={open}>
         {p.imageUrl
-          ? <img src={p.imageUrl} alt={p.name} loading="lazy" className={isWide(p.imageUrl) ? 'wide' : undefined} />
+          ? <img {...sizedPhoto(p.imageUrl, 'card')} alt={p.name} loading="lazy" className={isWide(p.imageUrl) ? 'wide' : undefined} />
           : <div className="noimg">Photo à venir</div>}
       </div>
       {p.number != null && <span className="num">N° {p.number}</span>}

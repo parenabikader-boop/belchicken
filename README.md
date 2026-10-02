@@ -175,6 +175,13 @@ Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (t
   `PUT /api/staff/menu/categories/order` et `PUT /api/staff/menu/categories/:id/products/order` avec `{ ids }`.
   Supprimer un plat jamais commandé le supprime ; un plat déjà commandé est retiré du menu (`archivedAt`) et peut être remis.
   Une catégorie ne se supprime que vide ; sinon on la masque (`isActive`). Règles et validations : `src/services/menu-edit.js`.
+- Photos (Patron) : `PUT|DELETE /api/staff/menu/products/:id/photo` et `PUT|DELETE /api/staff/menu/categories/:id/photo`.
+  Le fichier est envoyé tel quel (`Content-Type: image/jpeg`), 6 Mo au plus, JPEG, PNG ou WebP vérifiés par leur contenu
+  (`src/services/photo.service.js`). Le navigateur le réduit d'abord à 1600 px en JPEG, après un recadrage facultatif
+  (zoom et déplacement, format 4/3 pour les plats, 3/2 pour les bandeaux) : `frontend/src/staff/menu/PhotoPicker.jsx`.
+  Rangées sur Cloudinary dans `<CLOUDINARY_FOLDER>/plats` et `/categories` ; l'ancienne photo est supprimée au remplacement.
+  Le site propose plusieurs tailles en WebP/AVIF (`srcset`, `sizedPhoto()` dans `frontend/src/utils/visuals.js`) :
+  le téléphone télécharge la petite.
 - Statuts : `PAIEMENT_A_VERIFIER` → `PAYEE` → `EN_PREPARATION` → `EN_LIVRAISON` → `LIVREE`, ou `ANNULEE` avec un motif.
   Historique dans la table `OrderStatusChange`.
 - Le site appelle `/api/staff` sur sa propre adresse : Vite relaie vers l'API en local (`vite.config.js`), Vercel en ligne
