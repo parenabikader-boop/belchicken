@@ -1,27 +1,31 @@
-// Charge le menu Belchicken en base. Idempotent : peut être relancé à chaque mise à jour du menu.
-// N'écrase pas la disponibilité (isAvailable), gérée plus tard par l'équipe.
+// Remplit une base VIDE avec le menu de menu-data.js (premier déploiement).
+// Dès qu'un plat existe, il ne fait rien : le menu se gère alors depuis l'espace équipe,
+// et un déploiement ne doit jamais écraser les prix, photos ou disponibilités modifiés par l'équipe.
 import { PrismaClient } from '@prisma/client';
-import { categories, products } from './menu-data.js';
+import { categories, products, homePhotos } from './menu-data.js';
 
 const prisma = new PrismaClient();
 
-async function main() {
+async function fill(tx) {
   const categoryIds = {};
   const groupIds = {};
 
   for (const [cPos, c] of categories.entries()) {
-    const category = await prisma.category.upsert({
-      where: { slug: c.slug },
-      update: { name: c.name, description: c.description, position: cPos },
-      create: { slug: c.slug, name: c.name, description: c.description, position: cPos },
+    const category = await tx.category.create({
+      data: {
+        slug: c.slug,
+        name: c.name,
+        description: c.description ?? null,
+        script: c.script ?? null,
+        heroImageUrl: c.heroImageUrl ?? null,
+        position: cPos,
+      },
     });
     categoryIds[c.slug] = category.id;
 
     for (const [gPos, g] of c.groups.entries()) {
-      const group = await prisma.menuGroup.upsert({
-        where: { categoryId_name: { categoryId: category.id, name: g.name } },
-        update: { note: g.note ?? null, position: gPos },
-        create: { categoryId: category.id, name: g.name, note: g.note ?? null, position: gPos },
+      const group = await tx.menuGroup.create({
+        data: { categoryId: category.id, name: g.name, note: g.note ?? null, position: gPos },
       });
       groupIds[`${c.slug}/${g.name}`] = group.id;
     }
@@ -32,40 +36,44 @@ async function main() {
     const groupId = groupIds[`${p.category}/${p.group}`];
     if (!categoryId || !groupId) throw new Error(`Catégorie ou groupe inconnu pour ${p.slug}`);
 
-    const data = {
-      number: p.number ?? null,
-      name: p.name,
-      description: p.description ?? null,
-      composition: p.composition ?? [],
-      imageUrl: p.imageUrl ?? null,
-      isSpicy: p.isSpicy ?? false,
-      serves: p.serves ?? null,
-      choiceLabel: p.choiceLabel ?? null,
-      choices: p.choices ?? [],
-      position: pPos,
-      categoryId,
-      groupId,
-    };
-    const product = await prisma.product.upsert({
-      where: { slug: p.slug },
-      update: data,
-      create: { slug: p.slug, ...data },
-    });
-
-    for (const [vPos, v] of p.variants.entries()) {
-      await prisma.productVariant.upsert({
-        where: { productId_code: { productId: product.id, code: v.code } },
-        update: { label: v.label, subLabel: v.subLabel ?? null, price: v.price, position: vPos },
-        create: { productId: product.id, code: v.code, label: v.label, subLabel: v.subLabel ?? null, price: v.price, position: vPos },
-      });
-    }
-    // Supprime les variantes retirées du menu
-    await prisma.productVariant.deleteMany({
-      where: { productId: product.id, code: { notIn: p.variants.map((v) => v.code) } },
+    await tx.product.create({
+      data: {
+        slug: p.slug,
+        number: p.number ?? null,
+        name: p.name,
+        description: p.description ?? null,
+        composition: p.composition ?? [],
+        imageUrl: p.imageUrl ?? null,
+        isSpicy: p.isSpicy ?? false,
+        serves: p.serves ?? null,
+        choiceLabel: p.choiceLabel ?? null,
+        choices: p.choices ?? [],
+        position: pPos,
+        categoryId,
+        groupId,
+        variants: {
+          create: p.variants.map((v, vPos) => ({
+            code: v.code, label: v.label, subLabel: v.subLabel ?? null, price: v.price, position: vPos,
+          })),
+        },
+      },
     });
   }
 
-  console.log(`Menu chargé : ${categories.length} catégories, ${products.length} produits.`);
+  for (const h of homePhotos) {
+    await tx.homePhoto.upsert({ where: { slot: h.slot }, update: {}, create: h });
+  }
+}
+
+async function main() {
+  const existing = await prisma.product.count();
+  if (existing > 0) {
+    console.log(`Menu déjà en base (${existing} plats) : rien n'est modifié. Le menu se gère depuis l'espace équipe.`);
+    return;
+  }
+  // Tout ou rien : si le chargement échoue en route, la base reste vide et le prochain déploiement recommence
+  await prisma.$transaction(fill, { timeout: 5 * 60 * 1000, maxWait: 30 * 1000 });
+  console.log(`Base vide remplie : ${categories.length} catégories, ${products.length} plats, ${homePhotos.length} photos d'accueil.`);
 }
 
 main()

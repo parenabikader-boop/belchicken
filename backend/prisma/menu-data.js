@@ -1,5 +1,6 @@
 // Menu officiel Belchicken, transcrit depuis les visuels envoyés aux clients.
-// Toute modification ici est appliquée par `npm run db:seed` (idempotent).
+// Sert uniquement à remplir une base vide (`npm run db:seed`, premier déploiement).
+// Ensuite le menu se gère depuis l'espace équipe : modifier ce fichier ne change plus la base.
 
 const img = (name) => `/menu/${name}.jpg`;
 
@@ -18,7 +19,7 @@ const single = (price) => [{ code: 'standard', label: 'Standard', price }];
 
 export const categories = [
   {
-    slug: 'burgers', name: 'Burgers',
+    slug: 'burgers', name: 'Burgers', script: 'Originals & XL', heroImageUrl: img('finest'),
     description: 'Chaque burger existe en menu, avec frites et boisson, ou seul.',
     groups: [
       { name: 'Originals', note: 'N° 7 à 9' },
@@ -27,7 +28,7 @@ export const categories = [
     ],
   },
   {
-    slug: 'poulet', name: 'Poulet frit',
+    slug: 'poulet', name: 'Poulet frit', script: 'Chicken Deals', heroImageUrl: img('wings12'),
     description: 'Les formules incluent frites et boisson, sauf le Chicken Pop Corn. Les Fuego Wings sont épicés.',
     groups: [
       { name: 'Wings', note: 'N° 16 à 18' },
@@ -36,14 +37,14 @@ export const categories = [
       { name: 'Spécialités', note: 'N° 22 et 23' },
     ],
   },
-  { slug: 'combos', name: "Chef's Combo", description: 'Chaque plateau comprend frites et boisson.', groups: [{ name: 'Plateaux', note: 'N° 13 à 15' }] },
-  { slug: 'buckets', name: 'Buckets', description: 'À partager en famille ou entre amis.', groups: [{ name: 'À partager', note: 'N° 26 à 28' }] },
-  { slug: 'wraps', name: 'Wraps', description: 'Chaque wrap existe en menu, avec frites et boisson, ou seul.', groups: [{ name: 'Wraps', note: 'N° 3 à 5' }] },
-  { slug: 'rice-box', name: 'Rice Box', description: 'Chaque box comprend deux beignets et une boisson.', groups: [{ name: 'Rice Box', note: 'N° 24 et 25' }] },
-  { slug: 'salades', name: 'Salades', description: 'En menu avec boisson, ou seule.', groups: [{ name: 'Salades', note: 'N° 1 et 2' }] },
-  { slug: 'bel-kids', name: 'Bel Kids', description: "La box inclut l'accès à la salle de jeu du restaurant.", groups: [{ name: 'Bel Kids', note: 'N° 6' }] },
+  { slug: 'combos', name: "Chef's Combo", script: 'Le choix du chef', heroImageUrl: img('chefs'), description: 'Chaque plateau comprend frites et boisson.', groups: [{ name: 'Plateaux', note: 'N° 13 à 15' }] },
+  { slug: 'buckets', name: 'Buckets', script: 'À partager', heroImageUrl: img('family'), description: 'À partager en famille ou entre amis.', groups: [{ name: 'À partager', note: 'N° 26 à 28' }] },
+  { slug: 'wraps', name: 'Wraps', script: 'Wraps', heroImageUrl: img('wrap_fuego'), description: 'Chaque wrap existe en menu, avec frites et boisson, ou seul.', groups: [{ name: 'Wraps', note: 'N° 3 à 5' }] },
+  { slug: 'rice-box', name: 'Rice Box', script: 'Rice Box', heroImageUrl: img('rice_belgrill'), description: 'Chaque box comprend deux beignets et une boisson.', groups: [{ name: 'Rice Box', note: 'N° 24 et 25' }] },
+  { slug: 'salades', name: 'Salades', script: '100 % Fresh', heroImageUrl: img('salad_chicken'), description: 'En menu avec boisson, ou seule.', groups: [{ name: 'Salades', note: 'N° 1 et 2' }] },
+  { slug: 'bel-kids', name: 'Bel Kids', script: 'Pour les petits', heroImageUrl: img('kids'), description: "La box inclut l'accès à la salle de jeu du restaurant.", groups: [{ name: 'Bel Kids', note: 'N° 6' }] },
   {
-    slug: 'extras', name: 'Extras',
+    slug: 'extras', name: 'Extras', script: 'Pour compléter', heroImageUrl: img('beignets'),
     description: 'Pour compléter un menu ou composer votre assiette.',
     groups: [{ name: 'Accompagnements' }, { name: 'Poulet à la pièce' }, { name: 'Sauces' }],
   },
@@ -113,4 +114,11 @@ export const products = [
   { slug: 'pilon', category: 'extras', group: 'Poulet à la pièce', name: 'Pilon', imageUrl: img('pieces'), variants: single(1500) },
   { slug: 'haut-de-cuisse', category: 'extras', group: 'Poulet à la pièce', name: 'Haut de cuisse', imageUrl: img('pieces'), variants: single(1500) },
   { slug: 'sauce-supplementaire', category: 'extras', group: 'Sauces', name: 'Sauce supplémentaire', description: 'Au choix, à préciser dans la note.', variants: single(250) },
+];
+
+// Photos de la mosaïque de l'accueil (fichiers dans frontend/public/accueil/)
+export const homePhotos = [
+  { slot: 1, imageUrl: '/accueil/burger.webp', alt: 'Burger Belchicken' },
+  { slot: 2, imageUrl: '/accueil/wings.webp', alt: 'Ailes de poulet Belchicken' },
+  { slot: 3, imageUrl: '/accueil/bucket.webp', alt: 'Bucket de poulet Belchicken' },
 ];

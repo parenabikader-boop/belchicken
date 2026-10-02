@@ -118,16 +118,16 @@ function CategoryTabs({ categories, current, query, setQuery }) {
 
 // Bandeau pleine largeur à la couleur de la catégorie, avec la photo du plat vedette à droite
 function CategoryBanner({ category: c }) {
-  const banner = categoryBanner(c.slug);
+  const banner = categoryBanner(c);
   return (
     <div className="cat-banner">
       <div className="wrap cat-banner-in">
         <div className="cat-banner-txt">
-          {banner && <span className="cat-script">{banner.script}</span>}
+          {banner?.script && <span className="cat-script">{banner.script}</span>}
           <h1>{c.name}</h1>
           {c.description && <p>{c.description}</p>}
         </div>
-        {banner && <img className={`cat-banner-ph${banner.small ? ' small' : ''}`} src={banner.photo} alt="" />}
+        {banner?.photo && <img className={`cat-banner-ph${banner.small ? ' small' : ''}`} src={banner.photo} alt="" />}
       </div>
     </div>
   );

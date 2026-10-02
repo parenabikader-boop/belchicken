@@ -9,9 +9,8 @@ services:
     # Ohio (us-east-2) : même région que la base Neon, pour des requêtes rapides
     region: ohio
     plan: free
-    # db:deploy applique les migrations (en réessayant si Neon dort) ; db:seed remet le menu de prisma/menu-data.js
-    # à jour (sans doublons, sans toucher à la disponibilité des plats).
-    # À retirer quand l'espace équipe gérera le menu, sinon chaque déploiement écraserait ses changements.
+    # db:deploy applique les migrations (en réessayant si Neon dort) ; db:seed remplit le menu SEULEMENT si la base
+    # est vide (premier déploiement). Ensuite il ne touche à rien : le menu se gère depuis l'espace équipe.
     buildCommand: npm install && npm run db:deploy && npm run db:seed
     startCommand: npm start
     healthCheckPath: /api/health
@@ -35,3 +34,12 @@ services:
         value: nouvelle_commande
       - key: WHATSAPP_TEMPLATE_LANG
         value: fr
+      # Photos du menu et de l'accueil (console Cloudinary > Settings > API Keys)
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_FOLDER
+        value: belchicken

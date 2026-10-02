@@ -20,8 +20,8 @@ belchicken/
 ├── backend/
 │   ├── prisma/
 │   │   ├── schema.prisma      Menu, commandes, journal WhatsApp
-│   │   ├── menu-data.js       Menu officiel (44 produits, N° 1 à 31 + extras)
-│   │   └── seed.js            Charge le menu en base (idempotent)
+│   │   ├── menu-data.js       Menu de départ (44 produits, N° 1 à 31 + extras)
+│   │   └── seed.js            Remplit une base vide avec ce menu (ne touche jamais une base déjà remplie)
 │   ├── src/
 │   │   ├── config/env.js
 │   │   ├── lib/prisma.js
@@ -47,7 +47,8 @@ cd backend
 cp .env.example .env        # renseignez DATABASE_URL et DIRECT_URL
 npm install                 # lance aussi prisma generate
 npx prisma migrate dev --name init
-npm run db:seed             # charge le menu
+npm run db:seed             # remplit le menu si la base est vide
+npm run cloudinary:check    # vérifie les clés Cloudinary (photos), sans les afficher
 npm run dev                 # http://localhost:3006
 ```
 
@@ -185,9 +186,13 @@ Render demande alors seulement :
 
 - `DATABASE_URL` : URL Neon **poolée** (l'hôte contient `-pooler`) ;
 - `DIRECT_URL` : URL Neon **directe** (même URL sans `-pooler`), utilisée pour les migrations ;
-- `CORS_ORIGINS` : adresse du site Vercel, sans slash final.
+- `CORS_ORIGINS` : adresse du site Vercel, sans slash final ;
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` : clés Cloudinary pour les photos.
+  Si le service existe déjà, ajoutez-les à la main dans **Environment** (Render ne redemande pas les secrets d'un Blueprint déjà créé).
 
-À chaque déploiement, le build applique les migrations (`npm run db:deploy`, qui réessaie si Neon dort) puis met le menu à jour depuis `prisma/menu-data.js` (`npm run db:seed`). Pas besoin du Shell Render.
+À chaque déploiement, le build applique les migrations (`npm run db:deploy`, qui réessaie si Neon dort) puis lance `npm run db:seed`.
+Le seed ne remplit le menu que si la base est **vide** (premier déploiement) ; sinon il ne modifie rien.
+Un déploiement n'écrase donc jamais les prix, photos et disponibilités changés dans l'espace équipe. Pas besoin du Shell Render.
 
 Offre gratuite : le service s'endort après 15 minutes sans visite et met jusqu'à une minute à se réveiller. Pour l'ouverture, passer au plan Starter.
 
@@ -199,6 +204,10 @@ Offre gratuite : le service s'endort après 15 minutes sans visite et met jusqu'
 
 ## Menu
 
-Le menu est défini dans `backend/prisma/menu-data.js`. Pour changer un prix ou ajouter un plat, modifiez ce fichier puis relancez `npm run db:seed`. Le seed met à jour sans créer de doublons et ne touche pas à la disponibilité des plats.
+Le menu se gère depuis l'espace équipe (`/equipe`) : c'est la base qui fait foi.
+`backend/prisma/menu-data.js` ne sert plus qu'à remplir une base vide (`npm run db:seed`) : le modifier ne change pas le menu en ligne.
+
+Photos : envoyées par l'API à Cloudinary (dossier `CLOUDINARY_FOLDER`, `belchicken` par défaut), jamais sur le disque de Render
+qui est effacé à chaque déploiement. Les photos d'origine restent servies depuis `frontend/public/` tant qu'elles ne sont pas remplacées.
 
 Point à confirmer : Fuego Wings 8 pièces à la carte, affiché à 10 000 F, plus cher que le menu N° 30 à 9 500 F.

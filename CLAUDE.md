@@ -19,15 +19,18 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 - `frontend/` est fait : Accueil `/`, Menu `/menu/:categorie`, Ma commande `/commande`, Vos informations `/valider`, Confirmation `/confirmation/:reference`, Infos pratiques `/infos`. Parcours complet testé avec une vraie commande en base.
 - `npm run dev` à la racine lance le backend et le frontend ensemble.
 - Espace équipe commencé : connexion (rôles PATRON / OPERATEUR, `npm run equipe:patron`), pages sous `/equipe` (`frontend/src/staff/`, chargées à part), API sous `/api/staff` protégée par `requireStaff()`. Page Commandes faite (liste mise à jour toutes les 5 s, son et badge, filtres, recherche, détail, changement de statut). Voir README.md.
-- `backend/prisma/menu-data.js` contient le menu officiel complet. Ne pas inventer de plats ni de prix.
+- `backend/prisma/menu-data.js` contient le menu de départ complet. Ne pas inventer de plats ni de prix. Il ne sert qu'à remplir une base vide : `seed.js` ne fait rien dès qu'un plat existe. La base fait foi pour le menu.
+- Cloudinary configuré (`src/lib/cloudinary.js`, `npm run cloudinary:check`). Clés dans `backend/.env` et sur Render, jamais dans le code ni la conversation.
 - Photos : plats dans `frontend/public/menu/` (provisoires, de mauvaise qualité), accueil dans `frontend/public/accueil/`, logo dans `frontend/public/brand/`. Sources dans `docs/photos/` et `docs/`.
-- Une seule ambiance sur tout le site (fond crème, rouge Belchicken, brun foncé) : le client ne veut pas de couleur par catégorie. Chaque catégorie du menu se distingue par son petit titre, sa photo vedette (`frontend/src/utils/visuals.js`, pour l'instant en dur) et la forme de ses cartes.
+- Une seule ambiance sur tout le site (fond crème, rouge Belchicken, brun foncé) : le client ne veut pas de couleur par catégorie. Chaque catégorie du menu se distingue par son petit titre, sa photo vedette (en base : `Category.script` et `Category.heroImageUrl`) et la forme de ses cartes (en dur dans `frontend/src/utils/visuals.js`).
 - `docs/maquette.html` est la maquette validée par le client (couleurs, typographie, pages, parcours). Elle parle encore d'espèces et de numéro de transaction : ces deux points sont abandonnés, ne pas les reprendre.
 
 ## Règles
 
 - Les prix sont toujours calculés par le serveur. Le frontend n'envoie jamais de prix.
 - Ne pas modifier le schéma Prisma ou l'API sans le signaler clairement.
+- Le seed ne doit **jamais** écraser une base remplie : chaque déploiement Render le lance, et il effacerait les changements de l'équipe (prix, photos, disponibilité). Pour corriger le menu en ligne, passer par l'espace équipe (ou une migration de données signalée), pas par `menu-data.js`.
+- Droits du menu : la disponibilité d'un plat (un clic) est ouverte au PATRON et à l'OPERATEUR ; tout le reste (prix, création, modification, suppression, photos, catégories, accueil) est réservé au PATRON, vérifié par l'API.
 - Paiement : uniquement Orange Money ou Moov Money, payé avant la livraison. Plus d'espèces : `ESPECES` reste dans l'enum Prisma (pas de migration) mais l'API le refuse, et le site n'en parle nulle part.
 - Mobile money : le client donne seulement le numéro qui a payé, plus de numéro de transaction. L'équipe vérifie le paiement avec ce numéro et le montant. La colonne `paymentReference` (et sa contrainte unique) reste en base, vide, en attendant une future migration qui la supprimera.
 - Statuts de commande : `PAIEMENT_A_VERIFIER` (départ de toute nouvelle commande) → `PAYEE` → `EN_PREPARATION` → `EN_LIVRAISON` → `LIVREE`, et `ANNULEE` (motif obligatoire) à tout moment avant `LIVREE`. Une étape à la fois, jamais de retour en arrière. `PAYEE` est toujours posé à la main par l'équipe après vérification sur le téléphone marchand, jamais automatiquement. Chaque changement est enregistré dans `OrderStatusChange` (qui, quand, motif). Règles dans `backend/src/services/order-status.js`.

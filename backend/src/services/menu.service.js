@@ -1,7 +1,8 @@
 import { prisma } from '../lib/prisma.js';
 
 // Menu public : catégories actives, sous-groupes, produits et variantes, dans l'ordre du menu.
-// Les produits indisponibles sont renvoyés avec isAvailable=false pour être affichés grisés.
+// Les produits indisponibles sont renvoyés avec isAvailable=false pour être affichés grisés ;
+// les produits retirés du menu (archivedAt) ne sont pas renvoyés.
 export async function getPublicMenu() {
   const categories = await prisma.category.findMany({
     where: { isActive: true },
@@ -9,6 +10,7 @@ export async function getPublicMenu() {
     include: {
       groups: { orderBy: { position: 'asc' }, select: { id: true, name: true, note: true } },
       products: {
+        where: { archivedAt: null },
         orderBy: { position: 'asc' },
         include: {
           variants: {
@@ -25,6 +27,8 @@ export async function getPublicMenu() {
     slug: c.slug,
     name: c.name,
     description: c.description,
+    script: c.script,
+    heroImageUrl: c.heroImageUrl,
     groups: c.groups,
     products: c.products.map((p) => ({
       id: p.id,

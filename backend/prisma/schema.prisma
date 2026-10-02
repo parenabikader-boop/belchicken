@@ -8,7 +8,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL") // URL poolée Neon
-  directUrl = env("DIRECT_URL")   // URL directe Neon (migrations)
+  directUrl = env("DIRECT_URL") // URL directe Neon (migrations)
 }
 
 // ─────────────────────────── ENUMS ───────────────────────────
@@ -40,16 +40,19 @@ enum NotificationStatus {
 // ─────────────────────────── MENU ───────────────────────────
 
 model Category {
-  id          String      @id @default(cuid())
-  slug        String      @unique
-  name        String
-  description String?
-  position    Int         @default(0)
-  isActive    Boolean     @default(true)
-  groups      MenuGroup[]
-  products    Product[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                String      @id @default(cuid())
+  slug              String      @unique
+  name              String
+  description       String?
+  script            String? // petit titre du bandeau, ex. "Originals & XL"
+  heroImageUrl      String? // photo vedette du bandeau (Cloudinary, ou /menu/… pour les photos d'origine)
+  heroImagePublicId String? // identifiant Cloudinary, pour remplacer ou supprimer la photo
+  position          Int         @default(0)
+  isActive          Boolean     @default(true)
+  groups            MenuGroup[]
+  products          Product[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 }
 
 // Sous-groupe d'une catégorie (ex. Burgers › Originals, XL, Bœuf)
@@ -58,7 +61,7 @@ model MenuGroup {
   categoryId String
   category   Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   name       String
-  note       String?   // ex. "N° 7 à 9"
+  note       String? // ex. "N° 7 à 9"
   position   Int       @default(0)
   products   Product[]
 
@@ -66,27 +69,31 @@ model MenuGroup {
 }
 
 model Product {
-  id          String           @id @default(cuid())
-  slug        String           @unique
-  number      Int?             // numéro du menu papier (N° 7…)
-  name        String
-  description String?
-  composition String[]         // ce qui est inclus dans une formule
-  imageUrl    String?
-  isSpicy     Boolean          @default(false)
-  serves      String?          // "2 personnes"
-  choiceLabel String?          // ex. "Cuisson du poulet"
-  choices     String[]         // ex. ["Grillé", "Frit"]
-  isAvailable Boolean          @default(true)
-  position    Int              @default(0)
-  categoryId  String
-  category    Category         @relation(fields: [categoryId], references: [id])
-  groupId     String?
-  group       MenuGroup?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  variants    ProductVariant[]
-  orderItems  OrderItem[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id            String           @id @default(cuid())
+  slug          String           @unique
+  number        Int? // numéro du menu papier (N° 7…)
+  name          String
+  description   String?
+  composition   String[] // ce qui est inclus dans une formule
+  imageUrl      String?
+  imagePublicId String? // identifiant Cloudinary de imageUrl (vide pour les photos d'origine)
+  isSpicy       Boolean          @default(false)
+  serves        String? // "2 personnes"
+  choiceLabel   String? // ex. "Cuisson du poulet"
+  choices       String[] // ex. ["Grillé", "Frit"]
+  isAvailable   Boolean          @default(true)
+  // Plat retiré du menu alors qu'il a déjà été commandé : on le garde pour l'historique des commandes.
+  // Un plat jamais commandé est vraiment supprimé.
+  archivedAt    DateTime?
+  position      Int              @default(0)
+  categoryId    String
+  category      Category         @relation(fields: [categoryId], references: [id])
+  groupId       String?
+  group         MenuGroup?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  variants      ProductVariant[]
+  orderItems    OrderItem[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@index([categoryId])
 }
@@ -97,7 +104,7 @@ model ProductVariant {
   id         String      @id @default(cuid())
   productId  String
   product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  code       String      // "menu", "seul", "L", "4pc", "standard"
+  code       String // "menu", "seul", "L", "4pc", "standard"
   label      String
   subLabel   String?
   price      Int
@@ -105,6 +112,15 @@ model ProductVariant {
   orderItems OrderItem[]
 
   @@unique([productId, code])
+}
+
+// Les 3 photos de la mosaïque de l'accueil (case 1 : grande à gauche, 2 et 3 : petites à droite)
+model HomePhoto {
+  slot          Int      @id // 1, 2 ou 3
+  imageUrl      String
+  imagePublicId String? // identifiant Cloudinary (vide pour les photos d'origine)
+  alt           String?
+  updatedAt     DateTime @updatedAt
 }
 
 // ─────────────────────────── COMMANDES ───────────────────────────
@@ -123,7 +139,7 @@ model Order {
 
   latitude         Float?
   longitude        Float?
-  locationAccuracy Int?    // en mètres
+  locationAccuracy Int? // en mètres
   addressNote      String? // quartier et repères
 
   itemsTotal Int // total des plats, calculé côté serveur
@@ -198,8 +214,8 @@ model NotificationLog {
 // ─────────────────────────── ESPACE ÉQUIPE ───────────────────────────
 
 enum StaffRole {
-  PATRON     // tout
-  OPERATEUR  // commandes et disponibilité des plats ; ni chiffre d'affaires, ni prix, ni menu
+  PATRON // tout
+  OPERATEUR // commandes et disponibilité des plats ; ni chiffre d'affaires, ni prix, ni menu
 }
 
 model StaffUser {

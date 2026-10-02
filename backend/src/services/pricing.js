@@ -11,7 +11,7 @@ export function priceItems(items, products) {
     if (!product) {
       throw new AppError(400, "Un plat de votre commande n'existe plus. Actualisez le menu.", 'PRODUIT_INCONNU', { index });
     }
-    if (!product.isAvailable || !product.category?.isActive) {
+    if (!product.isAvailable || product.archivedAt || !product.category?.isActive) {
       throw new AppError(409, `« ${product.name} » n'est plus disponible pour le moment.`, 'PRODUIT_INDISPONIBLE', { index, productId: product.id });
     }
     const variant = product.variants.find((v) => v.id === it.variantId);

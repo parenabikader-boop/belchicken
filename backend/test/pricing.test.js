@@ -36,6 +36,13 @@ test('refuse un plat indisponible', () => {
   );
 });
 
+test('refuse un plat retiré du menu', () => {
+  assert.throws(
+    () => priceItems([{ productId: 'finest', variantId: 'f-menu', quantity: 1 }], [{ ...finest, archivedAt: new Date() }]),
+    (e) => e.status === 409 && e.code === 'PRODUIT_INDISPONIBLE',
+  );
+});
+
 test("refuse une variante d'un autre produit", () => {
   assert.throws(() => priceItems([{ productId: 'finest', variantId: 'b-std', quantity: 1 }], products), (e) => e.code === 'VARIANTE_INCONNUE');
 });
