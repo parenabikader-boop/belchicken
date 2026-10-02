@@ -1,5 +1,7 @@
 # Belchicken · Commande en ligne
 
+**Toujours répondre au client en français, avec des explications simples, sans jargon.**
+
 Site de commande en ligne du restaurant Belchicken (Bobo-Dioulasso, Burkina Faso).
 Le client choisit ses plats, indique son paiement et sa position, puis valide.
 La commande est enregistrée et l'équipe reçoit une alerte WhatsApp.
