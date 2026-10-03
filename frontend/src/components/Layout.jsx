@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
+import InstallBanner from './InstallBanner.jsx';
 
 // Numéro provisoire, en attente du numéro définitif du client (voir CLAUDE.md)
 export const WHATSAPP = '+226 70 00 00 01';
@@ -79,6 +80,9 @@ export default function Layout() {
           </Link>
         </div>
       </header>
+
+      {/* Hors du tunnel de commande, pour ne jamais gêner une commande en cours */}
+      <div className="wrap"><InstallBanner app="client" /></div>
 
       <main className={pageClass(pathname)}>
         <Outlet />

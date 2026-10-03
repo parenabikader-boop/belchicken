@@ -706,3 +706,18 @@ main.p-menu{padding-bottom:0}
   .steps-wrap .steps{grid-template-columns:1fr}
   .steps-wrap .step:nth-child(n+2){border-top:1px solid #f1dcb4}
 }
+
+/* Bandeau « Installer l'application » (components/InstallBanner.jsx) : dans la page, jamais par-dessus */
+.install{max-width:720px;margin:14px auto 0;background:var(--ink);color:#f3e7dd;border-radius:var(--r-lg);padding:10px 10px 10px 12px;font-size:14px;line-height:1.35}
+.install-row{display:flex;align-items:center;gap:10px}
+.install img{width:44px;height:44px;border-radius:10px;flex:none}
+.install-txt{flex:1;min-width:0}
+.install-txt b{display:block;color:#fff;font-size:14.5px}
+.install-txt>span{display:block;color:#cdb8aa;font-size:13px}
+.install-go{flex:none;background:var(--yellow);color:var(--ink);border:0;border-radius:var(--r);padding:9px 14px;font-weight:800;font-size:14px}
+.install-x{flex:none;width:36px;height:36px;background:transparent;border:0;color:#cdb8aa;font-size:24px;line-height:1;border-radius:var(--r)}
+.install-x:hover{color:#fff}
+.install-guide{margin:10px 0 2px;padding:10px 12px 10px 32px;background:rgba(255,255,255,.07);border-radius:var(--r);display:grid;gap:6px}
+.install-guide b{color:#fff}
+.install-share{display:inline-block;vertical-align:-3px;color:var(--yellow)}
+@media (max-width:520px){.install-more{display:none}}

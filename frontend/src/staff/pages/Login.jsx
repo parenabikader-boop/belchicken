@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { StaffScreen } from '../StaffScreen.jsx';
 import { useStaff } from '../StaffContext.jsx';
+import InstallBanner from '../../components/InstallBanner.jsx';
 
 // Page demandée avant la connexion, seulement si elle est dans l'espace équipe
 const safeNext = (value) => (value && /^\/equipe(\/|$)/.test(value) ? value : '/equipe');
@@ -49,6 +50,7 @@ export default function Login() {
         </div>
         <button type="submit" className="btn btn-p btn-block" disabled={sending}>{sending ? 'Connexion…' : 'Se connecter'}</button>
       </form>
+      <InstallBanner app="equipe" />
     </StaffScreen>
   );
 }

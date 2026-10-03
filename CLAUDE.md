@@ -21,6 +21,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 - `frontend/` est fait : Accueil `/`, Menu `/menu/:categorie`, Ma commande `/commande`, Vos informations `/valider`, Confirmation `/confirmation/:reference`, Infos pratiques `/infos`. Parcours complet testé avec une vraie commande en base.
 - `npm run dev` à la racine lance le backend et le frontend ensemble.
 - Espace équipe commencé : connexion (rôles PATRON / OPERATEUR, `npm run equipe:patron`), pages sous `/equipe` (`frontend/src/staff/`, chargées à part), API sous `/api/staff` protégée par `requireStaff()`. Page Commandes faite (liste mise à jour toutes les 5 s, son et badge, filtres, recherche, détail, changement de statut). Page Menu faite (`frontend/src/staff/menu/`) : disponibilité en un clic pour toute l'équipe ; fiches plat et catégorie, ordre, suppression ou retrait du menu pour le Patron. Photos des plats, photos vedettes des catégories et 3 photos de l'accueil (page Accueil, `/equipe/accueil`) envoyées sur Cloudinary (téléphone : appareil photo ou galerie, aperçu, recadrage, réduction dans le navigateur). Tableau de bord fait (`/equipe/tableau-de-bord`, Patron seulement, `frontend/src/staff/dashboard/`). Voir README.md.
+- Application installable (PWA), deux applications : « Belchicken » (`public/manifest.webmanifest`, tout le site) et « Belchicken Équipe » (`public/equipe.webmanifest`, sous `/equipe`, icône avec badge « ÉQUIPE ») ; le choix se fait dans `index.html`. Service worker `public/sw.js` (actif seulement après `npm run build`) : garde le code du site, les photos et les polices, **jamais** `/api/...` ni les pages ; hors ligne, page `public/hors-ligne.html`. Bandeau d'installation `src/components/InstallBanner.jsx` (Android : bouton ; iPhone : guide), refermé pour 5 jours.
 - `backend/prisma/menu-data.js` contient le menu de départ complet. Ne pas inventer de plats ni de prix. Il ne sert qu'à remplir une base vide : `seed.js` ne fait rien dès qu'un plat existe. La base fait foi pour le menu.
 - Cloudinary configuré (`src/lib/cloudinary.js`, `npm run cloudinary:check`). Clés dans `backend/.env` et sur Render, jamais dans le code ni la conversation.
 - Photos : plats dans `frontend/public/menu/` (provisoires, de mauvaise qualité), accueil dans `frontend/public/accueil/`, logo dans `frontend/public/brand/`. Sources dans `docs/photos/` et `docs/`.
@@ -51,7 +52,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 2. Alerte WhatsApp : application Meta, modèle `nouvelle_commande` approuvé, variables WhatsApp sur Render.
 3. Espace équipe (cahier des charges ci-dessous).
 4. Vraies informations du restaurant : adresse, numéros WhatsApp et marchand, horaires, descriptions des burgers, prix des Fuego Wings 8 pièces.
-5. Préparation de l'ouverture : vider les commandes de test (dont `BC-K98QKH`, client « TEST Claude (à supprimer) »), changer le mot de passe Neon et mettre à jour `DATABASE_URL` sur Render.
+5. Préparation de l'ouverture : commandes de test de la base production vidées le 2 octobre 2026 (9 commandes) ; la commande d'essai depuis le téléphone sera à supprimer aussi. Reste : changer le mot de passe Neon et mettre à jour `DATABASE_URL` sur Render.
 
 ### Espace équipe : cahier des charges
 

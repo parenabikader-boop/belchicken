@@ -11,6 +11,7 @@ import ProductForm from './menu/ProductForm.jsx';
 import CategoryForm from './menu/CategoryForm.jsx';
 import HomeAdmin from './home/HomeAdmin.jsx';
 import Dashboard from './dashboard/Dashboard.jsx';
+import InstallBanner from '../components/InstallBanner.jsx';
 import './staff.css';
 
 // Espace équipe, sous /equipe. Chargé à part (voir App.jsx) : le code n'est jamais
@@ -121,6 +122,7 @@ function StaffShell() {
       </header>
       {!soundReady && <p className="st-sound">Touchez l'écran une fois pour activer le son des nouvelles commandes.</p>}
       <main className="st-wrap st-main">
+        <InstallBanner app="equipe" />
         <Outlet />
       </main>
     </div>

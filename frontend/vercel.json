@@ -1,4 +1,21 @@
 {
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" },
+        { "key": "Content-Type", "value": "text/javascript; charset=utf-8" }
+      ]
+    },
+    {
+      "source": "/manifest.webmanifest",
+      "headers": [{ "key": "Content-Type", "value": "application/manifest+json; charset=utf-8" }]
+    },
+    {
+      "source": "/equipe.webmanifest",
+      "headers": [{ "key": "Content-Type", "value": "application/manifest+json; charset=utf-8" }]
+    }
+  ],
   "rewrites": [
     { "source": "/api/staff/:path*", "destination": "https://belchicken-api.onrender.com/api/staff/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }

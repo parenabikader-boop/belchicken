@@ -23,6 +23,8 @@
 .st-out{background:transparent;border:1.5px solid #6b4a3c;color:#f3e7dd;border-radius:var(--r);padding:7px 12px;font-weight:700;font-size:13px;cursor:pointer}
 .st-out:hover{border-color:var(--yellow);color:var(--yellow)}
 .st-main{padding-top:28px;padding-bottom:72px} /* 72 px : rien ne reste caché sous le rappel du son */
+.st-main .install{margin:0 0 20px}
+.st-card .install{margin:22px 0 0}
 .st-empty{margin-top:24px;background:var(--panel);border:1px dashed #e3c999;border-radius:var(--r-lg);padding:36px 24px;text-align:center}
 .st-empty b{font-size:17px}
 .st-empty p{margin:6px 0 0;color:var(--muted);font-size:14px}
