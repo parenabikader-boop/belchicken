@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatPrice, plural } from '../../utils/format.js';
 import { useOrdersFeed } from './OrdersFeed.jsx';
+import AlertsPrompt from '../alerts/AlertsPrompt.jsx';
 import { ACTIVE, FILTERS, formatTime, METHOD_LABEL, STATUS_LABEL, timeAgo } from './labels.js';
 
 const REFRESH_MS = 5000;
@@ -74,6 +75,8 @@ export default function OrdersList() {
         <h1 className="st-title">Commandes</h1>
         <span className="st-muted st-live"><span className="st-dot" />{feed.updatedAt ? 'Mise à jour automatique' : 'Chargement…'}</span>
       </div>
+
+      <AlertsPrompt />
 
       {toVerify > 0 && status !== 'PAIEMENT_A_VERIFIER' && (
         <button type="button" className="st-verify" onClick={() => setStatus('PAIEMENT_A_VERIFIER')}>

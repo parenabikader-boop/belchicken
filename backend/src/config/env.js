@@ -20,6 +20,13 @@ export const env = {
     apiSecret: process.env.CLOUDINARY_API_SECRET || '',
     folder: process.env.CLOUDINARY_FOLDER || 'belchicken',
   },
+  // Notifications de l'équipe (Web Push). Le sujet est une adresse https ou mailto: qui identifie
+  // l'expéditeur auprès de Google et Apple.
+  push: {
+    publicKey: process.env.VAPID_PUBLIC_KEY || '',
+    privateKey: process.env.VAPID_PRIVATE_KEY || '',
+    subject: process.env.VAPID_SUBJECT || 'https://belchicken-api.onrender.com',
+  },
 };
 
 export const whatsappEnabled = () =>
@@ -27,3 +34,5 @@ export const whatsappEnabled = () =>
 
 export const cloudinaryEnabled = () =>
   Boolean(env.cloudinary.cloudName && env.cloudinary.apiKey && env.cloudinary.apiSecret);
+
+export const pushEnabled = () => Boolean(env.push.publicKey && env.push.privateKey);

@@ -27,6 +27,9 @@ self.addEventListener('install', (event) => {
     caches
       .open(SHELL)
       .then((cache) => cache.addAll(SHELL_FILES))
+      // Mémoire du téléphone pleine ou indisponible : le service worker s'installe quand même,
+      // sinon les alertes de l'équipe ne fonctionneraient plus du tout
+      .catch(() => {})
       .then(() => self.skipWaiting()),
   );
 });
@@ -97,8 +100,11 @@ async function put(cacheName, request, response, max) {
   for (let i = 0; i < keys.length - max; i++) await cache.delete(keys[i]);
 }
 
+// Copie gardée, ou rien si la mémoire du navigateur est indisponible (on passe alors par internet)
+const cachedCopy = (request, cacheName) => caches.match(request, { cacheName }).catch(() => undefined);
+
 async function cacheFirst(request, cacheName, max) {
-  const cached = await caches.match(request, { cacheName });
+  const cached = await cachedCopy(request, cacheName);
   if (cached) return cached;
   const response = await fetch(request);
   if (storable(response)) put(cacheName, request, response.clone(), max).catch(() => {});
@@ -106,7 +112,7 @@ async function cacheFirst(request, cacheName, max) {
 }
 
 async function staleWhileRevalidate(request, cacheName, max) {
-  const cached = await caches.match(request, { cacheName });
+  const cached = await cachedCopy(request, cacheName);
   const fresh = fetch(request)
     .then((response) => {
       if (storable(response)) put(cacheName, request, response.clone(), max).catch(() => {});
@@ -115,3 +121,46 @@ async function staleWhileRevalidate(request, cacheName, max) {
     .catch(() => cached || Response.error());
   return cached || fresh;
 }
+
+// ─────────── Notifications de l'équipe (envoyées par le serveur, voir backend/src/services/push.service.js) ───────────
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: event.data?.text() };
+  }
+  const title = data.title || 'Belchicken Équipe';
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || '',
+      icon: '/icons/equipe-192.png',
+      tag: data.tag || undefined,
+      renotify: Boolean(data.tag), // même étiquette : le téléphone sonne quand même
+      requireInteraction: data.tag?.startsWith('commande-') || false, // reste affichée jusqu'à ce qu'on la touche
+      vibrate: [200, 100, 200],
+      data: { url: data.url || '/equipe/commandes' },
+      lang: 'fr',
+    }),
+  );
+});
+
+// Un appui ouvre la commande : dans une fenêtre de l'espace équipe déjà ouverte si possible,
+// sinon dans l'application Belchicken Équipe
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const path = event.notification.data?.url || '/equipe/commandes';
+  const target = new URL(path.startsWith('/equipe') ? path : '/equipe/commandes', self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      const open = windows.find((w) => new URL(w.url).pathname.startsWith('/equipe'));
+      if (open) {
+        await open.focus().catch(() => {}); // refusé parfois par le téléphone : on ouvre la commande quand même
+        return open.navigate(target).catch(() => self.clients.openWindow(target));
+      }
+      return self.clients.openWindow(target);
+    })(),
+  );
+});

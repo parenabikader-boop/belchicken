@@ -229,8 +229,9 @@ model StaffUser {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  sessions      StaffSession[]
-  statusChanges OrderStatusChange[]
+  sessions          StaffSession[]
+  statusChanges     OrderStatusChange[]
+  pushSubscriptions PushSubscription[]
 }
 
 // Une ligne par appareil connecté. Le navigateur garde le jeton dans un cookie httpOnly ;
@@ -247,4 +248,23 @@ model StaffSession {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+// Téléphones qui reçoivent les notifications de nouvelle commande (Web Push).
+// Une ligne par téléphone (navigateur) qui a activé les alertes. Les adresses que le service
+// de notification déclare mortes, ou qui échouent 5 fois de suite, sont supprimées toutes seules.
+model PushSubscription {
+  id            String    @id @default(cuid())
+  endpoint      String    @unique // adresse d'envoi donnée par le téléphone (Google, Apple, Mozilla…)
+  p256dh        String // clé de chiffrement du téléphone
+  auth          String // secret du téléphone
+  staffUserId   String
+  staffUser     StaffUser @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  userAgent     String? // pour reconnaître le téléphone (« Android · Chrome »)
+  failures      Int       @default(0) // échecs d'envoi d'affilée, remis à 0 au premier succès
+  lastSuccessAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([staffUserId])
 }

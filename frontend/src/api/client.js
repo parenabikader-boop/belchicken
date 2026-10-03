@@ -87,4 +87,9 @@ export const staffApi = {
   // Tableau de bord (Patron) : period = day | week | month, offset = 0 (en cours), -1 (précédente)…
   getDashboard: (period, offset) => staffRequest(`/dashboard?period=${period}&offset=${offset}`),
   resetHomePhoto: (slot) => staffRequest(`/home/${slot}/photo`, { method: 'DELETE' }).then((d) => d.photo),
+  // Alertes de nouvelle commande sur téléphone (Patron et Opérateur)
+  pushStatus: () => staffRequest('/push'),
+  pushSubscribe: (subscription) => staffRequest('/push/subscribe', { method: 'POST', body: JSON.stringify(subscription) }),
+  pushUnsubscribe: (endpoint) => staffRequest('/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) }),
+  pushTest: (endpoint) => staffRequest('/push/test', { method: 'POST', body: JSON.stringify({ endpoint }) }),
 };

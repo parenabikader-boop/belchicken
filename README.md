@@ -189,6 +189,14 @@ Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (t
   Chiffre d'affaires = commandes `PAYEE`, `EN_PREPARATION`, `EN_LIVRAISON`, `LIVREE` seulement. La période en cours est comparée
   au même moment de la précédente (aujourd'hui jusqu'à 14 h contre hier jusqu'à 14 h). Heure du Burkina = UTC.
   Calculs dans `src/services/dashboard.js` (testés), lecture en base dans `src/services/dashboard.service.js`.
+- Alertes sur téléphone (Patron et Opérateur), page `/equipe/alertes` (`frontend/src/staff/alerts/`) : chaque membre active
+  les alertes sur son téléphone (`POST /api/staff/push/subscribe`), les coupe (`/push/unsubscribe`) ou s'envoie un essai
+  (`/push/test`). À chaque commande, notification « Nouvelle commande BC-XXXX · 7 500 F » (sans nom ni téléphone du client) ;
+  un appui ouvre la commande. Envoi en arrière-plan comme WhatsApp, journal `NotificationLog` (canal `PUSH`).
+  Téléphones dans la table `PushSubscription`, retirés tout seuls si Google/Apple répondent 404/410 ou après 5 échecs d'affilée.
+  Clés `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` : à ne jamais changer en ligne (chaque téléphone devrait réactiver).
+  Sur iPhone : seulement dans l'application installée (iOS 16.4+). Ne marche pas avec `npm run dev` (pas de service worker) :
+  essayer avec `npm run build` puis `npx vite preview --port 5173` dans `frontend/`.
 - Statuts : `PAIEMENT_A_VERIFIER` → `PAYEE` → `EN_PREPARATION` → `EN_LIVRAISON` → `LIVREE`, ou `ANNULEE` avec un motif.
   Historique dans la table `OrderStatusChange`.
 - Le site appelle `/api/staff` sur sa propre adresse : Vite relaie vers l'API en local (`vite.config.js`), Vercel en ligne
@@ -217,6 +225,7 @@ Render demande alors seulement :
 - `DIRECT_URL` : URL Neon **directe** (même URL sans `-pooler`), utilisée pour les migrations ;
 - `CORS_ORIGINS` : adresse du site Vercel, sans slash final ;
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` : clés Cloudinary pour les photos.
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` : clés des alertes sur téléphone, copiées depuis `backend/.env`.
   Si le service existe déjà, ajoutez-les à la main dans **Environment** (Render ne redemande pas les secrets d'un Blueprint déjà créé).
 
 À chaque déploiement, le build applique les migrations (`npm run db:deploy`, qui réessaie si Neon dort) puis lance `npm run db:seed`.

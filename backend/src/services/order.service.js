@@ -5,6 +5,7 @@ import { newOrderReference } from '../utils/reference.js';
 import { priceItems } from './pricing.js';
 import { INITIAL_STATUS } from './order-status.js';
 import { notifyTeamNewOrder } from './whatsapp.service.js';
+import { pushTeamNewOrder } from './push.service.js';
 
 export async function createOrder(input) {
   const productIds = [...new Set(input.items.map((i) => i.productId))];
@@ -47,8 +48,10 @@ export async function createOrder(input) {
   }
   if (!order) throw new AppError(500, "La commande n'a pas pu être enregistrée. Réessayez.");
 
-  // Alerte WhatsApp en arrière-plan : le client n'attend pas l'envoi
+  // Alertes WhatsApp et téléphones de l'équipe en arrière-plan : le client n'attend pas l'envoi,
+  // et un échec n'annule jamais la commande
   notifyTeamNewOrder(order).catch((e) => console.error('[whatsapp]', e));
+  pushTeamNewOrder(order).catch((e) => console.error('[push]', e));
 
   return order;
 }

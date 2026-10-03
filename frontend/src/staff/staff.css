@@ -399,3 +399,19 @@
 }
 .db-plot{margin-top:14px}
 .db-nw{white-space:nowrap}
+
+/* ===== Alertes sur téléphone (alerts/) ===== */
+.st-bell{display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+.st-bell.active{border-color:var(--yellow);color:var(--yellow)}
+.al-box{display:grid;gap:14px;max-width:620px;padding:18px}
+.al-box p{margin:0}
+.al-state{font-size:16px;display:flex;align-items:center;gap:10px}
+.al-dot{width:12px;height:12px;border-radius:50%;background:var(--ok);flex:none}
+.al-dot.off{background:var(--line-2)}
+.al-actions{display:flex;flex-wrap:wrap;gap:10px}
+.al-steps{margin:0;padding-left:22px;display:grid;gap:6px}
+.al-prompt{display:flex;align-items:center;gap:10px;background:var(--ink);color:#f3e7dd;border-radius:var(--r-lg);padding:10px 10px 10px 14px;margin:0 0 14px;font-size:14px;font-weight:600}
+.al-prompt span{flex:1}
+.al-prompt-go{flex:none;background:var(--yellow);color:var(--ink);border-radius:var(--r);padding:8px 14px;font-weight:800;text-decoration:none}
+.al-prompt-x{flex:none;width:34px;height:34px;background:transparent;border:0;color:#cdb8aa;font-size:22px;line-height:1}
+@media (max-width:640px){.al-actions .btn{width:100%}}

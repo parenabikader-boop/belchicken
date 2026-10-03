@@ -43,3 +43,10 @@ services:
         sync: false
       - key: CLOUDINARY_FOLDER
         value: belchicken
+      # Notifications de l'équipe sur téléphone : mêmes valeurs que dans backend/.env, à ne jamais changer ensuite
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        value: https://belchicken-api.onrender.com
