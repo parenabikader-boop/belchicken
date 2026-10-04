@@ -24,7 +24,7 @@ services:
         sync: false
       - key: DIRECT_URL
         sync: false
-      # Adresse du site Vercel, par exemple https://belchicken.vercel.app (sans slash final)
+      # Adresse du site Vercel, par exemple https://belchicken-six.vercel.app (sans slash final)
       - key: CORS_ORIGINS
         sync: false
       # Alerte WhatsApp : laissée vide pour l'instant (les commandes fonctionnent sans)
@@ -34,6 +34,12 @@ services:
         value: nouvelle_commande
       - key: WHATSAPP_TEMPLATE_LANG
         value: fr
+      # Messages au client : lien de suivi et numéro marchand pour les frais de livraison.
+      # MERCHANT_NUMBER vide = numéro provisoire du code (+22670000000).
+      - key: PUBLIC_SITE_URL
+        value: https://belchicken-six.vercel.app
+      - key: MERCHANT_NUMBER
+        sync: false
       # Photos du menu et de l'accueil (console Cloudinary > Settings > API Keys)
       - key: CLOUDINARY_CLOUD_NAME
         sync: false

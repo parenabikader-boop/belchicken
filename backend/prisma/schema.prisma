@@ -144,9 +144,15 @@ model Order {
 
   itemsTotal Int // total des plats, calculé côté serveur
 
+  // Frais de livraison selon le quartier, saisis par l'équipe (au moins 1 F). Vide = pas encore saisis.
+  // Le livreur ne part (EN_LIVRAISON) qu'une fois les frais saisis et reçus (vérifiés sur le téléphone marchand).
+  deliveryFee           Int?
+  deliveryFeeReceivedAt DateTime? // vide = frais pas encore reçus
+
   items         OrderItem[]
   notifications NotificationLog[]
   statusChanges OrderStatusChange[]
+  events        OrderEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -196,6 +202,30 @@ model OrderStatusChange {
   @@index([orderId, createdAt])
 }
 
+// Historique d'une commande hors statut : frais de livraison et messages WhatsApp préparés pour le client.
+// Les changements de statut restent dans OrderStatusChange.
+enum OrderEventType {
+  FRAIS_SAISIS // frais saisis ou modifiés (montant dans amount)
+  FRAIS_RECUS // « Frais reçus » coché, après vérification sur le téléphone marchand
+  FRAIS_NON_RECUS // case décochée (erreur de manipulation)
+  MESSAGE_PREPARE // message WhatsApp au client ouvert par un agent (messageKey)
+}
+
+model OrderEvent {
+  id          String         @id @default(cuid())
+  orderId     String
+  order       Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type        OrderEventType
+  amount      Int? // montant des frais pour FRAIS_SAISIS
+  messageKey  String? // PAIEMENT_CONFIRME, FRAIS_RECUS, EN_ROUTE, LIVREE, ANNULEE (src/services/customer-messages.js)
+  staffUserId String?
+  staffUser   StaffUser?     @relation(fields: [staffUserId], references: [id], onDelete: SetNull)
+  staffName   String? // copie figée, comme dans OrderStatusChange
+  createdAt   DateTime       @default(now())
+
+  @@index([orderId, createdAt])
+}
+
 model NotificationLog {
   id                String             @id @default(cuid())
   orderId           String
@@ -234,6 +264,7 @@ model StaffUser {
 
   sessions          StaffSession[]
   statusChanges     OrderStatusChange[]
+  orderEvents       OrderEvent[]
   pushSubscriptions PushSubscription[]
 }
 

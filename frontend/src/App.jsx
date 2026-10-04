@@ -21,6 +21,8 @@ export default function App() {
         <Route path="commande" element={<Commande />} />
         <Route path="valider" element={<Valider />} />
         <Route path="confirmation/:reference" element={<Confirmation />} />
+        {/* Même page, adresse courte envoyée au client sur WhatsApp */}
+        <Route path="suivi/:reference" element={<Confirmation />} />
         <Route path="infos" element={<Infos />} />
         <Route path="*" element={<Home />} />
       </Route>

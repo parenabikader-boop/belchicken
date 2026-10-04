@@ -39,3 +39,37 @@ export function transitionError(from, to, reason) {
   }
   return null;
 }
+
+// ─────────── Frais de livraison ───────────
+// Saisis par l'équipe selon le quartier (au moins 1 F), puis cochés « reçus » après vérification
+// sur le téléphone marchand. Le livreur ne part (EN_LIVRAISON) qu'une fois les frais saisis et reçus.
+export const FEE_MIN = 1;
+export const FEE_MAX = 50000;
+// Les frais se modifient tant que le livreur n'est pas parti
+const FEE_EDITABLE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION'];
+
+// Avant le départ du livreur : null si permis, sinon le message
+export function deliveryError(order) {
+  if (order.deliveryFee == null) return 'Saisissez d’abord les frais de livraison : le livreur part une fois les frais reçus.';
+  if (!order.deliveryFeeReceivedAt) return 'Frais de livraison pas encore reçus : le livreur part une fois les frais reçus. Cochez « Frais reçus » après vérification sur le téléphone marchand.';
+  return null;
+}
+
+// Saisie ou modification du montant
+export function feeEditError(order) {
+  if (!FEE_EDITABLE.includes(order.status)) return 'Les frais ne se modifient plus à cette étape.';
+  if (order.deliveryFeeReceivedAt) return 'Les frais sont déjà reçus : décochez « Frais reçus » pour modifier le montant.';
+  return null;
+}
+
+// Cocher (received = true) ou décocher « Frais reçus »
+export function feeReceivedError(order, received) {
+  if (!FEE_EDITABLE.includes(order.status)) return 'Les frais ne se modifient plus à cette étape.';
+  if (received) {
+    if (order.deliveryFee == null) return 'Saisissez d’abord le montant des frais de livraison.';
+    if (order.deliveryFeeReceivedAt) return 'Les frais sont déjà notés comme reçus.';
+  } else if (!order.deliveryFeeReceivedAt) {
+    return 'Les frais ne sont pas notés comme reçus.';
+  }
+  return null;
+}

@@ -11,6 +11,8 @@ export async function getDashboard({ period, offset }) {
       status: true,
       paymentMethod: true,
       itemsTotal: true,
+      deliveryFee: true,
+      deliveryFeeReceivedAt: true,
       customerName: true,
       createdAt: true,
       items: {

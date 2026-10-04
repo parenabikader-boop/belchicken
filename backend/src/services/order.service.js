@@ -1,4 +1,6 @@
 import { Prisma } from '@prisma/client';
+import { env } from '../config/env.js';
+import { formatPhone } from './customer-messages.js';
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { newOrderReference } from '../utils/reference.js';
@@ -60,19 +62,28 @@ export async function createOrder(input) {
 export async function getOrderSummary(reference) {
   const order = await prisma.order.findUnique({
     where: { reference },
-    include: { items: true },
+    include: { items: true, statusChanges: { orderBy: { createdAt: 'asc' } } },
   });
   if (!order) throw new AppError(404, 'Commande introuvable.', 'COMMANDE_INTROUVABLE');
   return toPublicOrder(order);
 }
 
+// Page de suivi : étapes datées, frais de livraison, motif d'annulation. Jamais de nom, numéro,
+// position ni nom d'agent : la référence suffit pour la voir.
 export function toPublicOrder(order) {
+  const changes = order.statusChanges || [];
   return {
     reference: order.reference,
     status: order.status,
     createdAt: order.createdAt,
     paymentMethod: order.paymentMethod,
     itemsTotal: order.itemsTotal,
+    deliveryFee: order.deliveryFee ?? null,
+    deliveryFeeReceived: order.deliveryFeeReceivedAt != null,
+    // Numéro où envoyer les frais (le même que dans le message WhatsApp), tant qu'ils sont attendus
+    payTo: order.deliveryFee != null && order.deliveryFeeReceivedAt == null ? formatPhone(env.merchantNumber) : null,
+    steps: changes.map((h) => ({ status: h.toStatus, at: h.createdAt })),
+    cancelReason: changes.findLast((h) => h.toStatus === 'ANNULEE')?.reason || null,
     items: order.items.map((i) => ({
       productName: i.productName,
       productNumber: i.productNumber,

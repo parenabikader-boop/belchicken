@@ -11,7 +11,7 @@ export default function Infos() {
         <div className="info-grid">
           <div className="info-card">
             <h3>Livraison</h3>
-            <p>Nous livrons à domicile et au bureau. Les frais et le délai dépendent de votre quartier : notre équipe vous les annonce sur WhatsApp. Vous pouvez aussi retirer votre commande au restaurant.</p>
+            <p>Nous livrons à domicile et au bureau. Les frais dépendent de votre quartier : une fois votre paiement vérifié, notre équipe vous indique leur montant sur WhatsApp et sur la page de suivi de votre commande. Le livreur part dès leur réception. Vous pouvez aussi retirer votre commande au restaurant.</p>
           </div>
           <div className="info-card">
             <h3>Paiement</h3>

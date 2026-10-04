@@ -246,10 +246,18 @@ export default function Dashboard() {
       {data && (
         <div className={`db-body${loading ? ' loading' : ''}`}>
           <section className="st-box db-hero">
-            <h2>Chiffre d'affaires</h2>
+            <h2>Chiffre d'affaires des plats</h2>
             <p className="db-big">{formatPrice(s.revenue)}</p>
             <Delta now={s.revenue} before={prev.revenue} compare={compare} money />
             <p className="st-muted db-note">Commandes payées seulement (payée, en préparation, en livraison, livrée).</p>
+            <div className="db-fees">
+              <h3>Frais de livraison reçus</h3>
+              <p className="db-num">{formatPrice(s.deliveryRevenue)}</p>
+              <Delta now={s.deliveryRevenue} before={prev.deliveryRevenue} compare={compare} money />
+              <p className="st-muted db-note">
+                {s.deliveryPaid ? `${plural(s.deliveryPaid, 'commande')} · ` : ''}Comptés une fois cochés « reçus », sauf commande annulée. À part du chiffre des plats.
+              </p>
+            </div>
           </section>
 
           <div className="db-tiles">

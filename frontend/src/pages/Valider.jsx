@@ -357,7 +357,7 @@ export default function Valider() {
                   ))}
                   <tr className="tot"><td>Total des plats</td><td>{formatPrice(total)}</td></tr>
                 </tbody></table>
-                <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>Frais de livraison confirmés par notre équipe sur WhatsApp.</p>
+                <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>Frais de livraison selon votre quartier : indiqués après la vérification de votre paiement, sur WhatsApp et sur la page de suivi, à régler avant le départ du livreur.</p>
                 {blocked && <p className="err-line" style={{ marginTop: 12 }}>Un plat n'est plus disponible. Retirez-le dans Ma commande pour continuer.</p>}
                 <button type="submit" className="btn btn-p btn-block" style={{ marginTop: 16 }} disabled={sending || blocked}>
                   {sending ? 'Envoi en cours…' : 'Envoyer ma commande'}

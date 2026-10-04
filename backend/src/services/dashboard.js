@@ -7,6 +7,8 @@ export const PERIODS = ['day', 'week', 'month'];
 // Seules les commandes payées (et au-delà) comptent dans le chiffre d'affaires
 export const PAID = ['PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'LIVREE'];
 const isPaid = (o) => PAID.includes(o.status);
+// Frais de livraison : comptés une fois reçus, sauf si la commande a été annulée ensuite
+const feeCounted = (o) => o.deliveryFee != null && o.deliveryFeeReceivedAt != null && o.status !== 'ANNULEE';
 
 export const dashboardQuerySchema = z.object({
   period: z.enum(PERIODS).default('day'),
@@ -45,11 +47,14 @@ const inRange = (o, from, to) => o.createdAt >= from && o.createdAt < to;
 
 export function summarize(orders) {
   const paid = orders.filter(isPaid);
-  const revenue = paid.reduce((s, o) => s + o.itemsTotal, 0);
+  const revenue = paid.reduce((s, o) => s + o.itemsTotal, 0); // plats seulement
+  const fees = orders.filter(feeCounted);
   return {
     received: orders.length,
     paid: paid.length,
     revenue,
+    deliveryRevenue: fees.reduce((s, o) => s + o.deliveryFee, 0),
+    deliveryPaid: fees.length,
     avgBasket: paid.length ? Math.round(revenue / paid.length) : 0,
     cancelled: orders.filter((o) => o.status === 'ANNULEE').length,
     toVerify: orders.filter((o) => o.status === 'PAIEMENT_A_VERIFIER').length,

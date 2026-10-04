@@ -459,3 +459,40 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
   .tm-list{grid-template-columns:minmax(0,1fr)}
   .st-nav a{padding:10px 3px;font-size:14px}
 }
+
+/* Tableau de bord : frais de livraison, à part du chiffre d'affaires des plats */
+.db-fees{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.db-fees h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0}
+
+/* ===== Détail d'une commande : frais de livraison et message WhatsApp au client ===== */
+.of-row{margin-bottom:12px}
+.of-fee.todo{border:2px solid #e0a100;background:#fffaf0}
+.of-fee.ok{border-color:#9fd3a9}
+.of-fee-form{display:grid;gap:6px}
+.of-fee-form label{font-size:14px}
+.of-fee-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.of-amount{display:inline-flex;align-items:center;border:1px solid var(--line-2);border-radius:var(--r);background:var(--panel);padding-right:12px}
+.of-amount:focus-within{border-color:var(--brand);outline:2px solid var(--brand-line)}
+.of-amount input{width:120px;border:0;outline:none;background:transparent;height:46px;padding:0 4px 0 12px;font-size:20px;font-weight:700;text-align:right}
+.of-amount span{font-weight:700;font-size:18px;color:var(--muted)}
+.of-fee-row .btn{padding:11px 18px}
+.st-box .of-fee-value{display:flex;align-items:baseline;gap:12px}
+.of-fee-value b{font-size:24px;font-weight:800}
+.of-check{display:flex;align-items:flex-start;gap:12px;margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:var(--r);cursor:pointer;background:var(--panel)}
+.of-check input{width:26px;height:26px;flex:none;margin:0;accent-color:#2f9e44;cursor:pointer}
+.of-check b{display:block;font-size:16px}
+.of-check small{display:block;color:var(--muted);font-size:13px}
+.of-fee.ok .of-check{background:var(--ok-soft);border-color:#9fd3a9}
+.of-check.locked{cursor:default}
+.of-msg{display:grid;gap:10px;align-content:start}
+.of-msg h2{margin-bottom:0}
+.st-box .of-msg-label{font-weight:700}
+.st-box .of-bubble{white-space:pre-wrap;overflow-wrap:anywhere;background:#e7f7ea;border-radius:10px 10px 10px 2px;padding:10px 12px;font-size:14px;line-height:1.45}
+.st-next:disabled{opacity:.4;cursor:not-allowed}
+.of-amount input::placeholder{color:var(--faint);font-weight:400;font-size:16px}
+.of-msg .btn-wa:disabled{opacity:.45}
+.of-msg .st-note,.of-fee .st-note{margin-top:0!important}
+.st-history li.e-FRAIS_SAISIS::before,.st-history li.e-FRAIS_RECUS::before{background:#2f9e44;width:8px;height:8px;left:-5px}
+.st-history li.e-FRAIS_NON_RECUS::before{background:#e0a100;width:8px;height:8px;left:-5px}
+.st-history li.e-MESSAGE_PREPARE::before{background:#1f9e55;border-radius:2px;width:8px;height:8px;left:-5px}
+@media (max-width:640px){.of-msg .btn-wa,.of-fee-row .btn{width:100%}}

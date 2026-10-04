@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireStaff } from '../middlewares/staff-auth.js';
-import { changeStatus, getOrder, listOrders } from '../services/staff-orders.service.js';
-import { STATUSES } from '../services/order-status.js';
+import { changeStatus, getOrder, listOrders, logMessagePrepared, setDeliveryFee, setFeeReceived } from '../services/staff-orders.service.js';
+import { FEE_MAX, FEE_MIN, STATUSES } from '../services/order-status.js';
 
 // Commandes de l'espace équipe : Patron et Opérateur
 export const staffOrdersRouter = Router();
@@ -38,6 +38,44 @@ staffOrdersRouter.post('/:reference/status', async (req, res, next) => {
   try {
     const input = statusSchema.parse(req.body);
     res.json({ order: await changeStatus(reference(req), input, req.staff) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Frais de livraison (Patron et Opérateur) : montant selon le quartier, puis « Frais reçus »
+export const feeSchema = z.object({
+  amount: z
+    .number({ required_error: 'Indiquez le montant des frais.', invalid_type_error: 'Indiquez le montant des frais en F.' })
+    .int('Montant en F, sans centimes.')
+    .min(FEE_MIN, 'Les frais de livraison doivent être d’au moins 1 F.')
+    .max(FEE_MAX, 'Montant trop élevé (50 000 F au plus).'),
+});
+
+staffOrdersRouter.put('/:reference/delivery-fee', async (req, res, next) => {
+  try {
+    const { amount } = feeSchema.parse(req.body);
+    res.json({ order: await setDeliveryFee(reference(req), amount, req.staff) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+staffOrdersRouter.post('/:reference/delivery-fee/received', async (req, res, next) => {
+  try {
+    const { received } = z.object({ received: z.boolean() }).parse(req.body);
+    res.json({ order: await setFeeReceived(reference(req), received, req.staff) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Message WhatsApp ouvert par l'agent : noté dans l'historique
+staffOrdersRouter.post('/:reference/messages', async (req, res, next) => {
+  try {
+    const { key } = z.object({ key: z.string().max(40) }).parse(req.body);
+    await logMessagePrepared(reference(req), key, req.staff);
+    res.json({ ok: true });
   } catch (e) {
     next(e);
   }

@@ -13,7 +13,14 @@ export const env = {
     templateNewOrder: process.env.WHATSAPP_TEMPLATE_NEW_ORDER || 'nouvelle_commande',
     templateLang: process.env.WHATSAPP_TEMPLATE_LANG || 'fr',
     teamNumbers: list(process.env.WHATSAPP_TEAM_NUMBERS),
+    // Messages au client envoyés tout seuls par l'API (à chaque étape de la commande). Laisser vide
+    // tant que les modèles de src/services/customer-messages.js ne sont pas approuvés chez Meta.
+    customerAuto: process.env.WHATSAPP_CUSTOMER_AUTO === '1',
   },
+  // Adresse du site public : lien de suivi envoyé au client (/suivi/BC-XXXXXX)
+  siteUrl: process.env.PUBLIC_SITE_URL || 'https://belchicken-six.vercel.app',
+  // Numéro marchand Orange Money / Moov Money, donné au client pour les frais de livraison (provisoire)
+  merchantNumber: process.env.MERCHANT_NUMBER || '+22670000000',
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
     apiKey: process.env.CLOUDINARY_API_KEY || '',
@@ -31,6 +38,12 @@ export const env = {
 
 export const whatsappEnabled = () =>
   Boolean(env.whatsapp.token && env.whatsapp.phoneNumberId && env.whatsapp.teamNumbers.length);
+
+// Envoi automatique des messages au client : l'API WhatsApp configurée ET l'option activée
+export const customerAutoEnabled = () => Boolean(env.whatsapp.token && env.whatsapp.phoneNumberId && env.whatsapp.customerAuto);
+
+// Ce dont les messages au client ont besoin (lien de suivi, numéro marchand)
+export const messageContext = () => ({ siteUrl: env.siteUrl, merchantNumber: env.merchantNumber });
 
 export const cloudinaryEnabled = () =>
   Boolean(env.cloudinary.cloudName && env.cloudinary.apiKey && env.cloudinary.apiSecret);

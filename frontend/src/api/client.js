@@ -58,6 +58,15 @@ export const staffApi = {
   order: (reference) => staffRequest(`/orders/${encodeURIComponent(reference)}`).then((d) => d.order),
   setStatus: (reference, body) =>
     staffRequest(`/orders/${encodeURIComponent(reference)}/status`, { method: 'POST', body: JSON.stringify(body) }).then((d) => d.order),
+  // Frais de livraison (montant en F) et « Frais reçus »
+  setDeliveryFee: (reference, amount) =>
+    staffRequest(`/orders/${encodeURIComponent(reference)}/delivery-fee`, { method: 'PUT', body: JSON.stringify({ amount }) }).then((d) => d.order),
+  setFeeReceived: (reference, received) =>
+    staffRequest(`/orders/${encodeURIComponent(reference)}/delivery-fee/received`, { method: 'POST', body: JSON.stringify({ received }) }).then((d) => d.order),
+  // Message WhatsApp ouvert par l'agent : noté dans l'historique. keepalive : la requête part même
+  // si le téléphone bascule aussitôt sur WhatsApp.
+  logMessage: (reference, key) =>
+    staffRequest(`/orders/${encodeURIComponent(reference)}/messages`, { method: 'POST', body: JSON.stringify({ key }), keepalive: true }),
 
   // Menu : disponibilité pour toute l'équipe, le reste pour le Patron (vérifié par l'API)
   menu: () => staffRequest('/menu'),

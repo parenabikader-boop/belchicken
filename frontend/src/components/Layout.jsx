@@ -5,14 +5,15 @@ import InstallBanner from './InstallBanner.jsx';
 
 // Numéro provisoire, en attente du numéro définitif du client (voir CLAUDE.md)
 export const WHATSAPP = '+226 70 00 00 01';
-// Numéro marchand Orange Money / Moov Money, provisoire lui aussi
+// Numéro marchand Orange Money / Moov Money, provisoire lui aussi.
+// À garder identique à MERCHANT_NUMBER du serveur (messages WhatsApp et page de suivi).
 export const MERCHANT = '+226 70 00 00 00';
 
-const TUNNEL = /^\/(commande|valider|confirmation)(\/|$)/;
+const TUNNEL = /^\/(commande|valider|confirmation|suivi)(\/|$)/;
 
 // Partie du site, pour la couleur de fond de la page (voir styles.css)
 function pageClass(pathname) {
-  if (pathname.startsWith('/confirmation')) return 'p-confirmation';
+  if (/^\/(confirmation|suivi)\//.test(pathname)) return 'p-confirmation';
   if (TUNNEL.test(pathname)) return 'p-tunnel';
   if (pathname.startsWith('/menu')) return 'p-menu';
   if (pathname.startsWith('/infos')) return 'p-infos';

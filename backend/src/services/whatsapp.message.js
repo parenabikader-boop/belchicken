@@ -2,7 +2,7 @@ import { formatFcfa, PAYMENT_LABELS } from '../utils/format.js';
 
 // Meta refuse les paramètres de modèle contenant des retours à la ligne,
 // des tabulations ou plus de 4 espaces consécutifs.
-const clean = (s, max = 900) =>
+export const clean = (s, max = 900) =>
   String(s ?? '')
     .replace(/[\r\n\t]+/g, ' · ')
     .replace(/ {2,}/g, ' ')

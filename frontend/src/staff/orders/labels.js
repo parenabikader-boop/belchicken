@@ -1,4 +1,5 @@
 // Libellés et petites aides d'affichage des commandes (espace équipe)
+import { formatPrice } from '../../utils/format.js';
 
 export const STATUS_LABEL = {
   PAIEMENT_A_VERIFIER: 'Paiement à vérifier',
@@ -55,4 +56,37 @@ export function timeAgo(iso, now = Date.now()) {
 export function formatDateTime(iso) {
   const d = new Date(iso);
   return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} à ${formatTime(iso)}`;
+}
+
+// Frais de livraison : modifiables jusqu'au départ du livreur (mêmes règles que l'API, order-status.js)
+export const FEE_EDITABLE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION'];
+// Ce qui empêche le livreur de partir, ou null
+export function deliveryBlock(o) {
+  if (o.deliveryFee == null) return 'Saisissez d’abord les frais de livraison ci-dessous.';
+  if (!o.deliveryFeeReceivedAt) return 'Le livreur part une fois les frais reçus : cochez « Frais reçus » après vérification sur le téléphone marchand.';
+  return null;
+}
+
+// Historique : statuts et autres événements (frais, messages), du plus récent au plus ancien
+export function timelineOf(o) {
+  const statuses = o.history.map((h) => ({
+    kind: `p-${h.toStatus}`,
+    title: h.fromStatus ? STATUS_LABEL[h.toStatus] : 'Commande reçue',
+    note: h.reason ? `Motif : ${h.reason}` : null,
+    by: h.by || 'site de commande',
+    at: h.at,
+  }));
+  const events = (o.events || []).map((e) => ({
+    kind: `e-${e.type}`,
+    title: {
+      FRAIS_SAISIS: `Frais de livraison : ${formatPrice(e.amount)}`,
+      FRAIS_RECUS: 'Frais de livraison reçus',
+      FRAIS_NON_RECUS: '« Frais reçus » décoché',
+      MESSAGE_PREPARE: 'Message WhatsApp préparé',
+    }[e.type],
+    note: e.type === 'MESSAGE_PREPARE' ? e.messageLabel : null,
+    by: e.by,
+    at: e.at,
+  }));
+  return [...statuses, ...events].sort((a, b) => new Date(b.at) - new Date(a.at));
 }

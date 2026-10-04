@@ -130,7 +130,14 @@ Erreurs, toujours au format `{ error: { code, message, details } }` avec un mess
 
 ### `GET /api/orders/:reference`
 
-Récapitulatif public d'une commande (plats, total, statut), sans données de paiement ni position. Sert à réafficher la page de confirmation.
+Récapitulatif public d'une commande, pour la page de suivi : plats, total, statut, étapes datées (`steps`),
+frais de livraison (`deliveryFee`, `deliveryFeeReceived`), numéro où les envoyer (`payTo`, tant qu'ils sont attendus)
+et motif d'annulation. Jamais de nom, de numéro du client, de position ni de nom d'agent.
+
+Page de suivi du client : `/confirmation/:reference` juste après l'envoi, et `/suivi/:reference` (adresse courte
+envoyée sur WhatsApp). Même page (`frontend/src/pages/Confirmation.jsx`) : frise des étapes, frais de livraison
+quand ils sont saisis, bouton « Nous contacter sur WhatsApp ». Elle relit la commande toutes les 20 s
+(et au retour sur la page) tant que la commande n'est ni livrée ni annulée.
 
 ## Alerte WhatsApp à l'équipe
 
@@ -154,6 +161,29 @@ Livraison : {{6}}
 4. Une fois le modèle approuvé, renseignez `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` et `WHATSAPP_TEAM_NUMBERS` dans `.env`.
 
 Le paramètre {{5}} indique le moyen de paiement, par exemple « Orange Money depuis +22676123456 ». Le paramètre {{6}} contient un lien Google Maps quand le client a partagé sa position, suivi de ses repères.
+
+## Messages WhatsApp au client
+
+À chaque étape, le détail d'une commande (espace équipe) propose le message à envoyer au client :
+paiement confirmé avec les frais de livraison, le numéro marchand et le lien de suivi (`PAIEMENT_CONFIRME`) ;
+frais reçus, commande en préparation (`FRAIS_RECUS`) ; en route (`EN_ROUTE`) ; livrée (`LIVREE`) ; annulée avec le motif (`ANNULEE`).
+Le bouton ouvre WhatsApp sur le téléphone de l'agent (lien `wa.me`), message déjà écrit avec le prénom, la référence
+et les vrais montants. L'historique de la commande note « Message WhatsApp préparé » (table `OrderEvent`).
+
+Le lien de suivi utilise `PUBLIC_SITE_URL` : l'adresse du site public, `https://belchicken-six.vercel.app`
+(valeur par défaut du code, à changer seulement si le site change d'adresse).
+
+Les textes sont écrits une seule fois, dans `backend/src/services/customer-messages.js`, au format des modèles Meta
+(`{{1}}`, `{{2}}`…, testé dans `test/customer-messages.test.js`). Pour qu'ils partent tout seuls plus tard :
+
+1. Créez chez Meta un modèle de catégorie **Utilité**, langue français, pour chaque message : nom = `template`,
+   corps = `body` recopié tel quel (`commande_paiement_confirme`, `commande_en_preparation`, `commande_en_route`,
+   `commande_livree`, `commande_annulee`).
+2. Une fois les 5 modèles approuvés, mettez `WHATSAPP_CUSTOMER_AUTO=1` sur Render.
+
+Le serveur envoie alors le message de l'étape après chaque changement (statut, frais), une seule fois par commande
+et par message (`autoNotifyCustomer` dans `src/services/whatsapp.service.js`, journal `NotificationLog`).
+Les boutons de l'espace équipe restent disponibles pour renvoyer un message à la main.
 
 ## Espace équipe
 
@@ -211,6 +241,15 @@ Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (t
   essayer avec `npm run build` puis `npx vite preview --port 5173` dans `frontend/`.
 - Statuts : `PAIEMENT_A_VERIFIER` → `PAYEE` → `EN_PREPARATION` → `EN_LIVRAISON` → `LIVREE`, ou `ANNULEE` avec un motif.
   Historique dans la table `OrderStatusChange`.
+- Frais de livraison (Patron et Opérateur), dans le détail d'une commande : `PUT /api/staff/orders/:reference/delivery-fee`
+  `{ amount }` (au moins 1 F, selon le quartier) et `POST /api/staff/orders/:reference/delivery-fee/received` `{ received }`
+  (« Frais reçus », après vérification sur le téléphone marchand). Modifiables jusqu'au départ du livreur, le montant
+  seulement tant que la case n'est pas cochée. Le passage à `EN_LIVRAISON` est refusé par l'API tant que les frais
+  ne sont pas saisis **et** reçus ; la préparation peut commencer avant. Règles dans `src/services/order-status.js`.
+  Colonnes `Order.deliveryFee` et `Order.deliveryFeeReceivedAt` ; chaque action est notée dans `OrderEvent`.
+- Message préparé : `POST /api/staff/orders/:reference/messages` `{ key }` (voir « Messages WhatsApp au client »).
+- Tableau de bord : le chiffre d'affaires des plats et les frais de livraison reçus sont séparés. Les frais comptent une
+  fois cochés « reçus », sauf si la commande a été annulée ensuite.
 - Le site appelle `/api/staff` sur sa propre adresse : Vite relaie vers l'API en local (`vite.config.js`), Vercel en ligne
   (`frontend/vercel.json`, à mettre à jour si l'adresse Render change). Ainsi le cookie n'est pas bloqué par Safari.
 

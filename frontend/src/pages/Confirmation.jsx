@@ -1,29 +1,37 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
-import { WHATSAPP } from '../components/Layout.jsx';
+import { MERCHANT, WHATSAPP } from '../components/Layout.jsx';
 import { TunnelHead } from '../components/PageParts.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils/format.js';
 
 const METHOD_LABEL = { ORANGE_MONEY: 'Orange Money', MOOV_MONEY: 'Moov Money' };
-const STATUS_LABEL = {
-  PAIEMENT_A_VERIFIER: 'Paiement en cours de vérification',
-  PAYEE: 'Paiement reçu',
-  EN_PREPARATION: 'En préparation',
-  EN_LIVRAISON: 'En livraison',
-  LIVREE: 'Livrée',
-  ANNULEE: 'Annulée',
-};
+// Rafraîchissement de la page de suivi, tant que la commande n'est ni livrée ni annulée
+const REFRESH_MS = 20000;
+const FINAL = ['LIVREE', 'ANNULEE'];
+
+// Frise : les étapes vues par le client
+const STEPS = [
+  { status: 'PAIEMENT_A_VERIFIER', label: 'Commande reçue' },
+  { status: 'PAYEE', label: 'Paiement vérifié' },
+  { status: 'EN_PREPARATION', label: 'En préparation' },
+  { status: 'EN_LIVRAISON', label: 'En route' },
+  { status: 'LIVREE', label: 'Livrée' },
+];
 
 const formatDate = (iso) => {
   const d = new Date(iso);
-  return `${d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+  return `${d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })} à ${formatTime(iso)}`;
 };
+const formatTime = (iso) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
-// Juste après l'envoi, la page reçoit la commande et les coordonnées du client (state de navigation).
-// Après un rechargement, elle relit la commande via GET /api/orders/:reference, qui ne renvoie
-// ni le nom, ni les numéros, ni la position : ces lignes sont alors simplement absentes.
+const contactHref = (reference) =>
+  `https://wa.me/${WHATSAPP.replace(/\D/g, '')}?text=${encodeURIComponent(`Bonjour, je vous contacte au sujet de ma commande ${reference}.`)}`;
+
+// Page de suivi : /confirmation/:reference (juste après l'envoi) et /suivi/:reference (lien envoyé
+// sur WhatsApp). Elle relit la commande toutes les 20 s. Juste après l'envoi, elle reçoit aussi les
+// coordonnées du client (state de navigation) ; l'API, elle, ne renvoie jamais ni nom, ni numéro, ni position.
 export default function Confirmation() {
   const { reference } = useParams();
   const { state } = useLocation();
@@ -37,48 +45,61 @@ export default function Confirmation() {
     if (fresh) clear();
   }, [fresh, clear]);
 
-  useEffect(() => {
-    if (fresh) return undefined;
-    let alive = true;
+  const load = useCallback(() => {
     api.getOrder(reference).then(
-      (o) => alive && setOrder(o),
-      (e) => alive && setError(e),
+      (o) => {
+        setOrder(o);
+        setError(null);
+      },
+      (e) => setError(e),
     );
-    return () => {
-      alive = false;
-    };
-  }, [reference, fresh]);
+  }, [reference]);
 
-  if (error) {
-    return (
-      <div className="wrap pagebody tunnel-body">
-        <TunnelHead title="Confirmation" />
-        <div className="alert err" role="alert"><span>{error.message}</span></div>
-        <Link className="lnk" to="/menu">‹ Retour au menu</Link>
-      </div>
-    );
-  }
+  useEffect(load, [load]);
+
+  const done = order && FINAL.includes(order.status);
+  useEffect(() => {
+    if (done) return undefined;
+    const t = setInterval(() => !document.hidden && load(), REFRESH_MS);
+    // Retour sur la page (téléphone remis en marche, autre application) : mise à jour tout de suite
+    const onShow = () => !document.hidden && load();
+    document.addEventListener('visibilitychange', onShow);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', onShow);
+    };
+  }, [done, load]);
+
   if (!order) {
     return (
       <div className="wrap pagebody tunnel-body">
-        <TunnelHead title="Confirmation" />
-        <div className="alert info" role="status"><span>Chargement de votre commande…</span></div>
+        <TunnelHead title="Suivi de commande" />
+        {error ? (
+          <>
+            <div className="alert err" role="alert"><span>{error.message}</span></div>
+            <Link className="lnk" to="/menu">‹ Retour au menu</Link>
+          </>
+        ) : (
+          <div className="alert info" role="status"><span>Chargement de votre commande…</span></div>
+        )}
       </div>
     );
   }
 
   const recap = fresh?.recap;
   const delivery = recap && [recap.geo && 'Position partagée', recap.addr].filter(Boolean).join(' · ');
+  const fee = order.deliveryFee;
 
   return (
     <div className="wrap pagebody tunnel-body">
-      <TunnelHead title="Commande envoyée" step={3}>
-        {recap ? `Notre équipe vous contacte sur WhatsApp au ${recap.phone}.` : `Notre équipe vous contacte sur WhatsApp. Une question : ${WHATSAPP}.`}
+      <TunnelHead title={fresh ? 'Commande envoyée' : 'Suivi de commande'} step={fresh ? 3 : undefined}>
+        {recap
+          ? `Gardez cette page : elle suit votre commande en direct. Nous vous écrivons aussi sur WhatsApp au ${recap.phone}.`
+          : `Commande ${order.reference}. Cette page se met à jour toute seule.`}
       </TunnelHead>
       <div className="receipt">
-        <div className="alert info" style={{ marginBottom: 18 }}>
-          <span>Votre commande est préparée dès que le paiement est vérifié. Les frais de livraison vous sont annoncés sur WhatsApp.</span>
-        </div>
+        <Tracking order={order} offline={Boolean(error)} />
+
         <div className="doc">
           <div className="doc-top">
             <div className="brand"><span className="mark"><span>B</span></span><span><b>Belchicken</b><small>Récapitulatif de commande</small></span></div>
@@ -100,7 +121,13 @@ export default function Confirmation() {
                   </tr>
                 );
               })}
-              <tr className="tot"><td>Total des plats</td><td></td><td className="r">{formatPrice(order.itemsTotal)}</td></tr>
+              <tr className={fee != null ? 'sub' : 'tot'}><td>Total des plats</td><td></td><td className="r">{formatPrice(order.itemsTotal)}</td></tr>
+              {fee != null && (
+                <>
+                  <tr className="sub"><td>Frais de livraison</td><td></td><td className="r">{formatPrice(fee)}</td></tr>
+                  <tr className="tot"><td>Total</td><td></td><td className="r">{formatPrice(order.itemsTotal + fee)}</td></tr>
+                </>
+              )}
             </tbody>
           </table>
           <dl>
@@ -108,15 +135,101 @@ export default function Confirmation() {
             <dt>Paiement</dt>
             <dd>{METHOD_LABEL[order.paymentMethod] || order.paymentMethod}{recap && ` · depuis le ${recap.payer}`}</dd>
             {delivery && <><dt>Livraison</dt><dd>{delivery}</dd></>}
-            <dt>Frais de livraison</dt><dd>Annoncés sur WhatsApp</dd>
-            <dt>Statut</dt><dd><span className="pill">{STATUS_LABEL[order.status] || order.status}</span></dd>
+            {(fee != null || order.status !== 'ANNULEE') && (
+              <>
+                <dt>Frais de livraison</dt>
+                <dd>
+                  {fee == null
+                    ? 'Selon votre quartier : affichés ici après la vérification de votre paiement'
+                    : `${formatPrice(fee)} · ${order.deliveryFeeReceived ? 'reçus, merci' : 'à envoyer avant le départ du livreur'}`}
+                </dd>
+              </>
+            )}
           </dl>
         </div>
         <div className="rc-actions">
+          <a className="btn btn-wa" href={contactHref(order.reference)} target="_blank" rel="noreferrer">Nous contacter sur WhatsApp</a>
           <button type="button" className="btn btn-s" onClick={() => window.print()}>Imprimer</button>
-          <Link className="btn btn-p" to="/menu">Retour au menu</Link>
+          <Link className="btn btn-s" to="/menu">Retour au menu</Link>
         </div>
       </div>
     </div>
   );
+}
+
+// Où en est la commande : frise des étapes et ce que le client doit savoir maintenant
+function Tracking({ order, offline }) {
+  const cancelled = order.status === 'ANNULEE';
+  const at = Object.fromEntries((order.steps || []).map((s) => [s.status, s.at]));
+  at.PAIEMENT_A_VERIFIER ??= order.createdAt;
+  // Étape atteinte : la dernière de la frise (pour une commande annulée, la dernière avant l'annulation)
+  const reached = cancelled
+    ? Math.max(0, ...STEPS.map((s, i) => (at[s.status] ? i : 0)))
+    : STEPS.findIndex((s) => s.status === order.status);
+
+  return (
+    <section className={`trk${cancelled ? ' off' : ''}`} aria-label="Suivi de votre commande">
+      <div className="trk-head">
+        <h2>{cancelled ? 'Commande annulée' : STEPS[reached].label}</h2>
+        {!FINAL.includes(order.status) && (
+          <span className={`trk-live${offline ? ' off' : ''}`}>{offline ? 'Connexion perdue, nouvel essai…' : 'Mise à jour automatique'}</span>
+        )}
+      </div>
+
+      <ol className="trk-steps">
+        {STEPS.map((s, i) => {
+          // Annulée : les étapes atteintes restent cochées. Livrée : tout est coché.
+          let state = 'todo';
+          if (i < reached || (i === reached && (cancelled || order.status === 'LIVREE'))) state = 'done';
+          else if (i === reached) state = 'cur';
+          return (
+            <li key={s.status} className={state} aria-current={state === 'cur' ? 'step' : undefined}>
+              <span className="trk-dot" aria-hidden="true" />
+              <b>{s.label}</b>
+              <small>{at[s.status] && state !== 'todo' ? formatTime(at[s.status]) : ' '}</small>
+            </li>
+          );
+        })}
+      </ol>
+
+      <Now order={order} />
+    </section>
+  );
+}
+
+function Now({ order }) {
+  const fee = order.deliveryFee;
+  const payTo = order.payTo || MERCHANT;
+  const method = METHOD_LABEL[order.paymentMethod] || 'Orange Money ou Moov Money';
+
+  switch (order.status) {
+    case 'ANNULEE':
+      return (
+        <p className="trk-now bad">
+          {order.cancelReason ? <>Motif : <b>{order.cancelReason.trim().replace(/[\s.!]+$/, '')}</b>. </> : null}
+          Pour toute question, contactez-nous sur WhatsApp.
+        </p>
+      );
+    case 'PAIEMENT_A_VERIFIER':
+      return <p className="trk-now">Nous vérifions votre paiement de <b>{formatPrice(order.itemsTotal)}</b> sur notre téléphone marchand. Ensuite, nous vous indiquons ici et sur WhatsApp les frais de livraison pour votre quartier.</p>;
+    case 'PAYEE':
+    case 'EN_PREPARATION':
+      if (fee == null) return <p className="trk-now">Paiement vérifié, merci ! Nous calculons les frais de livraison pour votre quartier : ils s’affichent ici dans un instant et vous sont envoyés sur WhatsApp.</p>;
+      if (!order.deliveryFeeReceived) {
+        return (
+          <div className="trk-fee">
+            <p>Frais de livraison pour votre quartier</p>
+            <b>{formatPrice(fee)}</b>
+            <p>À envoyer par <b>{method}</b> au <b className="trk-num">{payTo}</b>. Le livreur part dès leur réception.</p>
+          </div>
+        );
+      }
+      return <p className="trk-now ok">Frais de livraison de <b>{formatPrice(fee)}</b> bien reçus. {order.status === 'EN_PREPARATION' ? 'Votre commande est en préparation.' : 'Votre commande va être préparée.'}</p>;
+    case 'EN_LIVRAISON':
+      return <p className="trk-now ok">Votre commande est en route ! Gardez votre téléphone près de vous : le livreur peut vous appeler.</p>;
+    case 'LIVREE':
+      return <p className="trk-now ok">Commande livrée. Merci de votre confiance et bon appétit !</p>;
+    default:
+      return null;
+  }
 }
