@@ -7,7 +7,8 @@ export const SESSION_DAYS = 14;
 const SEEN_REFRESH_MS = 5 * 60 * 1000;
 
 // Ce que l'API renvoie d'un compte : jamais l'empreinte du mot de passe
-export const toPublicStaff = (u) => ({ id: u.id, name: u.name, phone: u.phone, role: u.role });
+// mustChangePassword : mot de passe provisoire, l'écran demande d'en choisir un avant tout le reste
+export const toPublicStaff = (u) => ({ id: u.id, name: u.name, phone: u.phone, role: u.role, mustChangePassword: u.mustChangePassword });
 
 // Renvoie { user, token, expiresAt } ou null si le numéro ou le mot de passe est faux
 export async function login(phone, password, userAgent) {

@@ -26,6 +26,8 @@ export function StaffProvider({ children }) {
         const user = await staffApi.login(phone, password);
         setState({ status: 'ready', user, error: null });
       },
+      // Après un changement de mot de passe : le compte renvoyé par l'API (mustChangePassword à faux)
+      setUser: (user) => setState({ status: 'ready', user, error: null }),
       logout: async () => {
         // Même si l'API ne répond pas, on oublie la session côté écran
         await staffApi.logout().catch(() => {});

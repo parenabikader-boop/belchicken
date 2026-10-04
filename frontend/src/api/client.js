@@ -92,4 +92,14 @@ export const staffApi = {
   pushSubscribe: (subscription) => staffRequest('/push/subscribe', { method: 'POST', body: JSON.stringify(subscription) }),
   pushUnsubscribe: (endpoint) => staffRequest('/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) }),
   pushTest: (endpoint) => staffRequest('/push/test', { method: 'POST', body: JSON.stringify({ endpoint }) }),
+  // Son propre mot de passe (tout membre). currentPassword est inutile quand il est provisoire.
+  changePassword: (body) => staffRequest('/password', { method: 'POST', body: JSON.stringify(body) }).then((d) => d.user),
+  // Page Équipe (Patron) : comptes Opérateur
+  team: () => staffRequest('/team').then((d) => d.members),
+  createMember: (body) => staffRequest('/team', { method: 'POST', body: JSON.stringify(body) }).then((d) => d.member),
+  resetMemberPassword: (id, password) =>
+    staffRequest(`/team/${id}/password`, { method: 'POST', body: JSON.stringify({ password }) }).then((d) => d.member),
+  deactivateMember: (id) => staffRequest(`/team/${id}/deactivate`, { method: 'POST' }).then((d) => d.member),
+  reactivateMember: (id, password) =>
+    staffRequest(`/team/${id}/reactivate`, { method: 'POST', body: JSON.stringify({ password }) }).then((d) => d.member),
 };

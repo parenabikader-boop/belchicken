@@ -12,6 +12,8 @@ import CategoryForm from './menu/CategoryForm.jsx';
 import HomeAdmin from './home/HomeAdmin.jsx';
 import Dashboard from './dashboard/Dashboard.jsx';
 import AlertsPage from './alerts/AlertsPage.jsx';
+import PasswordPage, { ForcedPassword } from './account/PasswordPage.jsx';
+import TeamPage from './team/TeamPage.jsx';
 import InstallBanner from '../components/InstallBanner.jsx';
 import './staff.css';
 
@@ -43,6 +45,7 @@ export default function StaffApp() {
             <Route path="commandes/:reference" element={<OrderDetail />} />
             <Route path="menu" element={<MenuAdmin />} />
             <Route path="alertes" element={<AlertsPage />} />
+            <Route path="mot-de-passe" element={<PasswordPage />} />
             <Route element={<RequirePatron />}>
               <Route path="menu/plats/nouveau" element={<ProductForm />} />
               <Route path="menu/plats/:id" element={<ProductForm />} />
@@ -50,6 +53,7 @@ export default function StaffApp() {
               <Route path="menu/categories/:id" element={<CategoryForm />} />
               <Route path="accueil" element={<HomeAdmin />} />
               <Route path="tableau-de-bord" element={<Dashboard />} />
+              <Route path="equipe" element={<TeamPage />} />
             </Route>
           </Route>
         </Route>
@@ -59,9 +63,10 @@ export default function StaffApp() {
   );
 }
 
-// Sans connexion, renvoie vers la page de connexion, en retenant la page demandée
+// Sans connexion, renvoie vers la page de connexion, en retenant la page demandée.
+// Mot de passe provisoire : rien d'autre n'est affiché tant qu'il n'est pas remplacé (l'API bloque aussi).
 function RequireStaff() {
-  const { status, error, retry } = useStaff();
+  const { status, error, retry, user } = useStaff();
   const { pathname } = useLocation();
   if (status === 'loading') return <StaffScreen><p className="st-muted">Vérification de la connexion…</p></StaffScreen>;
   if (status === 'error') {
@@ -73,6 +78,7 @@ function RequireStaff() {
     );
   }
   if (status === 'anon') return <Navigate to={`/equipe/connexion?suite=${encodeURIComponent(pathname)}`} replace />;
+  if (user.mustChangePassword) return <StaffScreen><ForcedPassword /></StaffScreen>;
   return <Outlet />;
 }
 
@@ -115,9 +121,13 @@ function StaffShell() {
             <NavLink to="/equipe/menu">Menu</NavLink>
             {user.role === 'PATRON' && <NavLink to="/equipe/accueil">Accueil</NavLink>}
             {user.role === 'PATRON' && <NavLink to="/equipe/tableau-de-bord"><span className="st-lg">Tableau de bord</span><span className="st-sm">Chiffres</span></NavLink>}
+            {user.role === 'PATRON' && <NavLink to="/equipe/equipe">Équipe</NavLink>}
           </nav>
           <div className="st-user">
-            <span className="st-name">{user.name}<small>{ROLE_LABEL[user.role]}</small></span>
+            <NavLink to="/equipe/mot-de-passe" className="st-name" title="Mon mot de passe">{user.name}<small>{ROLE_LABEL[user.role]}</small></NavLink>
+            <NavLink to="/equipe/mot-de-passe" className="st-out st-bell st-sm-only" aria-label="Mon mot de passe">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+            </NavLink>
             <NavLink to="/equipe/alertes" className="st-out st-bell" aria-label="Alertes sur ce téléphone">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
               <span className="st-lg">Alertes</span>

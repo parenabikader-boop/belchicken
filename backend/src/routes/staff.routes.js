@@ -2,13 +2,16 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { normalizePhone } from '../utils/phone.js';
-import { readSessionToken, requireStaff, sessionCookie } from '../middlewares/staff-auth.js';
+import { readSessionToken, requireStaffSession, sessionCookie } from '../middlewares/staff-auth.js';
 import { login, logout, toPublicStaff } from '../services/staff.service.js';
 import { staffOrdersRouter } from './staff-orders.routes.js';
 import { staffMenuRouter } from './staff-menu.routes.js';
 import { staffHomeRouter } from './staff-home.routes.js';
 import { staffDashboardRouter } from './staff-dashboard.routes.js';
 import { staffPushRouter } from './staff-push.routes.js';
+import { staffTeamRouter } from './staff-team.routes.js';
+import { ownPasswordSchema } from '../services/team.js';
+import { changeOwnPassword } from '../services/team.service.js';
 
 export const staffRouter = Router();
 
@@ -66,8 +69,26 @@ staffRouter.post('/logout', async (req, res, next) => {
   }
 });
 
-staffRouter.get('/me', requireStaff(), (req, res) => {
+staffRouter.get('/me', requireStaffSession(), (req, res) => {
   res.json({ user: toPublicStaff(req.staff) });
+});
+
+// Changer son propre mot de passe (tout membre, y compris avec un mot de passe provisoire).
+// 8 essais ratés / 15 min par compte : l'ancien mot de passe ne se devine pas depuis un téléphone resté ouvert.
+const passwordLimiter = limiter({
+  limit: 8,
+  keyGenerator: (req) => `compte:${req.staff.id}`,
+  message: { error: { code: 'TROP_DE_TENTATIVES', message: 'Trop d’essais. Réessayez dans 15 minutes.' } },
+});
+
+staffRouter.post('/password', requireStaffSession(), passwordLimiter, async (req, res, next) => {
+  try {
+    const body = ownPasswordSchema(req.staff.mustChangePassword).parse(req.body);
+    const user = await changeOwnPassword(req.staff, readSessionToken(req), body);
+    res.json({ user: toPublicStaff(user) });
+  } catch (e) {
+    next(e);
+  }
 });
 
 staffRouter.use('/orders', staffOrdersRouter);
@@ -75,3 +96,4 @@ staffRouter.use('/menu', staffMenuRouter);
 staffRouter.use('/home', staffHomeRouter);
 staffRouter.use('/dashboard', staffDashboardRouter);
 staffRouter.use('/push', staffPushRouter);
+staffRouter.use('/team', staffTeamRouter);

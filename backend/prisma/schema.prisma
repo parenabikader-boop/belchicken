@@ -219,15 +219,18 @@ enum StaffRole {
 }
 
 model StaffUser {
-  id           String    @id @default(cuid())
-  name         String
-  phone        String    @unique // normalisé +226XXXXXXXX, sert d'identifiant de connexion
-  role         StaffRole
-  passwordHash String // scrypt, voir src/services/staff-auth.js
-  isActive     Boolean   @default(true)
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  name               String
+  phone              String    @unique // normalisé +226XXXXXXXX, sert d'identifiant de connexion
+  role               StaffRole
+  passwordHash       String // scrypt, voir src/services/staff-auth.js
+  isActive           Boolean   @default(true) // faux = compte désactivé (agent parti) : plus de connexion possible
+  // Vrai après la création du compte ou une réinitialisation par le Patron : le mot de passe est
+  // provisoire, rien n'est accessible tant que le membre ne l'a pas remplacé par le sien.
+  mustChangePassword Boolean   @default(false)
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   sessions          StaffSession[]
   statusChanges     OrderStatusChange[]

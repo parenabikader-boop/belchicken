@@ -162,8 +162,20 @@ Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (t
 (commandes et disponibilité des plats, sans chiffre d'affaires ni prix ni menu).
 
 - Créer le compte Patron (ou changer son mot de passe) : `npm run equipe:patron` dans `backend/`.
+  Les comptes Opérateur se créent depuis la page Équipe.
 - API : `POST /api/staff/login`, `POST /api/staff/logout`, `GET /api/staff/me`. Les routes protégées utilisent
   `requireStaff()` (tout compte connecté) ou `requireStaff('PATRON')` (`src/middlewares/staff-auth.js`).
+  Un compte au mot de passe provisoire (`StaffUser.mustChangePassword`) reçoit 403 `MOT_DE_PASSE_A_CHANGER` partout,
+  sauf `GET /me` et `POST /password` (`requireStaffSession()`) ; le site lui affiche seulement l'écran « Choisissez votre mot de passe ».
+- Mon mot de passe (tout membre), page `/equipe/mot-de-passe` : `POST /api/staff/password` `{ currentPassword, newPassword }`
+  (l'ancien n'est pas demandé si le mot de passe est provisoire ; le nouveau doit être différent). Les autres appareils
+  du membre sont déconnectés, celui-ci reste connecté. 8 essais ratés par compte toutes les 15 minutes.
+- Équipe (Patron), page `/equipe/equipe` (`frontend/src/staff/team/`) : `GET /api/staff/team` (rôle, dernière connexion,
+  appareils connectés), `POST /api/staff/team` `{ name, phone, password }` crée un Opérateur au mot de passe provisoire,
+  `POST /api/staff/team/:id/password` `{ password }` (mot de passe oublié : provisoire, appareils déconnectés),
+  `POST /api/staff/team/:id/deactivate` (plus de connexion, sessions et alertes téléphone supprimées),
+  `POST /api/staff/team/:id/reactivate` `{ password }` (avec un nouveau mot de passe provisoire). Seuls les comptes
+  Opérateur se gèrent ici, jamais le sien ni celui d'un Patron. Règles dans `src/services/team.js` (testées).
 - Session : jeton aléatoire dans un cookie `httpOnly` limité à `/api/staff`, valable 14 jours ; la base ne garde que son empreinte.
   Mots de passe hachés avec scrypt. 8 essais ratés par numéro (20 par adresse IP) toutes les 15 minutes.
 - Commandes (Patron et Opérateur) : `GET /api/staff/orders?status=EN_COURS|TOUTES|<statut>&q=<recherche>`,

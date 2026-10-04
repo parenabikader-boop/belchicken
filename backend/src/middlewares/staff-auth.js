@@ -37,22 +37,25 @@ const unauthorized = (res) =>
   res.status(401).json({ error: { code: 'NON_CONNECTE', message: "Connectez-vous pour accéder à l'espace équipe." } });
 const forbidden = (res) =>
   res.status(403).json({ error: { code: 'ACCES_REFUSE', message: "Votre compte n'a pas accès à cette page." } });
+const mustChange = (res) =>
+  res.status(403).json({ error: { code: 'MOT_DE_PASSE_A_CHANGER', message: 'Choisissez d’abord votre propre mot de passe.' } });
 
-// 'ok', 'non-connecte' ou 'refuse' : qui a droit à une route de l'espace équipe
-export function accessFor(user, roles) {
+// 'ok', 'non-connecte', 'refuse' ou 'mot-de-passe' (mot de passe provisoire à changer) :
+// qui a droit à une route de l'espace équipe
+export function accessFor(user, roles, { allowProvisional = false } = {}) {
   if (!user) return 'non-connecte';
+  if (user.mustChangePassword && !allowProvisional) return 'mot-de-passe';
   if (roles.length && !roles.includes(user.role)) return 'refuse';
   return 'ok';
 }
 
-// Protège une route de l'espace équipe. Sans rôle : tout compte connecté.
-// Avec rôles : requireStaff('PATRON') réserve la route au patron.
-export function requireStaff(...roles) {
+function guard(roles, options) {
   return async (req, res, next) => {
     try {
       const user = await getSessionUser(readSessionToken(req));
-      const access = accessFor(user, roles);
+      const access = accessFor(user, roles, options);
       if (access === 'non-connecte') return unauthorized(res);
+      if (access === 'mot-de-passe') return mustChange(res);
       if (access === 'refuse') return forbidden(res);
       req.staff = user;
       next();
@@ -61,3 +64,11 @@ export function requireStaff(...roles) {
     }
   };
 }
+
+// Protège une route de l'espace équipe. Sans rôle : tout compte connecté.
+// Avec rôles : requireStaff('PATRON') réserve la route au patron.
+// Un compte au mot de passe provisoire n'a accès à rien tant qu'il ne l'a pas changé.
+export const requireStaff = (...roles) => guard(roles);
+
+// Seules exceptions au mot de passe provisoire : savoir qui est connecté et changer son mot de passe
+export const requireStaffSession = () => guard([], { allowProvisional: true });
