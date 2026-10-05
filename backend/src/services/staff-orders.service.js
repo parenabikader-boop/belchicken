@@ -1,8 +1,10 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
-import { messageContext } from '../config/env.js';
-import { ACTIVE, deliveryError, feeEditError, feeReceivedError, STATUSES, transitionError } from './order-status.js';
-import { customerMessage, MESSAGE_KEYS, MESSAGES } from './customer-messages.js';
+import { customerAutoEnabled, messageContext } from '../config/env.js';
+import {
+  ACTIVE, deliveryError, feeEditError, feeReceivedError, paymentConfirmError, preparationError, STATUSES, transitionError,
+} from './order-status.js';
+import { customerMessage, MESSAGE_KEYS, MESSAGES, noticeError, noticeState } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
 
 const LIST_LIMIT = 100;
@@ -66,8 +68,11 @@ const DETAIL_INCLUDE = {
 // Motif de la dernière annulation (pour le message au client)
 const withCancelReason = (o) => ({ ...o, cancelReason: o.statusChanges.findLast((h) => h.toStatus === 'ANNULEE')?.reason || null });
 
+const notice = (o) => noticeState(o, { auto: customerAutoEnabled() });
+
 export function toStaffOrder(order) {
   const o = withCancelReason(order);
+  const state = notice(o);
   return {
     reference: o.reference,
     status: o.status,
@@ -98,7 +103,7 @@ export function toStaffOrder(order) {
       by: h.staffName,
       at: h.createdAt,
     })),
-    // Frais saisis, frais reçus, messages préparés : affichés avec l'historique des statuts
+    // Frais, messages préparés et envois confirmés : affichés avec l'historique des statuts
     events: o.events.map((e) => ({
       type: e.type,
       amount: e.amount,
@@ -107,8 +112,14 @@ export function toStaffOrder(order) {
       by: e.staffName,
       at: e.createdAt,
     })),
-    // Message WhatsApp de l'étape en cours, prêt à ouvrir (voir customer-messages.js)
-    customerMessage: customerMessage(o, messageContext()),
+    // Message de l'étape en cours : texte et lien WhatsApp (customer-messages.js), et s'il a été confirmé.
+    // required = l'étape suivante est bloquée tant que l'envoi n'est pas confirmé.
+    notice: state && {
+      ...customerMessage(o, messageContext()),
+      required: state.required,
+      confirmed: state.confirmed && { type: state.confirmed.type, by: state.confirmed.staffName, at: state.confirmed.createdAt },
+      auto: customerAutoEnabled(),
+    },
   };
 }
 
@@ -128,90 +139,108 @@ export async function getOrder(reference) {
   return toStaffOrder(order);
 }
 
-// Change le statut. « from » est le statut que la personne voyait à l'écran : si quelqu'un d'autre
-// a changé la commande entre-temps, on refuse au lieu d'écraser son action.
-export async function changeStatus(reference, { from, to, reason }, staff) {
-  await prisma.$transaction(async (tx) => {
-    const order = await tx.order.findUnique({
-      where: { reference },
-      select: { id: true, status: true, deliveryFee: true, deliveryFeeReceivedAt: true },
-    });
-    if (!order) throw new AppError(404, 'Commande introuvable.', 'COMMANDE_INTROUVABLE');
-    if (from && from !== order.status) {
-      throw new AppError(409, "Quelqu'un a déjà changé le statut de cette commande. La page est mise à jour.", 'STATUT_DEJA_CHANGE');
-    }
-    const error = transitionError(order.status, to, reason) || (to === 'EN_LIVRAISON' ? deliveryError(order) : null);
-    if (error) throw new AppError(400, error, 'CHANGEMENT_IMPOSSIBLE');
-
-    // Mêmes frais qu'au moment de la vérification : personne ne les a décochés entre-temps
-    const updated = await tx.order.updateMany({
-      where: { id: order.id, status: order.status, deliveryFee: order.deliveryFee, deliveryFeeReceivedAt: order.deliveryFeeReceivedAt },
-      data: { status: to },
-    });
-    if (updated.count !== 1) {
-      throw new AppError(409, "Quelqu'un a déjà changé le statut de cette commande. La page est mise à jour.", 'STATUT_DEJA_CHANGE');
-    }
-    await tx.orderStatusChange.create({
-      data: {
-        orderId: order.id,
-        fromStatus: order.status,
-        toStatus: to,
-        reason: to === 'ANNULEE' ? reason.trim() : null,
-        staffUserId: staff.id,
-        staffName: staff.name,
-      },
-    });
-  });
-  return afterChange(reference);
-}
-
-async function findForFee(tx, reference) {
+// Commande lue dans une transaction, avec ce qu'il faut pour les règles (statuts et événements)
+async function findForRules(tx, reference) {
   const order = await tx.order.findUnique({
     where: { reference },
-    select: { id: true, status: true, deliveryFee: true, deliveryFeeReceivedAt: true },
+    select: {
+      id: true, status: true, deliveryFee: true, deliveryFeeReceivedAt: true,
+      statusChanges: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
+      events: { select: { type: true, messageKey: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
+    },
   });
   if (!order) throw new AppError(404, 'Commande introuvable.', 'COMMANDE_INTROUVABLE');
   return order;
 }
 
-// Saisie ou modification du montant des frais de livraison (Patron et Opérateur)
+// Écriture protégée : refusée si quelqu'un a changé le statut ou les frais depuis la lecture
+async function guardedUpdate(tx, order, data) {
+  const updated = await tx.order.updateMany({
+    where: { id: order.id, status: order.status, deliveryFee: order.deliveryFee, deliveryFeeReceivedAt: order.deliveryFeeReceivedAt },
+    data,
+  });
+  if (updated.count !== 1) throw new AppError(409, CHANGED, 'COMMANDE_DEJA_CHANGEE');
+}
+
+const statusChange = (order, to, staff, reason = null) => ({
+  orderId: order.id, fromStatus: order.status, toStatus: to, reason, staffUserId: staff.id, staffName: staff.name,
+});
+
+// Change le statut. « from » est le statut que la personne voyait à l'écran : si quelqu'un d'autre
+// a changé la commande entre-temps, on refuse au lieu d'écraser son action.
+// Confirmation du paiement (PAYEE) : les frais de livraison sont donnés en même temps (deliveryFee).
+// Chaque étape, sauf l'annulation, demande que le client ait été prévenu de l'étape en cours.
+export async function changeStatus(reference, { from, to, reason, deliveryFee }, staff) {
+  await prisma.$transaction(async (tx) => {
+    const order = await findForRules(tx, reference);
+    if (from && from !== order.status) {
+      throw new AppError(409, "Quelqu'un a déjà changé le statut de cette commande. La page est mise à jour.", 'STATUT_DEJA_CHANGE');
+    }
+    const fee = to === 'PAYEE' ? deliveryFee ?? order.deliveryFee : order.deliveryFee;
+    const error =
+      transitionError(order.status, to, reason) ||
+      (to !== 'ANNULEE' ? noticeError(notice(order)) : null) ||
+      (to === 'PAYEE' ? paymentConfirmError(fee) : null) ||
+      (to === 'EN_PREPARATION' ? preparationError(order) : null) ||
+      (to === 'EN_LIVRAISON' ? deliveryError(order) : null);
+    if (error) throw new AppError(400, error, 'CHANGEMENT_IMPOSSIBLE');
+
+    await guardedUpdate(tx, order, { status: to, ...(to === 'PAYEE' ? { deliveryFee: fee } : {}) });
+    await tx.orderStatusChange.create({ data: statusChange(order, to, staff, to === 'ANNULEE' ? reason.trim() : null) });
+    if (to === 'PAYEE' && fee !== order.deliveryFee) {
+      await tx.orderEvent.create({ data: event(order.id, 'FRAIS_SAISIS', staff, { amount: fee }) });
+    }
+  });
+  return afterChange(reference);
+}
+
+// Modification du montant des frais (Patron et Opérateur), avant leur réception.
+// Après la confirmation du paiement, un nouveau montant demande un nouveau message au client.
 export async function setDeliveryFee(reference, amount, staff) {
   await prisma.$transaction(async (tx) => {
-    const order = await findForFee(tx, reference);
+    const order = await findForRules(tx, reference);
     const error = feeEditError(order);
     if (error) throw new AppError(400, error, 'FRAIS_IMPOSSIBLES');
     if (order.deliveryFee === amount) return;
-    const updated = await tx.order.updateMany({
-      where: { id: order.id, status: order.status, deliveryFee: order.deliveryFee, deliveryFeeReceivedAt: null },
-      data: { deliveryFee: amount },
-    });
-    if (updated.count !== 1) throw new AppError(409, CHANGED, 'COMMANDE_DEJA_CHANGEE');
+    await guardedUpdate(tx, order, { deliveryFee: amount });
     await tx.orderEvent.create({ data: event(order.id, 'FRAIS_SAISIS', staff, { amount }) });
   });
   return afterChange(reference);
 }
 
-// Cocher ou décocher « Frais reçus » (après vérification sur le téléphone marchand)
+// Cocher « Frais reçus » (après vérification sur le téléphone marchand) : la préparation commence,
+// le client doit en être prévenu. Décocher (erreur de manipulation) reste possible avant le départ du livreur.
 export async function setFeeReceived(reference, received, staff) {
   await prisma.$transaction(async (tx) => {
-    const order = await findForFee(tx, reference);
-    const error = feeReceivedError(order, received);
+    const order = await findForRules(tx, reference);
+    const error = feeReceivedError(order, received) || (received ? noticeError(notice(order)) : null);
     if (error) throw new AppError(400, error, 'FRAIS_IMPOSSIBLES');
-    const updated = await tx.order.updateMany({
-      where: { id: order.id, status: order.status, deliveryFee: order.deliveryFee, deliveryFeeReceivedAt: order.deliveryFeeReceivedAt },
-      data: { deliveryFeeReceivedAt: received ? new Date() : null },
-    });
-    if (updated.count !== 1) throw new AppError(409, CHANGED, 'COMMANDE_DEJA_CHANGEE');
+    const startPreparation = received && order.status === 'PAYEE';
+    await guardedUpdate(tx, order, { deliveryFeeReceivedAt: received ? new Date() : null, ...(startPreparation ? { status: 'EN_PREPARATION' } : {}) });
     await tx.orderEvent.create({ data: event(order.id, received ? 'FRAIS_RECUS' : 'FRAIS_NON_RECUS', staff) });
+    if (startPreparation) await tx.orderStatusChange.create({ data: statusChange(order, 'EN_PREPARATION', staff) });
   });
   return afterChange(reference);
 }
 
 // Un agent a ouvert WhatsApp avec le message de l'étape : noté dans l'historique.
-// (WhatsApp ne dit pas si le message a vraiment été envoyé : on note qu'il a été préparé.)
+// (WhatsApp ne dit pas si le message a vraiment été envoyé : l'agent le confirme ensuite.)
 export async function logMessagePrepared(reference, key, staff) {
   if (!MESSAGE_KEYS.includes(key)) throw new AppError(400, 'Message inconnu.', 'MESSAGE_INCONNU');
   const order = await prisma.order.findUnique({ where: { reference }, select: { id: true } });
   if (!order) throw new AppError(404, 'Commande introuvable.', 'COMMANDE_INTROUVABLE');
   await prisma.orderEvent.create({ data: event(order.id, 'MESSAGE_PREPARE', staff, { messageKey: key }) });
+}
+
+// L'agent confirme que le client est prévenu de l'étape en cours : message WhatsApp envoyé
+// (by = 'WHATSAPP') ou client prévenu par appel (by = 'APPEL'). Débloque l'étape suivante.
+export async function confirmNotice(reference, { key, by }, staff) {
+  const order = await findForRules(prisma, reference);
+  const state = notice(order);
+  if (!state || state.key !== key) throw new AppError(409, 'La commande a changé d’étape. La page est mise à jour.', 'ETAPE_CHANGEE');
+  if (state.missing) throw new AppError(400, state.missing, 'MESSAGE_INCOMPLET');
+  if (!state.confirmed) {
+    await prisma.orderEvent.create({ data: event(order.id, by === 'APPEL' ? 'CLIENT_APPELE' : 'MESSAGE_ENVOYE', staff, { messageKey: key }) });
+  }
+  return getOrder(reference);
 }

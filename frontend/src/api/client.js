@@ -65,6 +65,9 @@ export const staffApi = {
     staffRequest(`/orders/${encodeURIComponent(reference)}/delivery-fee/received`, { method: 'POST', body: JSON.stringify({ received }) }).then((d) => d.order),
   // Message WhatsApp ouvert par l'agent : noté dans l'historique. keepalive : la requête part même
   // si le téléphone bascule aussitôt sur WhatsApp.
+  // Client prévenu de l'étape en cours : by = 'WHATSAPP' (message envoyé) ou 'APPEL'
+  confirmNotice: (reference, key, by) =>
+    staffRequest(`/orders/${encodeURIComponent(reference)}/notice`, { method: 'POST', body: JSON.stringify({ key, by }) }).then((d) => d.order),
   logMessage: (reference, key) =>
     staffRequest(`/orders/${encodeURIComponent(reference)}/messages`, { method: 'POST', body: JSON.stringify({ key }), keepalive: true }),
 

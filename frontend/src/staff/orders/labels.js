@@ -23,12 +23,13 @@ export const FILTERS = [
   { id: 'TOUTES', label: 'Toutes' },
 ];
 
-// Bouton principal de chaque statut : passage au statut suivant
+// Bouton unique de chaque étape : passage à l'étape suivante ET message au client (OrderSteps.jsx).
+// PAYEE -> EN_PREPARATION se fait en cochant les frais reçus.
 export const NEXT_ACTION = {
-  PAIEMENT_A_VERIFIER: { to: 'PAYEE', label: 'Paiement reçu' },
-  PAYEE: { to: 'EN_PREPARATION', label: 'Commencer la préparation' },
-  EN_PREPARATION: { to: 'EN_LIVRAISON', label: 'Partie en livraison' },
-  EN_LIVRAISON: { to: 'LIVREE', label: 'Livrée au client' },
+  PAIEMENT_A_VERIFIER: { to: 'PAYEE', label: 'Confirmer le paiement et prévenir le client' },
+  PAYEE: { to: 'EN_PREPARATION', label: 'Frais reçus : lancer la préparation et prévenir le client' },
+  EN_PREPARATION: { to: 'EN_LIVRAISON', label: 'Partie en livraison : prévenir le client' },
+  EN_LIVRAISON: { to: 'LIVREE', label: 'Livrée : remercier le client' },
 };
 
 export const METHOD_LABEL = { ORANGE_MONEY: 'Orange Money', MOOV_MONEY: 'Moov Money', ESPECES: 'Espèces' };
@@ -82,9 +83,11 @@ export function timelineOf(o) {
       FRAIS_SAISIS: `Frais de livraison : ${formatPrice(e.amount)}`,
       FRAIS_RECUS: 'Frais de livraison reçus',
       FRAIS_NON_RECUS: '« Frais reçus » décoché',
-      MESSAGE_PREPARE: 'Message WhatsApp préparé',
+      MESSAGE_PREPARE: 'WhatsApp ouvert avec le message',
+      MESSAGE_ENVOYE: 'Message envoyé au client (confirmé)',
+      CLIENT_APPELE: 'Client prévenu par appel',
     }[e.type],
-    note: e.type === 'MESSAGE_PREPARE' ? e.messageLabel : null,
+    note: e.messageLabel || null,
     by: e.by,
     at: e.at,
   }));

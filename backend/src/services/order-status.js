@@ -73,3 +73,17 @@ export function feeReceivedError(order, received) {
   }
   return null;
 }
+
+// Confirmer le paiement : les frais de livraison sont donnés en même temps, car le message
+// « paiement confirmé » les annonce au client
+export function paymentConfirmError(fee) {
+  if (fee == null) return 'Indiquez les frais de livraison : ils sont annoncés au client avec la confirmation du paiement.';
+  if (!Number.isInteger(fee) || fee < FEE_MIN || fee > FEE_MAX) return 'Frais de livraison invalides (de 1 F à 50 000 F).';
+  return null;
+}
+
+// La préparation commence une fois les frais reçus (le message « frais reçus » dit « en préparation »)
+export function preparationError(order) {
+  if (order.deliveryFeeReceivedAt) return null;
+  return 'Cochez d’abord « Frais reçus » : la préparation commence une fois les frais reçus.';
+}

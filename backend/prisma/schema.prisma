@@ -209,6 +209,8 @@ enum OrderEventType {
   FRAIS_RECUS // « Frais reçus » coché, après vérification sur le téléphone marchand
   FRAIS_NON_RECUS // case décochée (erreur de manipulation)
   MESSAGE_PREPARE // message WhatsApp au client ouvert par un agent (messageKey)
+  MESSAGE_ENVOYE // l'agent confirme avoir envoyé le message de l'étape (messageKey)
+  CLIENT_APPELE // client sans WhatsApp, prévenu par appel (messageKey = message de l'étape)
 }
 
 model OrderEvent {

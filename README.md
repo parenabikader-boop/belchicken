@@ -168,7 +168,25 @@ Le paramètre {{5}} indique le moyen de paiement, par exemple « Orange Money de
 paiement confirmé avec les frais de livraison, le numéro marchand et le lien de suivi (`PAIEMENT_CONFIRME`) ;
 frais reçus, commande en préparation (`FRAIS_RECUS`) ; en route (`EN_ROUTE`) ; livrée (`LIVREE`) ; annulée avec le motif (`ANNULEE`).
 Le bouton ouvre WhatsApp sur le téléphone de l'agent (lien `wa.me`), message déjà écrit avec le prénom, la référence
-et les vrais montants. L'historique de la commande note « Message WhatsApp préparé » (table `OrderEvent`).
+et les vrais montants. L'historique de la commande note « WhatsApp ouvert avec le message » (table `OrderEvent`).
+
+**Client prévenu à chaque étape (obligatoire).** Un seul bouton par étape enregistre l'étape et ouvre WhatsApp
+(`frontend/src/staff/orders/OrderSteps.jsx`) :
+
+| Étape | Bouton | Message |
+|---|---|---|
+| Paiement à vérifier | Confirmer le paiement et prévenir le client (avec les frais) | `PAIEMENT_CONFIRME` |
+| Payée | Frais reçus : lancer la préparation et prévenir le client | `FRAIS_RECUS` |
+| En préparation | Partie en livraison : prévenir le client | `EN_ROUTE` |
+| En livraison | Livrée : remercier le client | `LIVREE` |
+| À tout moment | Annuler et prévenir le client | `ANNULEE` |
+
+Au retour, l'espace équipe demande « Avez-vous envoyé le message au client ? » (« Oui, envoyé » / « Pas encore »),
+avec l'option « Client sans WhatsApp : prévenu par appel ». Tant que l'envoi n'est pas confirmé, l'étape suivante est
+refusée par l'API (« Prévenez d'abord le client »), sauf l'annulation. Un nouveau montant de frais demande un nouveau
+message. Confirmation : `POST /api/staff/orders/:reference/notice` `{ key, by: 'WHATSAPP' | 'APPEL' }`, notée dans
+l'historique (`MESSAGE_ENVOYE` ou `CLIENT_APPELE`, avec qui et quand). Règles : `noticeState()` dans
+`src/services/customer-messages.js` (testées). Avec `WHATSAPP_CUSTOMER_AUTO=1`, rien n'est demandé : le message part tout seul.
 
 Le lien de suivi utilise `PUBLIC_SITE_URL` : l'adresse du site public, `https://belchicken-six.vercel.app`
 (valeur par défaut du code, à changer seulement si le site change d'adresse).
@@ -241,11 +259,11 @@ Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (t
   essayer avec `npm run build` puis `npx vite preview --port 5173` dans `frontend/`.
 - Statuts : `PAIEMENT_A_VERIFIER` → `PAYEE` → `EN_PREPARATION` → `EN_LIVRAISON` → `LIVREE`, ou `ANNULEE` avec un motif.
   Historique dans la table `OrderStatusChange`.
-- Frais de livraison (Patron et Opérateur), dans le détail d'une commande : `PUT /api/staff/orders/:reference/delivery-fee`
-  `{ amount }` (au moins 1 F, selon le quartier) et `POST /api/staff/orders/:reference/delivery-fee/received` `{ received }`
-  (« Frais reçus », après vérification sur le téléphone marchand). Modifiables jusqu'au départ du livreur, le montant
-  seulement tant que la case n'est pas cochée. Le passage à `EN_LIVRAISON` est refusé par l'API tant que les frais
-  ne sont pas saisis **et** reçus ; la préparation peut commencer avant. Règles dans `src/services/order-status.js`.
+- Frais de livraison (Patron et Opérateur) : donnés en confirmant le paiement (`POST …/status` `{ to: 'PAYEE', deliveryFee }`),
+  corrigés avec `PUT /api/staff/orders/:reference/delivery-fee` `{ amount }` (au moins 1 F) tant qu'ils ne sont pas reçus,
+  puis `POST /api/staff/orders/:reference/delivery-fee/received` `{ received }` (« Frais reçus », après vérification sur
+  le téléphone marchand) : une commande payée passe alors en préparation. La préparation et le départ du livreur
+  (`EN_LIVRAISON`) sont refusés par l'API tant que les frais ne sont pas reçus. Règles dans `src/services/order-status.js`.
   Colonnes `Order.deliveryFee` et `Order.deliveryFeeReceivedAt` ; chaque action est notée dans `OrderEvent`.
 - Message préparé : `POST /api/staff/orders/:reference/messages` `{ key }` (voir « Messages WhatsApp au client »).
 - Tableau de bord : le chiffre d'affaires des plats et les frais de livraison reçus sont séparés. Les frais comptent une

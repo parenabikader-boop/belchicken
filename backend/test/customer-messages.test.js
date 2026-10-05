@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { currentMessageKey, customerMessage, firstName, MESSAGES, messageParams, renderMessage } from '../src/services/customer-messages.js';
-import { deliveryError, feeEditError, feeReceivedError } from '../src/services/order-status.js';
+import {
+  currentMessageKey, customerMessage, firstName, MESSAGES, messageParams, noticeError, noticeState, renderMessage,
+} from '../src/services/customer-messages.js';
+import { deliveryError, feeEditError, feeReceivedError, paymentConfirmError, preparationError } from '../src/services/order-status.js';
 import { feeSchema } from '../src/routes/staff-orders.routes.js';
 
 const ctx = { siteUrl: 'https://belchicken-six.vercel.app/', merchantNumber: '+22670000000' };
@@ -44,7 +46,7 @@ test('un message par étape, grisé tant qu’il manque quelque chose', () => {
   assert.equal(currentMessageKey(order({ status: 'PAIEMENT_A_VERIFIER' })), null);
   assert.deepEqual(currentMessageKey(order()), { key: 'PAIEMENT_CONFIRME', missing: 'Saisissez d’abord les frais de livraison.' });
   assert.deepEqual(currentMessageKey(order({ deliveryFee: 1000 })), { key: 'PAIEMENT_CONFIRME' });
-  assert.equal(currentMessageKey(order({ deliveryFee: 1000, deliveryFeeReceivedAt: RECU })).missing.length > 0, true);
+  assert.deepEqual(currentMessageKey(order({ deliveryFee: 1000, deliveryFeeReceivedAt: RECU })), { key: 'FRAIS_RECUS' });
   assert.deepEqual(currentMessageKey(order({ status: 'EN_PREPARATION', deliveryFee: 1000, deliveryFeeReceivedAt: RECU })), { key: 'FRAIS_RECUS' });
   assert.deepEqual(currentMessageKey(order({ status: 'EN_LIVRAISON' })), { key: 'EN_ROUTE' });
   assert.deepEqual(currentMessageKey(order({ status: 'LIVREE' })), { key: 'LIVREE' });
@@ -93,4 +95,69 @@ test('montant des frais : au moins 1 F, entier', () => {
   assert.throws(() => feeSchema.parse({ amount: 0 }), /au moins 1 F/);
   assert.throws(() => feeSchema.parse({ amount: 500.5 }), /centimes/);
   assert.throws(() => feeSchema.parse({ amount: '1000' }), /en F/);
+});
+
+// ─────────── Client prévenu à chaque étape ───────────
+const at = (hhmm) => new Date(`2026-10-04T${hhmm}:00Z`);
+const done = (key, hhmm, type = 'MESSAGE_ENVOYE') => ({ type, messageKey: key, createdAt: at(hhmm) });
+
+test('paiement confirmé : l’étape suivante attend que l’envoi soit confirmé', () => {
+  const o = order({
+    deliveryFee: 1000,
+    statusChanges: [{ toStatus: 'PAIEMENT_A_VERIFIER', createdAt: at('12:00') }, { toStatus: 'PAYEE', createdAt: at('12:05') }],
+    events: [{ type: 'FRAIS_SAISIS', createdAt: at('12:05') }, { type: 'MESSAGE_PREPARE', messageKey: 'PAIEMENT_CONFIRME', createdAt: at('12:05') }],
+  });
+  const pending = noticeState(o);
+  assert.equal(pending.key, 'PAIEMENT_CONFIRME');
+  assert.equal(pending.required, true); // WhatsApp ouvert ne suffit pas : il faut confirmer
+  assert.match(noticeError(pending), /Prévenez d’abord le client \(« Paiement confirmé et frais de livraison »\)/);
+  o.events.push(done('PAIEMENT_CONFIRME', '12:06'));
+  assert.equal(noticeState(o).required, false);
+  assert.equal(noticeError(noticeState(o)), null);
+});
+
+test('nouveau montant de frais : le client doit être prévenu à nouveau', () => {
+  const o = order({
+    deliveryFee: 1500,
+    statusChanges: [{ toStatus: 'PAYEE', createdAt: at('12:05') }],
+    events: [done('PAIEMENT_CONFIRME', '12:06'), { type: 'FRAIS_SAISIS', amount: 1500, createdAt: at('12:10') }],
+  });
+  assert.equal(noticeState(o).required, true);
+});
+
+test('client sans WhatsApp : prévenu par appel compte comme envoyé', () => {
+  const o = order({ status: 'EN_LIVRAISON', statusChanges: [{ toStatus: 'EN_LIVRAISON', createdAt: at('13:00') }], events: [] });
+  assert.equal(noticeState(o).required, true);
+  o.events.push(done('EN_ROUTE', '13:01', 'CLIENT_APPELE'));
+  assert.equal(noticeState(o).confirmed.type, 'CLIENT_APPELE');
+  assert.equal(noticeState(o).required, false);
+});
+
+test('la confirmation d’une étape ne vaut pas pour la suivante', () => {
+  const o = order({
+    status: 'EN_PREPARATION', deliveryFee: 1000, deliveryFeeReceivedAt: RECU,
+    statusChanges: [{ toStatus: 'PAYEE', createdAt: at('12:05') }, { toStatus: 'EN_PREPARATION', createdAt: at('12:20') }],
+    events: [done('PAIEMENT_CONFIRME', '12:06'), { type: 'FRAIS_RECUS', createdAt: at('12:20') }],
+  });
+  assert.equal(noticeState(o).key, 'FRAIS_RECUS');
+  assert.equal(noticeState(o).required, true);
+});
+
+test('envoi automatique activé : aucune confirmation demandée', () => {
+  const o = order({ status: 'EN_LIVRAISON', statusChanges: [{ toStatus: 'EN_LIVRAISON', createdAt: at('13:00') }], events: [] });
+  assert.equal(noticeState(o, { auto: true }).required, false);
+  assert.equal(noticeError(noticeState(o, { auto: true })), null);
+});
+
+test('paiement à vérifier : rien à dire au client, rien de bloqué', () => {
+  assert.equal(noticeState(order({ status: 'PAIEMENT_A_VERIFIER' })), null);
+  assert.equal(noticeError(null), null);
+});
+
+test('confirmer le paiement demande les frais ; la préparation attend les frais reçus', () => {
+  assert.match(paymentConfirmError(null), /frais de livraison/);
+  assert.match(paymentConfirmError(0), /invalides/);
+  assert.equal(paymentConfirmError(1000), null);
+  assert.match(preparationError(order({ deliveryFee: 1000 })), /Frais reçus/);
+  assert.equal(preparationError(order({ deliveryFee: 1000, deliveryFeeReceivedAt: RECU })), null);
 });

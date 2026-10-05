@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireStaff } from '../middlewares/staff-auth.js';
-import { changeStatus, getOrder, listOrders, logMessagePrepared, setDeliveryFee, setFeeReceived } from '../services/staff-orders.service.js';
+import {
+  changeStatus, confirmNotice, getOrder, listOrders, logMessagePrepared, setDeliveryFee, setFeeReceived,
+} from '../services/staff-orders.service.js';
+import { MESSAGE_KEYS } from '../services/customer-messages.js';
 import { FEE_MAX, FEE_MIN, STATUSES } from '../services/order-status.js';
 
 // Commandes de l'espace équipe : Patron et Opérateur
@@ -32,6 +35,8 @@ const statusSchema = z.object({
   from: z.enum(STATUSES).optional(),
   to: z.enum(STATUSES, { errorMap: () => ({ message: 'Statut inconnu.' }) }),
   reason: z.string().max(300, 'Motif trop long (300 caractères au plus).').optional(),
+  // Frais de livraison donnés avec la confirmation du paiement (to = PAYEE)
+  deliveryFee: z.number({ invalid_type_error: 'Indiquez les frais de livraison en F.' }).int('Montant en F, sans centimes.').optional(),
 });
 
 staffOrdersRouter.post('/:reference/status', async (req, res, next) => {
@@ -76,6 +81,20 @@ staffOrdersRouter.post('/:reference/messages', async (req, res, next) => {
     const { key } = z.object({ key: z.string().max(40) }).parse(req.body);
     await logMessagePrepared(reference(req), key, req.staff);
     res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// L'agent confirme que le client est prévenu de l'étape en cours (débloque l'étape suivante)
+const noticeSchema = z.object({
+  key: z.enum(MESSAGE_KEYS, { errorMap: () => ({ message: 'Message inconnu.' }) }),
+  by: z.enum(['WHATSAPP', 'APPEL']).default('WHATSAPP'),
+});
+
+staffOrdersRouter.post('/:reference/notice', async (req, res, next) => {
+  try {
+    res.json({ order: await confirmNotice(reference(req), noticeSchema.parse(req.body), req.staff) });
   } catch (e) {
     next(e);
   }

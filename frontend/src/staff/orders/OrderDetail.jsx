@@ -3,10 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatPrice } from '../../utils/format.js';
 import { useOrdersFeed } from './OrdersFeed.jsx';
-import {
-  ACTIVE, deliveryBlock, FEE_EDITABLE, formatDateTime, formatPhone, formatTime, mapsHref, METHOD_LABEL, NEXT_ACTION, STATUS_LABEL,
-  telHref, timeAgo, timelineOf, whatsappHref,
-} from './labels.js';
+import { formatDateTime, formatPhone, mapsHref, METHOD_LABEL, STATUS_LABEL, telHref, timeAgo, timelineOf, whatsappHref } from './labels.js';
+import { Actions, DeliveryFee, Notice, useSteps } from './OrderSteps.jsx';
 
 const REFRESH_MS = 5000;
 
@@ -34,20 +32,27 @@ export default function OrderDetail() {
     return () => clearInterval(t);
   }, [reference, load, markSeen]);
 
-  if (!order) {
-    return (
-      <>
-        <Link className="st-back" to="/equipe/commandes">‹ Commandes</Link>
-        {error ? <div className="alert err" role="alert"><span>{error.message}</span></div> : <p className="st-muted">Chargement de la commande…</p>}
-      </>
-    );
-  }
+  if (!order) return <Loading error={error} />;
+  return <Loaded order={order} setOrder={setOrder} error={error} load={load} refreshFeed={refreshFeed} />;
+}
 
+function Loading({ error }) {
+  return (
+    <>
+      <Link className="st-back" to="/equipe/commandes">‹ Commandes</Link>
+      {error ? <div className="alert err" role="alert"><span>{error.message}</span></div> : <p className="st-muted">Chargement de la commande…</p>}
+    </>
+  );
+}
+
+// Commande chargée (composant à part : useSteps a besoin de la commande)
+function Loaded({ order, setOrder, error, load, refreshFeed }) {
   const o = order;
   const updated = (next) => {
     setOrder(next);
     refreshFeed();
   };
+  const steps = useSteps(o, updated, load);
 
   return (
     <div className="st-detail">
@@ -63,14 +68,12 @@ export default function OrderDetail() {
 
       {error && <div className="alert err" role="alert" style={{ marginBottom: 12 }}><span>{error.message}</span></div>}
 
-      <Actions order={o} onChange={updated} onConflict={load} />
-
-      <div className="st-grid of-row">
-        <DeliveryFee order={o} onChange={updated} onConflict={load} />
-        <CustomerMessage order={o} onLogged={load} />
-      </div>
+      <Notice order={o} steps={steps} onChange={updated} />
+      <Actions order={o} steps={steps} />
 
       <div className="st-grid">
+        <DeliveryFee order={o} steps={steps} />
+
         <section className="st-box">
           <h2>Client</h2>
           <p className="st-big">{o.customerName}</p>
@@ -144,202 +147,5 @@ export default function OrderDetail() {
         </section>
       </div>
     </div>
-  );
-}
-
-// Boutons : statut suivant (avec confirmation pour le paiement) et annulation avec motif
-function Actions({ order: o, onChange, onConflict }) {
-  const next = NEXT_ACTION[o.status];
-  const [mode, setMode] = useState(null); // null | 'confirm-pay' | 'cancel'
-  const [reason, setReason] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  // Changement de statut par un collègue : on referme ce qui était ouvert
-  useEffect(() => {
-    setMode(null);
-    setError('');
-  }, [o.status]);
-
-  if (!ACTIVE.includes(o.status)) return null;
-
-  const send = async (to, extra = {}) => {
-    setBusy(true);
-    setError('');
-    try {
-      onChange(await staffApi.setStatus(o.reference, { from: o.status, to, ...extra }));
-      setReason('');
-    } catch (e) {
-      setError(e.message);
-      if (e.status === 409) onConflict();
-    }
-    setBusy(false);
-  };
-
-  if (mode === 'confirm-pay') {
-    return (
-      <div className="st-action confirm">
-        <b>Avez-vous vérifié le paiement sur le téléphone marchand ?</b>
-        <p>
-          <strong>{formatPrice(o.itemsTotal)}</strong> reçus par {METHOD_LABEL[o.paymentMethod]}
-          {o.paymentPayerPhone && <> depuis le <strong>{formatPhone(o.paymentPayerPhone)}</strong></>}.
-        </p>
-        {error && <p className="st-err">{error}</p>}
-        <div className="st-action-row">
-          <button type="button" className="btn btn-p" disabled={busy} onClick={() => send('PAYEE')}>{busy ? 'Enregistrement…' : 'Oui, paiement reçu'}</button>
-          <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
-        </div>
-      </div>
-    );
-  }
-
-  if (mode === 'cancel') {
-    return (
-      <form className="st-action cancel" onSubmit={(e) => { e.preventDefault(); send('ANNULEE', { reason }); }}>
-        <label htmlFor="st-reason"><b>Motif de l'annulation</b></label>
-        <textarea id="st-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder="Ex. : paiement non reçu, client injoignable…" autoFocus />
-        {error && <p className="st-err">{error}</p>}
-        <div className="st-action-row">
-          <button type="submit" className="btn st-btn-danger" disabled={busy || reason.trim().length < 3}>{busy ? 'Annulation…' : "Confirmer l'annulation"}</button>
-          <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
-        </div>
-      </form>
-    );
-  }
-
-  const blocked = next.to === 'EN_LIVRAISON' ? deliveryBlock(o) : null;
-
-  return (
-    <div className="st-action">
-      {blocked && <p className="st-verify-hint">{blocked}</p>}
-      {o.status === 'PAIEMENT_A_VERIFIER' && (
-        <p className="st-verify-hint">
-          Vérifiez sur le téléphone marchand l'arrivée de <b>{formatPrice(o.itemsTotal)}</b> par {METHOD_LABEL[o.paymentMethod]}
-          {o.paymentPayerPhone && <> depuis le <b>{formatPhone(o.paymentPayerPhone)}</b></>}.
-        </p>
-      )}
-      {error && <p className="st-err">{error}</p>}
-      <div className="st-action-row">
-        <button type="button" className="btn btn-p st-next" disabled={busy || Boolean(blocked)} onClick={() => (next.to === 'PAYEE' ? setMode('confirm-pay') : send(next.to))}>
-          {busy ? 'Enregistrement…' : next.label}
-        </button>
-        <button type="button" className="st-text-btn danger" onClick={() => setMode('cancel')}>Annuler la commande</button>
-      </div>
-      <p className="st-muted st-since">Statut actuel depuis {formatTime(o.history.at(-1)?.at || o.createdAt)}</p>
-    </div>
-  );
-}
-
-// Frais de livraison : montant selon le quartier, puis « Frais reçus » après vérification
-// sur le téléphone marchand. Patron et Opérateur.
-function DeliveryFee({ order: o, onChange, onConflict }) {
-  const editable = FEE_EDITABLE.includes(o.status);
-  const received = Boolean(o.deliveryFeeReceivedAt);
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  // Changement par un collègue : on referme la saisie
-  useEffect(() => {
-    setEditing(false);
-    setError('');
-  }, [o.deliveryFee, o.deliveryFeeReceivedAt, o.status]);
-
-  const run = async (call) => {
-    setBusy(true);
-    setError('');
-    try {
-      onChange(await call());
-      setEditing(false);
-    } catch (e) {
-      setError(e.message);
-      if (e.status === 409) onConflict();
-    }
-    setBusy(false);
-  };
-
-  const save = (e) => {
-    e.preventDefault();
-    const amount = Number(value.replace(/\s/g, ''));
-    if (!Number.isInteger(amount) || amount < 1) return setError('Indiquez le montant en F (au moins 1 F).');
-    run(() => staffApi.setDeliveryFee(o.reference, amount));
-  };
-
-  const showForm = editable && !received && (editing || o.deliveryFee == null);
-
-  return (
-    <section className={`st-box of-fee${received ? ' ok' : o.deliveryFee == null && editable ? ' todo' : ''}`}>
-      <h2>Frais de livraison</h2>
-      {showForm ? (
-        <form className="of-fee-form" onSubmit={save}>
-          <label htmlFor="of-fee" className="st-muted">Montant selon le quartier du client</label>
-          <div className="of-fee-row">
-            <span className="of-amount">
-              <input id="of-fee" type="text" inputMode="numeric" autoComplete="off" placeholder="ex. 1000" value={value} onChange={(e) => setValue(e.target.value.replace(/[^\d\s]/g, ''))} />
-              <span>F</span>
-            </span>
-            <button type="submit" className="btn btn-p" disabled={busy}>{busy ? '…' : 'Enregistrer'}</button>
-            {o.deliveryFee != null && <button type="button" className="st-text-btn" onClick={() => setEditing(false)}>Annuler</button>}
-          </div>
-        </form>
-      ) : (
-        <p className="of-fee-value">
-          {o.deliveryFee == null ? <span className="st-muted">Pas de frais saisis.</span> : <b>{formatPrice(o.deliveryFee)}</b>}
-          {editable && !received && o.deliveryFee != null && (
-            <button type="button" className="st-text-btn" onClick={() => { setValue(String(o.deliveryFee)); setEditing(true); }}>Modifier</button>
-          )}
-        </p>
-      )}
-
-      {o.deliveryFee != null && (
-        <label className={`of-check${!editable ? ' locked' : ''}`}>
-          <input type="checkbox" checked={received} disabled={busy || !editable} onChange={(e) => run(() => staffApi.setFeeReceived(o.reference, e.target.checked))} />
-          <span>
-            <b>Frais reçus</b>
-            <small>{received ? `Reçus à ${formatTime(o.deliveryFeeReceivedAt)}` : 'À cocher après vérification sur le téléphone marchand.'}</small>
-          </span>
-        </label>
-      )}
-      {error && <p className="st-err">{error}</p>}
-      {editable && !received && o.deliveryFee != null && <p className="st-note">Le livreur part une fois les frais reçus.</p>}
-    </section>
-  );
-}
-
-// Message de l'étape en cours, prêt à ouvrir dans WhatsApp sur le téléphone de l'agent (lien wa.me).
-// Le lien est un vrai lien : touché directement, le téléphone ouvre WhatsApp sans blocage.
-function CustomerMessage({ order: o, onLogged }) {
-  const m = o.customerMessage;
-  if (!m) {
-    return (
-      <section className="st-box of-msg">
-        <h2>Prévenir le client sur WhatsApp</h2>
-        <p className="st-muted">Rien à envoyer pour l’instant : un message sera proposé une fois le paiement vérifié.</p>
-      </section>
-    );
-  }
-  const prepared = (o.events || []).filter((e) => e.type === 'MESSAGE_PREPARE' && e.messageKey === m.key).at(-1);
-  const log = () => staffApi.logMessage(o.reference, m.key).then(onLogged, () => {});
-
-  return (
-    <section className="st-box of-msg">
-      <h2>Prévenir le client sur WhatsApp</h2>
-      <p className="of-msg-label">{m.label}</p>
-      {m.missing ? (
-        <>
-          <p className="st-verify-hint">{m.missing}</p>
-          <button type="button" className="btn btn-wa" disabled>Ouvrir WhatsApp</button>
-        </>
-      ) : (
-        <>
-          <p className="of-bubble">{m.text}</p>
-          <a className="btn btn-wa" href={m.url} target="_blank" rel="noreferrer" onClick={log}>
-            {prepared ? 'Ouvrir WhatsApp à nouveau' : 'Ouvrir WhatsApp avec ce message'}
-          </a>
-        </>
-      )}
-      {prepared && <p className="st-note">Déjà préparé à {formatTime(prepared.at)}{prepared.by && ` par ${prepared.by}`}.</p>}
-    </section>
   );
 }

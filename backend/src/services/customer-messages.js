@@ -81,9 +81,7 @@ export function currentMessageKey(o) {
     case 'PAYEE':
     case 'EN_PREPARATION':
       if (!feeSet) return { key: 'PAIEMENT_CONFIRME', missing: 'Saisissez d’abord les frais de livraison.' };
-      if (!feeReceived) return { key: 'PAIEMENT_CONFIRME' };
-      if (o.status === 'PAYEE') return { key: 'FRAIS_RECUS', missing: 'Commencez la préparation pour prévenir le client.' };
-      return { key: 'FRAIS_RECUS' };
+      return { key: feeReceived ? 'FRAIS_RECUS' : 'PAIEMENT_CONFIRME' };
     case 'EN_LIVRAISON':
       return { key: 'EN_ROUTE' };
     case 'LIVREE':
@@ -116,4 +114,51 @@ export function customerMessage(o, ctx) {
   if (missing) return { ...base, missing };
   const text = renderMessage(key, o, ctx);
   return { ...base, text, url: whatsappLink(o.customerPhone, text) };
+}
+
+// ─────────── Client prévenu à chaque étape ───────────
+// Chaque étape a son message (currentMessageKey). Tant que l'agent n'a pas confirmé l'avoir envoyé
+// (« Oui, envoyé » ou « Client prévenu par appel »), l'étape suivante est refusée par l'API.
+// La confirmation compte seulement si elle date d'après le début de l'étape : une nouvelle étape,
+// ou un nouveau montant de frais, demande un nouveau message.
+// Avec l'envoi automatique (WHATSAPP_CUSTOMER_AUTO=1), rien n'est demandé : le message part tout seul.
+export const CONFIRM_TYPES = ['MESSAGE_ENVOYE', 'CLIENT_APPELE'];
+
+const time = (d) => (d ? new Date(d).getTime() : 0);
+const lastStatusAt = (o, status) => time((o.statusChanges || []).findLast((h) => h.toStatus === status)?.createdAt);
+const lastEventAt = (o, type) => time((o.events || []).findLast((e) => e.type === type)?.createdAt);
+
+// Début de l'étape dont le message est `key` (millisecondes)
+export function stepStart(o, key) {
+  switch (key) {
+    case 'PAIEMENT_CONFIRME':
+      return Math.max(lastStatusAt(o, 'PAYEE'), lastEventAt(o, 'FRAIS_SAISIS'));
+    case 'FRAIS_RECUS':
+      return lastEventAt(o, 'FRAIS_RECUS') || lastStatusAt(o, 'EN_PREPARATION');
+    case 'EN_ROUTE':
+      return lastStatusAt(o, 'EN_LIVRAISON');
+    default:
+      return lastStatusAt(o, key); // LIVREE, ANNULEE
+  }
+}
+
+// Où en est le message de l'étape :
+//   null si rien à dire au client (paiement à vérifier) ;
+//   sinon { key, missing?, confirmed (dernier événement de confirmation ou null), required }.
+//   required = l'étape suivante est bloquée tant que l'envoi n'est pas confirmé.
+// `o` : la commande avec statusChanges et events (createdAt).
+export function noticeState(o, { auto = false } = {}) {
+  const current = currentMessageKey(o);
+  if (!current) return null;
+  const since = stepStart(o, current.key);
+  const confirmed =
+    (o.events || []).findLast((e) => CONFIRM_TYPES.includes(e.type) && e.messageKey === current.key && time(e.createdAt) >= since) || null;
+  return { ...current, confirmed, required: !auto && !confirmed };
+}
+
+// Avant de passer à l'étape suivante : null si permis, sinon le message
+export function noticeError(state) {
+  if (!state || !state.required) return null;
+  if (state.missing) return state.missing;
+  return `Prévenez d’abord le client (« ${MESSAGES[state.key].label} »), puis confirmez l’envoi.`;
 }

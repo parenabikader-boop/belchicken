@@ -487,7 +487,7 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .of-msg{display:grid;gap:10px;align-content:start}
 .of-msg h2{margin-bottom:0}
 .st-box .of-msg-label{font-weight:700}
-.st-box .of-bubble{white-space:pre-wrap;overflow-wrap:anywhere;background:#e7f7ea;border-radius:10px 10px 10px 2px;padding:10px 12px;font-size:14px;line-height:1.45}
+.of-bubble{white-space:pre-wrap;overflow-wrap:anywhere;background:#e7f7ea;border-radius:10px 10px 10px 2px;padding:10px 12px;font-size:14px;line-height:1.45}
 .st-next:disabled{opacity:.4;cursor:not-allowed}
 .of-amount input::placeholder{color:var(--faint);font-weight:400;font-size:16px}
 .of-msg .btn-wa:disabled{opacity:.45}
@@ -496,3 +496,26 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .st-history li.e-FRAIS_NON_RECUS::before{background:#e0a100;width:8px;height:8px;left:-5px}
 .st-history li.e-MESSAGE_PREPARE::before{background:#1f9e55;border-radius:2px;width:8px;height:8px;left:-5px}
 @media (max-width:640px){.of-msg .btn-wa,.of-fee-row .btn{width:100%}}
+
+/* ===== Client prévenu à chaque étape (OrderSteps.jsx) ===== */
+.nt{border-radius:var(--r-lg);margin:0 0 12px}
+.nt h2{font-size:17px;margin:0}
+.nt-todo{background:var(--panel);border:2px solid #1f9e55;padding:14px 16px;display:grid;gap:10px}
+.nt-todo.asking{background:#e7f7ea}
+.nt-todo.asking h2{font-size:20px}
+.nt-sub{margin:0;font-size:14px;color:var(--muted)}
+.nt-row{display:flex;gap:10px;flex-wrap:wrap}
+.nt-row .btn{flex:1 1 180px;font-size:16px;padding:13px 16px}
+.nt-call{justify-self:start;padding-left:0}
+.nt-done{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--ok-soft);color:var(--ok);font-weight:600;font-size:14px;padding:10px 14px}
+.nt-done a{color:var(--ok);font-weight:700}
+.st-fee-label{display:block;font-weight:600;font-size:14px;margin:12px 0 6px}
+.st-action.confirm .of-amount{background:var(--panel)}
+.st-history li.e-MESSAGE_ENVOYE::before,.st-history li.e-CLIENT_APPELE::before{background:#1f9e55;width:10px;height:10px;left:-6px}
+@media (max-width:640px){.nt-row .btn{flex-basis:100%}}
+@media (max-width:640px){
+  /* Téléphone : bouton d'étape sur toute la largeur, « Annuler la commande » dessous */
+  .st-action-row{flex-direction:column;align-items:stretch;gap:6px}
+  .st-action-row .st-text-btn{align-self:center}
+}
+.nt .of-bubble{margin:0}
