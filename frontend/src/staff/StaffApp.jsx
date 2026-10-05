@@ -14,6 +14,7 @@ import Dashboard from './dashboard/Dashboard.jsx';
 import AlertsPage from './alerts/AlertsPage.jsx';
 import PasswordPage, { ForcedPassword } from './account/PasswordPage.jsx';
 import TeamPage from './team/TeamPage.jsx';
+import CoursesPage from './courier/CoursesPage.jsx';
 import InstallBanner from '../components/InstallBanner.jsx';
 import './staff.css';
 
@@ -39,27 +40,90 @@ export default function StaffApp() {
       <Routes>
         <Route path="connexion" element={<Login />} />
         <Route element={<RequireStaff />}>
-          <Route element={<StaffLayout />}>
-            <Route index element={<Navigate to="commandes" replace />} />
-            <Route path="commandes" element={<OrdersList />} />
-            <Route path="commandes/:reference" element={<OrderDetail />} />
-            <Route path="menu" element={<MenuAdmin />} />
-            <Route path="alertes" element={<AlertsPage />} />
-            <Route path="mot-de-passe" element={<PasswordPage />} />
-            <Route element={<RequirePatron />}>
-              <Route path="menu/plats/nouveau" element={<ProductForm />} />
-              <Route path="menu/plats/:id" element={<ProductForm />} />
-              <Route path="menu/categories/nouvelle" element={<CategoryForm />} />
-              <Route path="menu/categories/:id" element={<CategoryForm />} />
-              <Route path="accueil" element={<HomeAdmin />} />
-              <Route path="tableau-de-bord" element={<Dashboard />} />
-              <Route path="equipe" element={<TeamPage />} />
-            </Route>
-          </Route>
+          <Route path="*" element={<RoleRoutes />} />
         </Route>
-        <Route path="*" element={<Navigate to="/equipe" replace />} />
       </Routes>
     </StaffProvider>
+  );
+}
+
+// Le livreur a ses propres pages : toute autre adresse le ramène à ses courses (l'API refuse aussi)
+function RoleRoutes() {
+  const { user } = useStaff();
+  return user.role === 'LIVREUR' ? <CourierRoutes /> : <TeamRoutes />;
+}
+
+function CourierRoutes() {
+  return (
+    <Routes>
+      <Route element={<CourierShell />}>
+        <Route path="courses" element={<CoursesPage />} />
+        <Route path="alertes" element={<AlertsPage />} />
+        <Route path="mot-de-passe" element={<PasswordPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/equipe/courses" replace />} />
+    </Routes>
+  );
+}
+
+function TeamRoutes() {
+  return (
+    <Routes>
+      <Route element={<StaffLayout />}>
+        <Route index element={<Navigate to="commandes" replace />} />
+        <Route path="commandes" element={<OrdersList />} />
+        <Route path="commandes/:reference" element={<OrderDetail />} />
+        <Route path="menu" element={<MenuAdmin />} />
+        <Route path="alertes" element={<AlertsPage />} />
+        <Route path="mot-de-passe" element={<PasswordPage />} />
+        <Route element={<RequirePatron />}>
+          <Route path="menu/plats/nouveau" element={<ProductForm />} />
+          <Route path="menu/plats/:id" element={<ProductForm />} />
+          <Route path="menu/categories/nouvelle" element={<CategoryForm />} />
+          <Route path="menu/categories/:id" element={<CategoryForm />} />
+          <Route path="accueil" element={<HomeAdmin />} />
+          <Route path="tableau-de-bord" element={<Dashboard />} />
+          <Route path="equipe" element={<TeamPage />} />
+        </Route>
+      </Route>
+      <Route path="*" element={<Navigate to="/equipe" replace />} />
+    </Routes>
+  );
+}
+
+// En-tête du livreur : ses courses, ses alertes, son mot de passe
+function CourierShell() {
+  const { user, logout } = useStaff();
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return (
+    <div className="st-app">
+      <header className="st-top">
+        <div className="st-wrap">
+          <Link to="/equipe/courses" className="st-brand" style={{ color: 'inherit', textDecoration: 'none' }}>
+            <span className="mark"><span>B</span></span><span><b>Belchicken</b><small>Espace livreur</small></span>
+          </Link>
+          <div className="st-user">
+            <NavLink to="/equipe/mot-de-passe" className="st-name" title="Mon mot de passe">{user.name}<small>{ROLE_LABEL[user.role]}</small></NavLink>
+            <NavLink to="/equipe/mot-de-passe" className="st-out st-bell st-sm-only" aria-label="Mon mot de passe">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
+            </NavLink>
+            <NavLink to="/equipe/alertes" className="st-out st-bell" aria-label="Alertes sur ce téléphone">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+            </NavLink>
+            <button type="button" className="st-out" onClick={logout}>Déconnexion</button>
+          </div>
+        </div>
+      </header>
+      <main className="st-wrap st-main">
+        {pathname !== '/equipe/courses' && <Link className="st-back" to="/equipe/courses">‹ Mes courses</Link>}
+        <InstallBanner app="equipe" />
+        <Outlet />
+      </main>
+    </div>
   );
 }
 

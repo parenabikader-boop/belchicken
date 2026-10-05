@@ -174,6 +174,9 @@ function timelineBars(d) {
   });
 }
 
+// 26 -> « 26 min », 75 -> « 1 h 15 », vide -> « — »
+const duration = (min) => (min == null ? '—' : min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`);
+
 function Card({ title, sub, children, wide }) {
   return (
     <section className={`st-box db-card${wide ? ' wide' : ''}`}>
@@ -339,6 +342,28 @@ export default function Dashboard() {
                     </ul>
                   </>
                 ) : <p className="st-muted db-none">Aucune commande payée sur cette période.</p>}
+              </Card>
+
+              <Card title="Livreurs" sub="Commandes livrées sur la période. Temps moyen : du départ à la remise au client.">
+                {data.couriers?.length ? (
+                  <table className="db-couriers">
+                    <thead>
+                      <tr><th>Livreur</th><th className="db-n">Livraisons</th><th className="db-n">Temps moyen</th></tr>
+                    </thead>
+                    <tbody>
+                      {data.couriers.map((c) => (
+                        <tr key={c.name}>
+                          <td>
+                            <b>{c.name}</b>
+                            {c.withoutCode > 0 && <small className="st-muted" style={{ display: 'block', margin: 0 }}>{c.withoutCode} validée{c.withoutCode > 1 ? 's' : ''} sans code</small>}
+                          </td>
+                          <td className="db-n">{c.delivered}</td>
+                          <td className="db-n">{duration(c.avgMinutes)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : <p className="st-muted db-none">Aucune livraison par un livreur sur cette période.</p>}
               </Card>
 
               <Card title="Commandes annulées" sub={data.cancellations.count ? `${data.cancellations.count} sur la période, motifs donnés par l'équipe.` : null}>

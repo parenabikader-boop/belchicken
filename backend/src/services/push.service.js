@@ -2,7 +2,7 @@ import webpush from 'web-push';
 import { env, pushEnabled } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
-import { deviceLabel, newOrderNotification, testNotification } from './push.message.js';
+import { courseCancelledNotification, courseNotification, deviceLabel, newOrderNotification, testNotification } from './push.message.js';
 
 // Notifications de l'équipe sur téléphone (Web Push), à côté de l'alerte WhatsApp.
 
@@ -50,15 +50,30 @@ async function sendTo(sub, payload) {
   }
 }
 
-// Alerte toute l'équipe (Patron et Opérateur) d'une nouvelle commande. Ne lève jamais d'erreur :
-// un échec d'envoi ne doit pas faire échouer la commande, il est journalisé.
+// Alerte toute l'équipe (Patron et Opérateur, pas les livreurs) d'une nouvelle commande.
+// Ne lève jamais d'erreur : un échec d'envoi ne doit pas faire échouer la commande, il est journalisé.
 export async function pushTeamNewOrder(order) {
   if (!pushEnabled()) return;
+  await pushAndLog(order, { staffUser: { isActive: true, role: { in: ['PATRON', 'OPERATEUR'] } } }, newOrderNotification(order));
+}
+
+// Nouvelle course assignée : seulement les téléphones de ce livreur. Ne lève jamais d'erreur.
+export async function pushCourierAssigned(order, courierId) {
+  if (!pushEnabled()) return;
+  await pushAndLog(order, { staffUserId: courierId, staffUser: { isActive: true } }, courseNotification(order));
+}
+
+// Course annulée pendant la livraison : prévient son livreur. Ne lève jamais d'erreur.
+export async function pushCourseCancelled(order, courierId) {
+  if (!pushEnabled()) return;
+  await pushAndLog(order, { staffUserId: courierId, staffUser: { isActive: true } }, courseCancelledNotification(order));
+}
+
+async function pushAndLog(order, where, payload) {
   const subs = await prisma.pushSubscription.findMany({
-    where: { staffUser: { isActive: true } },
+    where,
     include: { staffUser: { select: { name: true } } },
   });
-  const payload = newOrderNotification(order);
   await Promise.all(
     subs.map(async (sub) => {
       const result = await sendTo(sub, payload);

@@ -47,8 +47,14 @@ function Handover({ info, onClose }) {
   );
 }
 
+// Rôles créés depuis cette page (les comptes Patron : npm run equipe:patron)
+const NEW_ROLES = [
+  { role: 'OPERATEUR', help: 'Voit et fait avancer les commandes, rend un plat disponible ou non. Ni chiffres, ni prix, ni comptes.' },
+  { role: 'LIVREUR', help: 'Voit seulement ses courses du jour (client, adresse, plats, sans aucun montant) et valide la remise avec le code du client.' },
+];
+
 function NewMember({ onCreated, onCancel }) {
-  const [form, setForm] = useState({ name: '', phone: '', password: provisionalPassword() });
+  const [form, setForm] = useState({ role: 'OPERATEUR', name: '', phone: '', password: provisionalPassword() });
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
   const set = (field) => (value) => setForm((f) => ({ ...f, [field]: value }));
@@ -71,8 +77,15 @@ function NewMember({ onCreated, onCancel }) {
 
   return (
     <form className="st-box tm-new" onSubmit={submit} noValidate>
-      <h2>Nouveau compte Opérateur</h2>
-      <p className="st-muted tm-help">Ce compte pourra voir et faire avancer les commandes, et rendre un plat disponible ou non. Ni chiffres, ni prix, ni comptes.</p>
+      <h2>Nouveau compte</h2>
+      <div className="cr-pick" role="radiogroup" aria-label="Rôle">
+        {NEW_ROLES.map((r) => (
+          <label key={r.role} className="cr-opt">
+            <input type="radio" name="tm-role" value={r.role} checked={form.role === r.role} onChange={() => set('role')(r.role)} />
+            <span><b>{ROLE_LABEL[r.role]}</b><small>{r.help}</small></span>
+          </label>
+        ))}
+      </div>
       {error && <div className="alert err" role="alert"><span>{error}</span></div>}
       <div className="fields">
         <div className="f">
@@ -107,7 +120,7 @@ function Member({ m, me, onChange }) {
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
   const isMe = m.id === me.id;
-  const manageable = !isMe && m.role === 'OPERATEUR';
+  const manageable = !isMe && m.role !== 'PATRON';
 
   const start = (action) => {
     setOpen(action);
@@ -227,7 +240,7 @@ export default function TeamPage() {
     <div className="tm">
       <div className="st-head">
         <h1 className="st-title">Équipe</h1>
-        {!adding && <button type="button" className="btn btn-p mn-btn" onClick={() => { setAdding(true); setHandover(null); }}>+ Opérateur</button>}
+        {!adding && <button type="button" className="btn btn-p mn-btn" onClick={() => { setAdding(true); setHandover(null); }}>+ Nouveau compte</button>}
       </div>
       <p className="st-muted tm-intro">Les comptes de l’espace équipe. Chacun se connecte avec son numéro et son propre mot de passe.</p>
 

@@ -519,3 +519,59 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
   .st-action-row .st-text-btn{align-self:center}
 }
 .nt .of-bubble{margin:0}
+
+/* ===== Espace livreur (/equipe/courses) : gros boutons, lisible en plein soleil ===== */
+.lv{max-width:620px;margin:0 auto}
+.lv-count{font-weight:800;margin:0 0 10px}
+.lv-sound{margin:-4px 0 12px}
+.lv-card{background:var(--panel);border:1px solid #f1dcb4;border-left:5px solid var(--brand);border-radius:var(--r-lg);margin-bottom:16px;overflow:hidden}
+.lv-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:12px 16px;background:#fbe3e3}
+.lv-top b{font-size:17px;letter-spacing:.02em}
+.lv-top .st-muted{margin:0}
+.lv-sec{padding:12px 16px;border-top:1px solid var(--line)}
+.lv-sec:first-of-type{border-top:0}
+.lv-sec h3{font-family:var(--sans);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+.lv-sec p{margin:0}
+.lv-name{font-size:20px;font-weight:800}
+.lv-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.lv-row .btn{padding:14px 10px}
+.lv-call{background:var(--ink);color:#fff}
+.lv-maps{margin-top:10px;flex-direction:column;gap:2px;padding:14px}
+.lv-maps small{font-weight:500;font-size:12px;color:var(--muted)}
+.lv-warn{margin-top:8px!important;background:#fff4d6;border-radius:var(--r);padding:8px 10px;font-weight:600;font-size:14px}
+.lv-items{list-style:none;margin:0;padding:0}
+.lv-items li{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:6px 0}
+.lv-items small,.lv-items em{display:block;font-size:13px;color:var(--muted)}
+.lv-items em{color:var(--brand-ink)}
+.lv-code{padding:14px 16px 16px;background:#fff8ea;border-top:2px dashed #f1dcb4;display:grid;gap:6px}
+.lv-code .st-muted{margin:0}
+.lv-code-row{display:grid;grid-template-columns:120px 1fr;gap:10px;margin-top:4px}
+.lv-code input{font-size:26px;font-weight:800;letter-spacing:.3em;text-align:center;padding:10px 6px;border:2px solid var(--ink);border-radius:var(--r);background:#fff;min-width:0}
+.lv-code.locked{background:var(--bad-soft);color:var(--bad)}
+.lv-code.locked p{margin:0;color:var(--ink)}
+.lv-done{margin-top:24px}
+.lv-done h2{font-family:var(--sans);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.lv-done ul{list-style:none;margin:0;padding:0;background:var(--panel);border:1px solid #f1dcb4;border-radius:var(--r-lg)}
+.lv-done li{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--line);font-size:14px}
+.lv-done li:first-child{border-top:0}
+.lv-done em{font-style:normal;color:#2b6e2f;font-weight:700}
+.lv-done li.cancel em{color:var(--bad)}
+
+/* ===== Livreur dans le détail d'une commande (agent) ===== */
+.cr-pick{display:grid;gap:8px;margin:10px 0}
+.cr-opt{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:var(--r);padding:10px 12px;background:#fff;cursor:pointer}
+.cr-opt:has(input:checked){border-color:var(--brand);background:#fbe3e3}
+.cr-opt input{width:20px;height:20px;accent-color:var(--brand)}
+.cr-opt small{display:block;color:var(--muted);font-size:12px}
+.st-box .cr-code{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;margin-top:10px;background:#fff8ea;border:1px dashed #e3c999;border-radius:var(--r);padding:8px 12px}
+.st-box .cr-code b{font-size:22px;letter-spacing:.25em}
+.st-box .cr-code.locked{background:var(--bad-soft);border-color:var(--bad)}
+.st-box .cr-actions{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+.st-box .cr-name{font-size:18px;font-weight:800}
+.st-wait{background:#fff8ea;border:1px dashed #e3c999;border-radius:var(--r);padding:10px 12px;margin:0 0 10px;font-size:14px}
+.db-couriers td,.db-couriers th{text-align:left;padding:8px 6px;border-top:1px solid var(--line);font-size:14px}
+.db-couriers th{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.04em;border-top:0}
+.db-couriers .db-n{text-align:right;white-space:nowrap}
+.db-couriers{width:100%;border-collapse:collapse}
+.tm-role.r-LIVREUR{background:#e3eefb;color:#1f4e8c}
+.st-box .cr-code small{flex-basis:100%;margin:0}

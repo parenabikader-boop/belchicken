@@ -149,6 +149,17 @@ model Order {
   deliveryFee           Int?
   deliveryFeeReceivedAt DateTime? // vide = frais pas encore reçus
 
+  // Livreur assigné au passage EN_LIVRAISON (remplaçable tant que la commande n'est pas livrée).
+  // courierName est une copie figée, comme staffName dans l'historique.
+  courierId            String?
+  courier              StaffUser? @relation("Courses", fields: [courierId], references: [id], onDelete: SetNull)
+  courierName          String?
+  courierAssignedAt    DateTime?
+  // Code de remise à 4 chiffres, créé au passage EN_LIVRAISON et envoyé au client dans le message
+  // « en route ». Jamais envoyé au livreur : il le tape, l'API vérifie. Bloqué après 5 codes faux.
+  deliveryCode         String?
+  deliveryCodeAttempts Int        @default(0)
+
   items         OrderItem[]
   notifications NotificationLog[]
   statusChanges OrderStatusChange[]
@@ -161,6 +172,7 @@ model Order {
   @@unique([paymentMethod, paymentReference])
   @@index([status])
   @@index([createdAt])
+  @@index([courierId, status])
 }
 
 model OrderItem {
@@ -193,7 +205,7 @@ model OrderStatusChange {
   order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
   fromStatus  OrderStatus?
   toStatus    OrderStatus
-  reason      String? // motif d'annulation
+  reason      String? // motif d'annulation, ou de livraison validée sans code
   staffUserId String?
   staffUser   StaffUser?   @relation(fields: [staffUserId], references: [id], onDelete: SetNull)
   staffName   String?
@@ -211,6 +223,9 @@ enum OrderEventType {
   MESSAGE_PREPARE // message WhatsApp au client ouvert par un agent (messageKey)
   MESSAGE_ENVOYE // l'agent confirme avoir envoyé le message de l'étape (messageKey)
   CLIENT_APPELE // client sans WhatsApp, prévenu par appel (messageKey = message de l'étape)
+  LIVREUR_ASSIGNE // livreur choisi ou remplacé (nom dans courierName)
+  CODE_INCORRECT // le livreur a tapé un mauvais code de remise
+  LIVRAISON_SANS_CODE // livraison validée par l'agent, client sans son code (motif dans OrderStatusChange.reason)
 }
 
 model OrderEvent {
@@ -219,6 +234,7 @@ model OrderEvent {
   order       Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
   type        OrderEventType
   amount      Int? // montant des frais pour FRAIS_SAISIS
+  courierName String? // livreur, pour LIVREUR_ASSIGNE
   messageKey  String? // PAIEMENT_CONFIRME, FRAIS_RECUS, EN_ROUTE, LIVREE, ANNULEE (src/services/customer-messages.js)
   staffUserId String?
   staffUser   StaffUser?     @relation(fields: [staffUserId], references: [id], onDelete: SetNull)
@@ -248,6 +264,7 @@ model NotificationLog {
 enum StaffRole {
   PATRON // tout
   OPERATEUR // commandes et disponibilité des plats ; ni chiffre d'affaires, ni prix, ni menu
+  LIVREUR // ses courses du jour seulement, sans aucun montant
 }
 
 model StaffUser {
@@ -268,6 +285,7 @@ model StaffUser {
   statusChanges     OrderStatusChange[]
   orderEvents       OrderEvent[]
   pushSubscriptions PushSubscription[]
+  courses           Order[]             @relation("Courses")
 }
 
 // Une ligne par appareil connecté. Le navigateur garde le jeton dans un cookie httpOnly ;

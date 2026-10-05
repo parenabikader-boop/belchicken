@@ -71,6 +71,16 @@ export const staffApi = {
   logMessage: (reference, key) =>
     staffRequest(`/orders/${encodeURIComponent(reference)}/messages`, { method: 'POST', body: JSON.stringify({ key }), keepalive: true }),
 
+  // Livreurs : liste pour le départ d'une commande, remplacement pendant la livraison
+  couriers: () => staffRequest('/orders/livreurs').then((d) => d.couriers),
+  reassignCourier: (reference, courierId) =>
+    staffRequest(`/orders/${encodeURIComponent(reference)}/courier`, { method: 'PUT', body: JSON.stringify({ courierId }) }).then((d) => d.order),
+
+  // Espace livreur : ses courses du jour, et la remise avec le code du client
+  courses: () => staffRequest('/courses'),
+  deliver: (reference, code) =>
+    staffRequest(`/courses/${encodeURIComponent(reference)}/deliver`, { method: 'POST', body: JSON.stringify({ code }) }).then((d) => d.course),
+
   // Menu : disponibilité pour toute l'équipe, le reste pour le Patron (vérifié par l'API)
   menu: () => staffRequest('/menu'),
   setAvailability: (id, isAvailable) =>

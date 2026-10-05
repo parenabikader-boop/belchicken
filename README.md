@@ -177,8 +177,8 @@ et les vrais montants. L'historique de la commande note « WhatsApp ouvert avec 
 |---|---|---|
 | Paiement à vérifier | Confirmer le paiement et prévenir le client (avec les frais) | `PAIEMENT_CONFIRME` |
 | Payée | Frais reçus : lancer la préparation et prévenir le client | `FRAIS_RECUS` |
-| En préparation | Partie en livraison : prévenir le client | `EN_ROUTE` |
-| En livraison | Livrée : remercier le client | `LIVREE` |
+| En préparation | Choisir le livreur et prévenir le client | `EN_ROUTE` (avec le code de remise) |
+| En livraison | Le livreur tape le code du client (ou l'agent valide sans code, avec un motif) | `LIVREE` |
 | À tout moment | Annuler et prévenir le client | `ANNULEE` |
 
 Au retour, l'espace équipe demande « Avez-vous envoyé le message au client ? » (« Oui, envoyé » / « Pas encore »),
@@ -195,7 +195,7 @@ Les textes sont écrits une seule fois, dans `backend/src/services/customer-mess
 (`{{1}}`, `{{2}}`…, testé dans `test/customer-messages.test.js`). Pour qu'ils partent tout seuls plus tard :
 
 1. Créez chez Meta un modèle de catégorie **Utilité**, langue français, pour chaque message : nom = `template`,
-   corps = `body` recopié tel quel (`commande_paiement_confirme`, `commande_en_preparation`, `commande_en_route`,
+   corps = `body` recopié tel quel (le modèle `commande_en_route` contient le code de remise, `{{3}}`) (`commande_paiement_confirme`, `commande_en_preparation`, `commande_en_route`,
    `commande_livree`, `commande_annulee`).
 2. Une fois les 5 modèles approuvés, mettez `WHATSAPP_CUSTOMER_AUTO=1` sur Render.
 
@@ -206,11 +206,11 @@ Les boutons de l'espace équipe restent disponibles pour renvoyer un message à 
 ## Espace équipe
 
 Pages réservées à l'équipe sous `/equipe` (aucun lien depuis le site public, non indexées).
-Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (tout) et `OPERATEUR`
-(commandes et disponibilité des plats, sans chiffre d'affaires ni prix ni menu).
+Connexion par numéro de téléphone et mot de passe ; trois rôles : `PATRON` (tout), `OPERATEUR`
+(commandes et disponibilité des plats, sans chiffre d'affaires ni prix ni menu) et `LIVREUR` (ses courses du jour seulement).
 
 - Créer le compte Patron (ou changer son mot de passe) : `npm run equipe:patron` dans `backend/`.
-  Les comptes Opérateur se créent depuis la page Équipe.
+  Les comptes Opérateur et Livreur se créent depuis la page Équipe.
 - API : `POST /api/staff/login`, `POST /api/staff/logout`, `GET /api/staff/me`. Les routes protégées utilisent
   `requireStaff()` (tout compte connecté) ou `requireStaff('PATRON')` (`src/middlewares/staff-auth.js`).
   Un compte au mot de passe provisoire (`StaffUser.mustChangePassword`) reçoit 403 `MOT_DE_PASSE_A_CHANGER` partout,
@@ -219,11 +219,11 @@ Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (t
   (l'ancien n'est pas demandé si le mot de passe est provisoire ; le nouveau doit être différent). Les autres appareils
   du membre sont déconnectés, celui-ci reste connecté. 8 essais ratés par compte toutes les 15 minutes.
 - Équipe (Patron), page `/equipe/equipe` (`frontend/src/staff/team/`) : `GET /api/staff/team` (rôle, dernière connexion,
-  appareils connectés), `POST /api/staff/team` `{ name, phone, password }` crée un Opérateur au mot de passe provisoire,
+  appareils connectés), `POST /api/staff/team` `{ role: 'OPERATEUR' | 'LIVREUR', name, phone, password }` crée un compte au mot de passe provisoire,
   `POST /api/staff/team/:id/password` `{ password }` (mot de passe oublié : provisoire, appareils déconnectés),
   `POST /api/staff/team/:id/deactivate` (plus de connexion, sessions et alertes téléphone supprimées),
   `POST /api/staff/team/:id/reactivate` `{ password }` (avec un nouveau mot de passe provisoire). Seuls les comptes
-  Opérateur se gèrent ici, jamais le sien ni celui d'un Patron. Règles dans `src/services/team.js` (testées).
+  Opérateur et Livreur se gèrent ici, jamais le sien ni celui d'un Patron. Règles dans `src/services/team.js` (testées).
 - Session : jeton aléatoire dans un cookie `httpOnly` limité à `/api/staff`, valable 14 jours ; la base ne garde que son empreinte.
   Mots de passe hachés avec scrypt. 8 essais ratés par numéro (20 par adresse IP) toutes les 15 minutes.
 - Commandes (Patron et Opérateur) : `GET /api/staff/orders?status=EN_COURS|TOUTES|<statut>&q=<recherche>`,
@@ -268,6 +268,22 @@ Connexion par numéro de téléphone et mot de passe ; deux rôles : `PATRON` (t
 - Message préparé : `POST /api/staff/orders/:reference/messages` `{ key }` (voir « Messages WhatsApp au client »).
 - Tableau de bord : le chiffre d'affaires des plats et les frais de livraison reçus sont séparés. Les frais comptent une
   fois cochés « reçus », sauf si la commande a été annulée ensuite.
+- Espace livreur (rôle `LIVREUR`) : à la connexion sur `/equipe`, le livreur arrive sur `/equipe/courses`
+  (`frontend/src/staff/courier/`) ; toute autre page le ramène là, et l'API lui refuse tout le reste (commandes, menu,
+  tableau de bord, équipe). Il voit ses courses en livraison et celles livrées ou annulées aujourd'hui : client (Appeler,
+  WhatsApp), repères, itinéraire Google Maps, plats. Jamais de montant, de paiement ni de code (`toCourse()`).
+  API : `GET /api/staff/courses`, `POST /api/staff/courses/:reference/deliver` `{ code }`.
+- Départ du livreur : `POST …/status` `{ to: 'EN_LIVRAISON', courierId }` (livreur obligatoire, compte `LIVREUR` actif).
+  Un code de remise à 4 chiffres est créé (`Order.deliveryCode`) et ajouté au message `EN_ROUTE`. Le livreur reçoit une
+  notification « Nouvelle course » (et « Course annulée » si la commande est annulée pendant la livraison). Liste des
+  livreurs : `GET /api/staff/orders/livreurs` ; remplacement pendant la livraison : `PUT /api/staff/orders/:reference/courier`
+  `{ courierId }` (le code ne change pas). Le code n'apparaît jamais sur la page de suivi publique.
+- Remise : le bon code fait passer la commande à `LIVREE`. Chaque code faux est compté (`deliveryCodeAttempts`, événement
+  `CODE_INCORRECT`) ; après 5, la saisie est bloquée sur cette commande. Client sans son code : l'agent valide avec
+  `POST …/status` `{ to: 'LIVREE', reason }` (motif obligatoire, événement `LIVRAISON_SANS_CODE`). Règles dans
+  `src/services/courier.js` (testées dans `test/courier.test.js`).
+- Tableau de bord : livraisons par livreur et temps moyen (passage `EN_LIVRAISON` → `LIVREE`), et nombre de livraisons
+  validées sans code.
 - Le site appelle `/api/staff` sur sa propre adresse : Vite relaie vers l'API en local (`vite.config.js`), Vercel en ligne
   (`frontend/vercel.json`, à mettre à jour si l'adresse Render change). Ainsi le cookie n'est pas bloqué par Safari.
 

@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
 import { isIos } from '../../pwa.js';
 import { usePush } from './push.js';
+import { useStaff } from '../StaffContext.jsx';
 
 // /equipe/alertes : chaque membre de l'équipe active les alertes sur son propre téléphone
 export default function AlertsPage() {
   const { state, busy, error, message, enable, disable, sendTest } = usePush();
+  const courier = useStaff().user.role === 'LIVREUR';
 
   return (
     <>
@@ -12,8 +14,12 @@ export default function AlertsPage() {
         <h1 className="st-title">Alertes</h1>
       </div>
       <p className="st-muted" style={{ marginBottom: 18 }}>
-        Une notification sur ce téléphone à chaque nouvelle commande, même quand l’application est fermée.
-        Un appui ouvre la commande. À activer sur chaque téléphone de l’équipe.
+        {courier ? (
+          <>Une notification sur ce téléphone à chaque nouvelle course, même quand l’application est fermée. Un appui ouvre vos courses.</>
+        ) : (
+          <>Une notification sur ce téléphone à chaque nouvelle commande, même quand l’application est fermée.
+          Un appui ouvre la commande. À activer sur chaque téléphone de l’équipe.</>
+        )}
       </p>
 
       <div className="st-box al-box">

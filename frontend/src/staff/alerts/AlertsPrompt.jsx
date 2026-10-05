@@ -24,7 +24,7 @@ async function needsActivation() {
   return !(await reg.pushManager.getSubscription());
 }
 
-export default function AlertsPrompt() {
+export default function AlertsPrompt({ what = 'commande' }) {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function AlertsPrompt() {
 
   return (
     <div className="al-prompt">
-      <span>🔔 Recevez une alerte sur ce téléphone à chaque nouvelle commande.</span>
+      <span>🔔 Recevez une alerte sur ce téléphone à chaque nouvelle {what}.</span>
       <Link className="al-prompt-go" to="/equipe/alertes">Activer</Link>
       <button type="button" className="al-prompt-x" onClick={close} aria-label="Fermer">×</button>
     </div>

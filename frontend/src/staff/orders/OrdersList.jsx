@@ -132,7 +132,7 @@ function OrderCard({ order: o, isNew }) {
         <div className="st-order-name">{o.customerName}</div>
         <div className="st-order-bottom">
           <span>{plural(o.itemCount, 'article')} · <b>{formatPrice(o.itemsTotal)}</b> · {METHOD_LABEL[o.paymentMethod]}</span>
-          <span className={`st-pill p-${o.status}`}>{STATUS_LABEL[o.status]}</span>
+          <span className={`st-pill p-${o.status}`}>{STATUS_LABEL[o.status]}{o.status === 'EN_LIVRAISON' && o.courierName && ` · ${o.courierName}`}</span>
         </div>
       </Link>
     </li>

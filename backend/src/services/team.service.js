@@ -26,7 +26,7 @@ export async function listMembers() {
   return users.map((u) => toMember(u, count.get(u.id) || 0));
 }
 
-export async function createOperator({ name, phone, password }) {
+export async function createMember({ name, phone, role, password }) {
   const existing = await prisma.staffUser.findUnique({ where: { phone } });
   if (existing) {
     const message = existing.isActive
@@ -35,7 +35,7 @@ export async function createOperator({ name, phone, password }) {
     throw new AppError(409, message, 'NUMERO_DEJA_UTILISE');
   }
   const user = await prisma.staffUser.create({
-    data: { name, phone, role: 'OPERATEUR', passwordHash: await hashPassword(password), mustChangePassword: true },
+    data: { name, phone, role, passwordHash: await hashPassword(password), mustChangePassword: true },
   });
   return toMember(user, 0);
 }

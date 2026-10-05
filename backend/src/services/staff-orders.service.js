@@ -6,6 +6,8 @@ import {
 } from './order-status.js';
 import { customerMessage, MESSAGE_KEYS, MESSAGES, noticeError, noticeState } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
+import { pushCourierAssigned, pushCourseCancelled } from './push.service.js';
+import { codeLocked, courierAssignError, generateDeliveryCode, handoverReasonError, MAX_CODE_ATTEMPTS } from './courier.js';
 
 const LIST_LIMIT = 100;
 
@@ -52,6 +54,7 @@ export async function listOrders({ status, q }) {
       itemsTotal: o.itemsTotal,
       deliveryFee: o.deliveryFee,
       deliveryFeeReceived: o.deliveryFeeReceivedAt != null,
+      courierName: o.courierName,
       itemCount: o.items.reduce((n, i) => n + i.quantity, 0),
       hasLocation: o.latitude != null,
     })),
@@ -84,6 +87,13 @@ export function toStaffOrder(order) {
     itemsTotal: o.itemsTotal,
     deliveryFee: o.deliveryFee,
     deliveryFeeReceivedAt: o.deliveryFeeReceivedAt,
+    // Livreur et code de remise. Le code est montré à l'équipe (il est dans le message « en route »,
+    // et peut être dicté au client par appel), jamais au livreur.
+    courier: o.courierName ? { id: o.courierId, name: o.courierName, assignedAt: o.courierAssignedAt } : null,
+    deliveryCode: o.deliveryCode,
+    codeAttempts: o.deliveryCodeAttempts,
+    codeLocked: o.deliveryCode != null && codeLocked(o),
+    maxCodeAttempts: MAX_CODE_ATTEMPTS,
     location: o.latitude != null ? { latitude: o.latitude, longitude: o.longitude, accuracy: o.locationAccuracy } : null,
     addressNote: o.addressNote,
     items: o.items.map((i) => ({
@@ -108,6 +118,7 @@ export function toStaffOrder(order) {
       type: e.type,
       amount: e.amount,
       messageKey: e.messageKey,
+      courierName: e.courierName,
       messageLabel: e.messageKey ? MESSAGES[e.messageKey]?.label || e.messageKey : null,
       by: e.staffName,
       at: e.createdAt,
@@ -144,7 +155,7 @@ async function findForRules(tx, reference) {
   const order = await tx.order.findUnique({
     where: { reference },
     select: {
-      id: true, status: true, deliveryFee: true, deliveryFeeReceivedAt: true,
+      id: true, status: true, deliveryFee: true, deliveryFeeReceivedAt: true, courierId: true,
       statusChanges: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
       events: { select: { type: true, messageKey: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
     },
@@ -156,23 +167,41 @@ async function findForRules(tx, reference) {
 // Écriture protégée : refusée si quelqu'un a changé le statut ou les frais depuis la lecture
 async function guardedUpdate(tx, order, data) {
   const updated = await tx.order.updateMany({
-    where: { id: order.id, status: order.status, deliveryFee: order.deliveryFee, deliveryFeeReceivedAt: order.deliveryFeeReceivedAt },
+    where: {
+      id: order.id, status: order.status, deliveryFee: order.deliveryFee, deliveryFeeReceivedAt: order.deliveryFeeReceivedAt, courierId: order.courierId,
+    },
     data,
   });
   if (updated.count !== 1) throw new AppError(409, CHANGED, 'COMMANDE_DEJA_CHANGEE');
 }
 
-const statusChange = (order, to, staff, reason = null) => ({
+// Livreur choisi par l'agent : compte LIVREUR actif (courier.js)
+async function findCourier(tx, order, courierId) {
+  const courier = courierId ? await tx.staffUser.findUnique({ where: { id: courierId } }) : null;
+  const error = courierAssignError(order, courier);
+  if (error) throw new AppError(400, error, 'LIVREUR_IMPOSSIBLE');
+  return courier;
+}
+
+const assignment = (courier) => ({ courierId: courier.id, courierName: courier.name, courierAssignedAt: new Date() });
+
+export const statusChange = (order, to, staff, reason = null) => ({
   orderId: order.id, fromStatus: order.status, toStatus: to, reason, staffUserId: staff.id, staffName: staff.name,
 });
 
 // Change le statut. « from » est le statut que la personne voyait à l'écran : si quelqu'un d'autre
 // a changé la commande entre-temps, on refuse au lieu d'écraser son action.
 // Confirmation du paiement (PAYEE) : les frais de livraison sont donnés en même temps (deliveryFee).
+// Départ (EN_LIVRAISON) : le livreur est choisi en même temps (courierId), et le code de remise créé.
+// Livrée (LIVREE) depuis l'espace équipe : seulement quand le client n'a plus son code, avec un motif
+// (le livreur, lui, valide avec le code : courier.service.js).
 // Chaque étape, sauf l'annulation, demande que le client ait été prévenu de l'étape en cours.
-export async function changeStatus(reference, { from, to, reason, deliveryFee }, staff) {
+export async function changeStatus(reference, { from, to, reason, deliveryFee, courierId }, staff) {
+  let courier = null;
+  let cancelledCourierId = null;
   await prisma.$transaction(async (tx) => {
     const order = await findForRules(tx, reference);
+    if (to === 'ANNULEE' && order.status === 'EN_LIVRAISON') cancelledCourierId = order.courierId;
     if (from && from !== order.status) {
       throw new AppError(409, "Quelqu'un a déjà changé le statut de cette commande. La page est mise à jour.", 'STATUT_DEJA_CHANGE');
     }
@@ -182,16 +211,60 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee },
       (to !== 'ANNULEE' ? noticeError(notice(order)) : null) ||
       (to === 'PAYEE' ? paymentConfirmError(fee) : null) ||
       (to === 'EN_PREPARATION' ? preparationError(order) : null) ||
-      (to === 'EN_LIVRAISON' ? deliveryError(order) : null);
+      (to === 'EN_LIVRAISON' ? deliveryError(order) : null) ||
+      (to === 'LIVREE' ? handoverReasonError(reason) : null);
     if (error) throw new AppError(400, error, 'CHANGEMENT_IMPOSSIBLE');
+    if (to === 'EN_LIVRAISON') courier = await findCourier(tx, order, courierId);
 
-    await guardedUpdate(tx, order, { status: to, ...(to === 'PAYEE' ? { deliveryFee: fee } : {}) });
-    await tx.orderStatusChange.create({ data: statusChange(order, to, staff, to === 'ANNULEE' ? reason.trim() : null) });
+    await guardedUpdate(tx, order, {
+      status: to,
+      ...(to === 'PAYEE' ? { deliveryFee: fee } : {}),
+      ...(courier ? { ...assignment(courier), deliveryCode: generateDeliveryCode(), deliveryCodeAttempts: 0 } : {}),
+    });
+    const withReason = to === 'ANNULEE' || to === 'LIVREE';
+    await tx.orderStatusChange.create({ data: statusChange(order, to, staff, withReason ? reason.trim() : null) });
     if (to === 'PAYEE' && fee !== order.deliveryFee) {
       await tx.orderEvent.create({ data: event(order.id, 'FRAIS_SAISIS', staff, { amount: fee }) });
     }
+    if (courier) await tx.orderEvent.create({ data: event(order.id, 'LIVREUR_ASSIGNE', staff, { courierName: courier.name }) });
+    if (to === 'LIVREE') await tx.orderEvent.create({ data: event(order.id, 'LIVRAISON_SANS_CODE', staff) });
   });
+  if (courier) notifyCourier(reference, courier.id);
+  if (cancelledCourierId) notifyCourier(reference, cancelledCourierId, pushCourseCancelled);
   return afterChange(reference);
+}
+
+// Remplacement du livreur pendant la livraison (panne, absence) : le code reste le même,
+// l'ancien livreur ne voit plus la course, le nouveau est prévenu.
+export async function reassignCourier(reference, courierId, staff) {
+  let courier = null;
+  await prisma.$transaction(async (tx) => {
+    const order = await findForRules(tx, reference);
+    if (order.status !== 'EN_LIVRAISON') throw new AppError(400, 'Le livreur se remplace seulement pendant la livraison.', 'LIVREUR_IMPOSSIBLE');
+    courier = await findCourier(tx, order, courierId);
+    await guardedUpdate(tx, order, assignment(courier));
+    await tx.orderEvent.create({ data: event(order.id, 'LIVREUR_ASSIGNE', staff, { courierName: courier.name }) });
+  });
+  notifyCourier(reference, courier.id);
+  return getOrder(reference);
+}
+
+// Livreurs proposés au départ d'une commande, avec le nombre de courses qu'ils ont en cours
+export async function listCouriers() {
+  const couriers = await prisma.staffUser.findMany({
+    where: { role: 'LIVREUR', isActive: true },
+    orderBy: { name: 'asc' },
+    select: { id: true, name: true, phone: true, _count: { select: { courses: { where: { status: 'EN_LIVRAISON' } } } } },
+  });
+  return couriers.map(({ _count, ...c }) => ({ ...c, activeCourses: _count.courses }));
+}
+
+// Notification au livreur : nouvelle course, ou course annulée (n'échoue jamais)
+function notifyCourier(reference, courierId, send = pushCourierAssigned) {
+  prisma.order
+    .findUnique({ where: { reference }, select: { id: true, reference: true, items: { select: { quantity: true } } } })
+    .then((order) => order && send(order, courierId))
+    .catch((e) => console.error('[push] course', e));
 }
 
 // Modification du montant des frais (Patron et Opérateur), avant leur réception.

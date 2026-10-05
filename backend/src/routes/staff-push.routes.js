@@ -3,9 +3,9 @@ import { z } from 'zod';
 import { requireStaff } from '../middlewares/staff-auth.js';
 import { pushStatus, sendTest, subscribe, unsubscribe } from '../services/push.service.js';
 
-// Alertes de nouvelle commande sur téléphone : Patron et Opérateur
+// Alertes sur téléphone : nouvelles commandes (Patron et Opérateur), nouvelles courses (Livreur)
 export const staffPushRouter = Router();
-staffPushRouter.use(requireStaff('PATRON', 'OPERATEUR'));
+staffPushRouter.use(requireStaff('PATRON', 'OPERATEUR', 'LIVREUR'));
 
 // Services de notification des navigateurs (Chrome, Safari, Firefox, Edge). Le serveur
 // n'envoie jamais rien ailleurs, même si une adresse inconnue lui est donnée.

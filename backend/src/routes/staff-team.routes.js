@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireStaff } from '../middlewares/staff-auth.js';
 import { createMemberSchema, provisionalPasswordSchema } from '../services/team.js';
-import { createOperator, deactivate, listMembers, reactivate, resetPassword } from '../services/team.service.js';
+import { createMember, deactivate, listMembers, reactivate, resetPassword } from '../services/team.service.js';
 
 // Page Équipe : comptes de l'équipe, Patron seulement
 export const staffTeamRouter = Router();
@@ -20,7 +20,7 @@ staffTeamRouter.get('/', handle(async (req, res) => {
 }));
 
 staffTeamRouter.post('/', handle(async (req, res) => {
-  res.status(201).json({ member: await createOperator(createMemberSchema.parse(req.body)) });
+  res.status(201).json({ member: await createMember(createMemberSchema.parse(req.body)) });
 }));
 
 staffTeamRouter.post('/:id/password', handle(async (req, res) => {

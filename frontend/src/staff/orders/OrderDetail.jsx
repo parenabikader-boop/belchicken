@@ -4,7 +4,7 @@ import { staffApi } from '../../api/client.js';
 import { formatPrice } from '../../utils/format.js';
 import { useOrdersFeed } from './OrdersFeed.jsx';
 import { formatDateTime, formatPhone, mapsHref, METHOD_LABEL, STATUS_LABEL, telHref, timeAgo, timelineOf, whatsappHref } from './labels.js';
-import { Actions, DeliveryFee, Notice, useSteps } from './OrderSteps.jsx';
+import { Actions, CourierBox, DeliveryFee, Notice, useSteps } from './OrderSteps.jsx';
 
 const REFRESH_MS = 5000;
 
@@ -72,6 +72,7 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
       <Actions order={o} steps={steps} />
 
       <div className="st-grid">
+        <CourierBox order={o} onChange={updated} />
         <DeliveryFee order={o} steps={steps} />
 
         <section className="st-box">

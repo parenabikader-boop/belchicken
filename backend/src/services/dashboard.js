@@ -1,6 +1,7 @@
 // Tableau de bord du Patron : calculs sans base de données (testés dans test/dashboard.test.js).
 // Burkina Faso = heure UTC toute l'année (pas d'heure d'été) : les jours se coupent à minuit UTC.
 import { z } from 'zod';
+import { courierStats } from './courier.js';
 
 const DAY = 24 * 3600 * 1000;
 export const PERIODS = ['day', 'week', 'month'];
@@ -130,6 +131,8 @@ export function buildDashboard(orders, range) {
     hours,
     weekdays,
     payments,
+    // Livraisons par livreur et temps moyen (départ -> remise), commandes de la période
+    couriers: courierStats(current),
     cancellations: {
       count: cancelled.length,
       reasons: [...reasons.values()].sort((a, b) => b.count - a.count),

@@ -9,7 +9,9 @@ const parti = { id: 'o2', role: 'OPERATEUR', isActive: false };
 
 test('nouveau compte : nom, numéro normalisé, mot de passe provisoire de 8 caractères au moins', () => {
   const ok = createMemberSchema.parse({ name: '  Awa  ', phone: '76 12 34 56', password: 'provisoire' });
-  assert.deepEqual(ok, { name: 'Awa', phone: '+22676123456', password: 'provisoire' });
+  assert.deepEqual(ok, { name: 'Awa', phone: '+22676123456', role: 'OPERATEUR', password: 'provisoire' });
+  assert.equal(createMemberSchema.parse({ name: 'Issa', phone: '70112233', role: 'LIVREUR', password: 'provisoire' }).role, 'LIVREUR');
+  assert.throws(() => createMemberSchema.parse({ name: 'Issa', phone: '70112233', role: 'PATRON', password: 'provisoire' }), /Opérateur ou Livreur/);
   assert.throws(() => createMemberSchema.parse({ name: 'Awa', phone: '1234', password: 'provisoire' }), /Numéro de téléphone invalide/);
   assert.throws(() => createMemberSchema.parse({ name: 'A', phone: '76123456', password: 'provisoire' }), /Nom trop court/);
   assert.throws(() => createMemberSchema.parse({ name: 'Awa', phone: '76123456', password: 'court' }), /au moins 8/);
@@ -48,4 +50,20 @@ test('mot de passe provisoire : tout est bloqué sauf « qui suis-je » et le ch
 test('un Opérateur n’a jamais accès à la page Équipe', () => {
   assert.equal(accessFor(agent, ['PATRON']), 'refuse');
   assert.equal(accessFor(patron, ['PATRON']), 'ok');
+});
+
+test('page Équipe : le Patron gère aussi les comptes Livreur', () => {
+  const livreur = { id: 'l1', role: 'LIVREUR', isActive: true };
+  assert.equal(teamActionError(patron, livreur, 'reset'), null);
+  assert.equal(teamActionError(patron, livreur, 'deactivate'), null);
+});
+
+test('un Livreur n’a accès qu’à ses courses et à ses alertes', () => {
+  const livreur = { id: 'l1', role: 'LIVREUR', isActive: true, mustChangePassword: false };
+  assert.equal(accessFor(livreur, ['LIVREUR']), 'ok'); // ses courses
+  assert.equal(accessFor(livreur, ['PATRON', 'OPERATEUR', 'LIVREUR']), 'ok'); // alertes
+  assert.equal(accessFor(livreur, ['PATRON', 'OPERATEUR']), 'refuse'); // commandes, menu
+  assert.equal(accessFor(livreur, ['PATRON']), 'refuse'); // tableau de bord, équipe, accueil
+  assert.equal(accessFor(agent, ['LIVREUR']), 'refuse');
+  assert.equal(accessFor({ ...livreur, mustChangePassword: true }, ['LIVREUR']), 'mot-de-passe');
 });

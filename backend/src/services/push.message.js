@@ -13,6 +13,26 @@ export function newOrderNotification(order) {
   };
 }
 
+// Nouvelle course pour un livreur. Pas d'adresse ni de nom sur l'écran verrouillé :
+// tout est dans l'application.
+export function courseNotification(order) {
+  const count = order.items.reduce((n, i) => n + i.quantity, 0);
+  return {
+    title: `Nouvelle course ${order.reference}`,
+    body: `${count} article${count > 1 ? 's' : ''} à livrer · ouvrez pour l’adresse et le client`,
+    url: '/equipe/courses',
+    tag: `course-${order.reference}`,
+  };
+}
+
+// Course annulée pendant la livraison : le livreur ne doit pas la remettre
+export const courseCancelledNotification = (order) => ({
+  title: `Course ${order.reference} annulée`,
+  body: 'Ne livrez pas cette commande. Ouvrez l’application pour le détail.',
+  url: '/equipe/courses',
+  tag: `course-${order.reference}`,
+});
+
 export const testNotification = () => ({
   title: 'Notification d’essai',
   body: 'Les alertes Belchicken fonctionnent sur ce téléphone.',

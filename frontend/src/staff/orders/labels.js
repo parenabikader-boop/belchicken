@@ -28,7 +28,8 @@ export const FILTERS = [
 export const NEXT_ACTION = {
   PAIEMENT_A_VERIFIER: { to: 'PAYEE', label: 'Confirmer le paiement et prévenir le client' },
   PAYEE: { to: 'EN_PREPARATION', label: 'Frais reçus : lancer la préparation et prévenir le client' },
-  EN_PREPARATION: { to: 'EN_LIVRAISON', label: 'Partie en livraison : prévenir le client' },
+  EN_PREPARATION: { to: 'EN_LIVRAISON', label: 'Choisir le livreur et prévenir le client' },
+  // Livrée : validée par le livreur avec le code du client, ou par l'agent avec un motif (OrderSteps.jsx)
   EN_LIVRAISON: { to: 'LIVREE', label: 'Livrée : remercier le client' },
 };
 
@@ -86,6 +87,9 @@ export function timelineOf(o) {
       MESSAGE_PREPARE: 'WhatsApp ouvert avec le message',
       MESSAGE_ENVOYE: 'Message envoyé au client (confirmé)',
       CLIENT_APPELE: 'Client prévenu par appel',
+      LIVREUR_ASSIGNE: `Livreur : ${e.courierName}`,
+      CODE_INCORRECT: 'Code de remise faux, tapé par le livreur',
+      LIVRAISON_SANS_CODE: 'Livraison validée sans code',
     }[e.type],
     note: e.messageLabel || null,
     by: e.by,

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireStaff } from '../middlewares/staff-auth.js';
 import {
-  changeStatus, confirmNotice, getOrder, listOrders, logMessagePrepared, setDeliveryFee, setFeeReceived,
+  changeStatus, confirmNotice, getOrder, listCouriers, listOrders, logMessagePrepared, reassignCourier, setDeliveryFee, setFeeReceived,
 } from '../services/staff-orders.service.js';
 import { MESSAGE_KEYS } from '../services/customer-messages.js';
 import { FEE_MAX, FEE_MIN, STATUSES } from '../services/order-status.js';
@@ -23,6 +23,15 @@ staffOrdersRouter.get('/', async (req, res, next) => {
   }
 });
 
+// Livreurs à choisir au départ d'une commande (avant /:reference)
+staffOrdersRouter.get('/livreurs', async (req, res, next) => {
+  try {
+    res.json({ couriers: await listCouriers() });
+  } catch (e) {
+    next(e);
+  }
+});
+
 staffOrdersRouter.get('/:reference', async (req, res, next) => {
   try {
     res.json({ order: await getOrder(reference(req)) });
@@ -34,7 +43,10 @@ staffOrdersRouter.get('/:reference', async (req, res, next) => {
 const statusSchema = z.object({
   from: z.enum(STATUSES).optional(),
   to: z.enum(STATUSES, { errorMap: () => ({ message: 'Statut inconnu.' }) }),
+  // Motif d'annulation, ou de livraison validée sans code
   reason: z.string().max(300, 'Motif trop long (300 caractères au plus).').optional(),
+  // Livreur choisi au départ (to = EN_LIVRAISON)
+  courierId: z.string().max(40).optional(),
   // Frais de livraison donnés avec la confirmation du paiement (to = PAYEE)
   deliveryFee: z.number({ invalid_type_error: 'Indiquez les frais de livraison en F.' }).int('Montant en F, sans centimes.').optional(),
 });
@@ -95,6 +107,16 @@ const noticeSchema = z.object({
 staffOrdersRouter.post('/:reference/notice', async (req, res, next) => {
   try {
     res.json({ order: await confirmNotice(reference(req), noticeSchema.parse(req.body), req.staff) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Remplacement du livreur pendant la livraison
+staffOrdersRouter.put('/:reference/courier', async (req, res, next) => {
+  try {
+    const { courierId } = z.object({ courierId: z.string({ required_error: 'Choisissez le livreur.' }).max(40) }).parse(req.body);
+    res.json({ order: await reassignCourier(reference(req), courierId, req.staff) });
   } catch (e) {
     next(e);
   }

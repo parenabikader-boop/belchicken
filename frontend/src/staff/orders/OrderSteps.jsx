@@ -153,9 +153,10 @@ export function Notice({ order: o, steps, onChange }) {
 // Bouton de l'étape suivante (avec confirmation pour le paiement et les frais) et annulation
 export function Actions({ order: o, steps }) {
   const next = NEXT_ACTION[o.status];
-  const [mode, setMode] = useState(null); // null | 'confirm' | 'cancel'
+  const [mode, setMode] = useState(null); // null | 'confirm' | 'depart' | 'handover' | 'cancel'
   const [reason, setReason] = useState('');
   const [fee, setFee] = useState('');
+  const [courierId, setCourierId] = useState('');
 
   // Changement de statut (par nous ou un collègue) : on referme ce qui était ouvert
   useEffect(() => {
@@ -209,6 +210,38 @@ export function Actions({ order: o, steps }) {
     );
   }
 
+  // Départ : choix du livreur. Le code de remise est créé et ajouté au message « en route ».
+  if (mode === 'depart' && o.status === 'EN_PREPARATION') {
+    return (
+      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'EN_LIVRAISON', courierId })); }}>
+        <b>Quel livreur part avec la commande ?</b>
+        <CourierPicker value={courierId} onChange={setCourierId} />
+        <p className="st-muted">Il reçoit une notification. Le client reçoit le code de remise dans le message « en route ».</p>
+        {steps.error && <p className="st-err">{steps.error}</p>}
+        <div className="st-action-row">
+          <button type="submit" className="btn btn-p" disabled={steps.busy || !courierId}>{steps.busy ? 'Enregistrement…' : 'Partie en livraison : prévenir le client'}</button>
+          <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
+        </div>
+      </form>
+    );
+  }
+
+  // Client sans son code : l'agent valide à la place du livreur, avec un motif
+  if (mode === 'handover' && o.status === 'EN_LIVRAISON') {
+    return (
+      <form className="st-action cancel" onSubmit={async (e) => { e.preventDefault(); if (await go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'LIVREE', reason }))) setReason(''); }}>
+        <label htmlFor="st-handover"><b>Pourquoi valider la livraison sans le code ?</b></label>
+        <textarea id="st-handover" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder="Ex. : client a effacé le message, livreur a vérifié par appel…" autoFocus />
+        <p className="st-muted">À faire seulement si la commande a bien été remise. Le motif est noté dans l’historique.</p>
+        {steps.error && <p className="st-err">{steps.error}</p>}
+        <div className="st-action-row">
+          <button type="submit" className="btn btn-p" disabled={steps.busy || reason.trim().length < 3}>{steps.busy ? 'Enregistrement…' : 'Valider la livraison et remercier le client'}</button>
+          <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
+        </div>
+      </form>
+    );
+  }
+
   if (mode === 'cancel') {
     return (
       <form className="st-action cancel" onSubmit={async (e) => { e.preventDefault(); if (await go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'ANNULEE', reason }))) setReason(''); }}>
@@ -229,7 +262,10 @@ export function Actions({ order: o, steps }) {
       setFee(o.deliveryFee != null ? String(o.deliveryFee) : '');
       setMode('confirm');
     } else if (o.status === 'PAYEE') setMode('confirm');
-    else go(() => staffApi.setStatus(o.reference, { from: o.status, to: next.to }));
+    else if (o.status === 'EN_PREPARATION') {
+      setCourierId('');
+      setMode('depart');
+    } else go(() => staffApi.setStatus(o.reference, { from: o.status, to: next.to }));
   };
 
   return (
@@ -241,11 +277,23 @@ export function Actions({ order: o, steps }) {
           {o.paymentPayerPhone && <> depuis le <b>{formatPhone(o.paymentPayerPhone)}</b></>}.
         </p>
       )}
+      {o.status === 'EN_LIVRAISON' && (
+        <p className="st-wait">
+          Le livreur valide la livraison avec le <b>code du client</b>.
+          {o.codeLocked && <> <b>Trop de codes faux</b> : si la commande a bien été remise, validez-la ci-dessous.</>}
+        </p>
+      )}
       {steps.error && !mode && <p className="st-err">{steps.error}</p>}
       <div className="st-action-row">
-        <button type="button" className="btn btn-p st-next" disabled={steps.busy || Boolean(blocked)} onClick={onNext}>
-          {steps.busy ? 'Enregistrement…' : next.label}
-        </button>
+        {o.status === 'EN_LIVRAISON' ? (
+          <button type="button" className="btn btn-s" disabled={steps.busy || Boolean(blocked)} onClick={() => { setReason(''); setMode('handover'); }}>
+            Le client n’a plus son code : valider la livraison
+          </button>
+        ) : (
+          <button type="button" className="btn btn-p st-next" disabled={steps.busy || Boolean(blocked)} onClick={onNext}>
+            {steps.busy ? 'Enregistrement…' : next.label}
+          </button>
+        )}
         <button type="button" className="st-text-btn danger" onClick={() => setMode('cancel')}>Annuler la commande</button>
       </div>
       <p className="st-muted st-since">Statut actuel depuis {formatTime(o.history.at(-1)?.at || o.createdAt)}</p>
@@ -311,6 +359,93 @@ export function DeliveryFee({ order: o, steps }) {
         </label>
       )}
       {o.status === 'PAYEE' && <p className="st-note">Le livreur part une fois les frais reçus : utilisez le bouton de l’étape ci-dessus.</p>}
+    </section>
+  );
+}
+
+// Liste des livreurs actifs, avec leurs courses en cours
+function CourierPicker({ value, onChange, exclude }) {
+  const [couriers, setCouriers] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    staffApi.couriers().then(setCouriers, (e) => setError(e.message));
+  }, []);
+
+  if (error) return <p className="st-err">{error}</p>;
+  if (!couriers) return <p className="st-muted">Chargement des livreurs…</p>;
+  const list = couriers.filter((c) => c.id !== exclude);
+  if (list.length === 0) {
+    return <p className="st-verify-hint">Aucun autre compte livreur actif. Le Patron les crée sur la page Équipe.</p>;
+  }
+  return (
+    <div className="cr-pick" role="radiogroup" aria-label="Livreur">
+      {list.map((c) => (
+        <label key={c.id} className="cr-opt">
+          <input type="radio" name="livreur" value={c.id} checked={value === c.id} onChange={() => onChange(c.id)} />
+          <span>
+            <b>{c.name}</b>
+            <small>{formatPhone(c.phone)} · {c.activeCourses ? `${c.activeCourses} course${c.activeCourses > 1 ? 's' : ''} en cours` : 'disponible'}</small>
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+// Livreur et code de remise (détail d'une commande) : remplacement pendant la livraison
+export function CourierBox({ order: o, onChange }) {
+  const [editing, setEditing] = useState(false);
+  const [courierId, setCourierId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setEditing(false);
+  }, [o.status, o.courier?.id]);
+
+  if (!o.courier) return null;
+
+  const save = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      onChange(await staffApi.reassignCourier(o.reference, courierId));
+    } catch (err) {
+      setError(err.message);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <section className="st-box">
+      <h2>Livreur</h2>
+      <p className="cr-name">{o.courier.name}</p>
+      <p className="st-muted">Course confiée à {formatTime(o.courier.assignedAt)}</p>
+      {o.deliveryCode && o.status === 'EN_LIVRAISON' && (
+        <div className={`cr-code${o.codeLocked ? ' locked' : ''}`}>
+          <span>Code du client</span>
+          <b>{o.deliveryCode}</b>
+          <small className="st-muted">
+            {o.codeLocked ? 'Bloqué : trop de codes faux' : o.codeAttempts > 0 ? `${o.codeAttempts} code${o.codeAttempts > 1 ? 's' : ''} faux` : 'Pour le client, jamais pour le livreur'}
+          </small>
+        </div>
+      )}
+      {o.status === 'EN_LIVRAISON' && (editing ? (
+        <form onSubmit={save}>
+          <CourierPicker value={courierId} onChange={setCourierId} exclude={o.courier.id} />
+          {error && <p className="st-err">{error}</p>}
+          <div className="cr-actions">
+            <button type="submit" className="btn btn-p" disabled={busy || !courierId}>{busy ? 'Enregistrement…' : 'Confier à ce livreur'}</button>
+            <button type="button" className="st-text-btn" onClick={() => setEditing(false)}>Annuler</button>
+          </div>
+        </form>
+      ) : (
+        <div className="cr-actions">
+          <button type="button" className="st-text-btn" onClick={() => { setCourierId(''); setEditing(true); }}>Changer de livreur</button>
+        </div>
+      ))}
     </section>
   );
 }

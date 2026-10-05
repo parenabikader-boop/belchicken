@@ -13,6 +13,8 @@ export async function getDashboard({ period, offset }) {
       itemsTotal: true,
       deliveryFee: true,
       deliveryFeeReceivedAt: true,
+      courierId: true,
+      courierName: true,
       customerName: true,
       createdAt: true,
       items: {
@@ -21,20 +23,28 @@ export async function getDashboard({ period, offset }) {
           product: { select: { category: { select: { name: true } } } },
         },
       },
+      // Annulation (motif), départ du livreur et remise : pour les annulations et le temps de livraison
       statusChanges: {
-        where: { toStatus: 'ANNULEE' },
-        select: { reason: true, staffName: true, createdAt: true },
-        orderBy: { createdAt: 'desc' },
-        take: 1,
+        where: { toStatus: { in: ['ANNULEE', 'EN_LIVRAISON', 'LIVREE'] } },
+        select: { toStatus: true, reason: true, staffName: true, createdAt: true },
+        orderBy: { createdAt: 'asc' },
       },
     },
   });
-  const orders = rows.map(({ items, statusChanges, ...o }) => ({
-    ...o,
-    items: items.map(({ product, ...i }) => ({ ...i, categoryName: product?.category?.name || null })),
-    cancelReason: statusChanges[0]?.reason || null,
-    cancelledBy: statusChanges[0]?.staffName || null,
-    cancelledAt: statusChanges[0]?.createdAt || null,
-  }));
+  const orders = rows.map(({ items, statusChanges, ...o }) => {
+    const last = (status) => statusChanges.findLast((h) => h.toStatus === status);
+    const cancel = last('ANNULEE');
+    const delivered = last('LIVREE');
+    return {
+      ...o,
+      items: items.map(({ product, ...i }) => ({ ...i, categoryName: product?.category?.name || null })),
+      cancelReason: cancel?.reason || null,
+      cancelledBy: cancel?.staffName || null,
+      cancelledAt: cancel?.createdAt || null,
+      startedAt: last('EN_LIVRAISON')?.createdAt || null,
+      deliveredAt: delivered?.createdAt || null,
+      withoutCode: Boolean(delivered?.reason), // validée par l'agent, avec un motif
+    };
+  });
   return buildDashboard(orders, range);
 }

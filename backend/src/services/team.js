@@ -10,8 +10,12 @@ const password = (label) =>
     .min(PASSWORD_MIN_LENGTH, `Mot de passe trop court : au moins ${PASSWORD_MIN_LENGTH} caractères.`)
     .max(200, 'Mot de passe trop long.');
 
-// Nouveau compte Opérateur : le mot de passe donné est provisoire
+// Comptes créés depuis la page Équipe (les Patrons : npm run equipe:patron)
+export const MEMBER_ROLES = ['OPERATEUR', 'LIVREUR'];
+
+// Nouveau compte Opérateur ou Livreur : le mot de passe donné est provisoire
 export const createMemberSchema = z.object({
+  role: z.enum(MEMBER_ROLES, { errorMap: () => ({ message: 'Choisissez le rôle : Opérateur ou Livreur.' }) }).default('OPERATEUR'),
   name: z
     .string({ required_error: 'Indiquez le nom.' })
     .trim()
@@ -50,7 +54,7 @@ export const ownPasswordSchema = (mustChange) =>
 export function teamActionError(actor, target, action) {
   if (target.id === actor.id) return 'Pour votre propre compte, utilisez « Mon mot de passe ».';
   // Un compte Patron ne se gère qu'avec npm run equipe:patron : un Patron ne peut pas en bloquer un autre
-  if (target.role !== 'OPERATEUR') return "Le compte d'un Patron ne se modifie pas depuis cette page.";
+  if (!MEMBER_ROLES.includes(target.role)) return "Le compte d'un Patron ne se modifie pas depuis cette page.";
   if (action === 'reactivate') return target.isActive ? 'Ce compte est déjà actif.' : null;
   if (!target.isActive) return 'Ce compte est désactivé. Réactivez-le en lui donnant un mot de passe provisoire.';
   return null;

@@ -42,4 +42,4 @@ export function StaffProvider({ children }) {
 
 export const useStaff = () => useContext(StaffContext);
 
-export const ROLE_LABEL = { PATRON: 'Patron', OPERATEUR: 'Opérateur' };
+export const ROLE_LABEL = { PATRON: 'Patron', OPERATEUR: 'Opérateur', LIVREUR: 'Livreur' };

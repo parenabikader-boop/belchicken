@@ -10,6 +10,7 @@ import { staffHomeRouter } from './staff-home.routes.js';
 import { staffDashboardRouter } from './staff-dashboard.routes.js';
 import { staffPushRouter } from './staff-push.routes.js';
 import { staffTeamRouter } from './staff-team.routes.js';
+import { staffCoursesRouter } from './staff-courses.routes.js';
 import { ownPasswordSchema } from '../services/team.js';
 import { changeOwnPassword } from '../services/team.service.js';
 
@@ -97,3 +98,4 @@ staffRouter.use('/home', staffHomeRouter);
 staffRouter.use('/dashboard', staffDashboardRouter);
 staffRouter.use('/push', staffPushRouter);
 staffRouter.use('/team', staffTeamRouter);
+staffRouter.use('/courses', staffCoursesRouter); // espace livreur

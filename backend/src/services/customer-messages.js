@@ -35,8 +35,10 @@ export const MESSAGES = {
     label: 'Commande en route',
     body:
       'Bonjour {{1}}, votre commande {{2}} est en route ! Le livreur arrive bientôt : gardez votre téléphone près de vous.\n\n' +
-      'Suivez votre commande ici : {{3}}\n\nBelchicken',
-    params: (o, ctx) => [firstName(o.customerName), o.reference, trackingUrl(o, ctx)],
+      'Donnez ce code au livreur à la réception : {{3}}. Ne le donnez qu’au livreur, quand il vous remet la commande.\n\n' +
+      'Suivez votre commande ici : {{4}}\n\nBelchicken',
+    // Code de remise à 4 chiffres (courier.js), créé au passage EN_LIVRAISON
+    params: (o, ctx) => [firstName(o.customerName), o.reference, o.deliveryCode || '-', trackingUrl(o, ctx)],
   },
   LIVREE: {
     template: 'commande_livree',

@@ -14,7 +14,7 @@ const OrdersFeedContext = createContext(null);
 // Son de notification fabriqué par le navigateur (deux notes), sans fichier audio.
 // Les navigateurs n'autorisent le son qu'après un premier geste de l'utilisateur : on prépare
 // le lecteur au premier toucher ou clic sur la page.
-function useChime() {
+export function useChime() {
   const ctxRef = useRef(null);
   const [ready, setReady] = useState(false);
 
