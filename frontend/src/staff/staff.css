@@ -575,3 +575,45 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .db-couriers{width:100%;border-collapse:collapse}
 .tm-role.r-LIVREUR{background:#e3eefb;color:#1f4e8c}
 .st-box .cr-code small{flex-basis:100%;margin:0}
+
+/* ===== Page Commandes : une étape à la fois (onglets) ou tableau de suivi (ordinateur) ===== */
+.od-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:12px -20px 12px;padding:0 20px 2px}
+.od-tabs::-webkit-scrollbar{display:none}
+.od-tab{flex:none;display:inline-flex;align-items:center;gap:6px;border:1px solid #e3c999;background:var(--panel);color:var(--muted);border-radius:var(--r);padding:9px 12px;font-size:14px;font-weight:600;cursor:pointer}
+.od-tab span{min-width:22px;text-align:center;border-radius:999px;background:#f3ead9;padding:1px 6px;font-size:12px;font-weight:800;color:var(--muted)}
+.od-tab.has{color:var(--text);border-color:var(--brand);font-weight:700}
+.od-tab.has span{background:var(--brand);color:#fff}
+.od-tab.warn{border-color:#e0a100;background:#fff4d6}
+.od-tab.warn span{background:#e0a100;color:var(--ink)}
+.od-tab.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.od-tab.on span{background:var(--yellow);color:var(--ink)}
+.od-tab-history{margin-left:auto}
+.od-hint{margin:0 0 12px;background:#fff8ea;border-left:4px solid var(--brand);border-radius:var(--r);padding:10px 12px;font-size:14px;font-weight:600}
+.od-stage.s-PAIEMENT_A_VERIFIER .od-hint{border-left-color:#e0a100;background:#fff4d6}
+.od-results .od-hint{border-left-color:var(--muted)}
+.od-sub{margin:0 0 12px!important;padding:0!important}
+.od-empty{margin:0;background:var(--panel);border:1px dashed #e3c999;border-radius:var(--r-lg);padding:18px 14px;text-align:center;color:var(--muted);font-size:14px}
+.od-detail{font-size:14px;font-weight:700;color:var(--brand-ink);margin:-2px 0 6px}
+
+.od-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
+.od-col{background:#fbeedd;border:1px solid #f1dcb4;border-radius:var(--r-lg);padding:10px;min-height:240px}
+.od-col.has{background:#fff8ea}
+.od-col.s-PAIEMENT_A_VERIFIER.has{background:#fff4d6;border-color:#e0a100}
+.od-col-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 2px 8px}
+.od-col-head h2{font-family:var(--sans);font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin:0}
+.od-count{min-width:26px;text-align:center;border-radius:999px;background:#eadfc9;color:var(--muted);font-size:13px;font-weight:800;padding:2px 8px}
+.od-col.has .od-count{background:var(--brand);color:#fff}
+.od-col.s-PAIEMENT_A_VERIFIER.has .od-count{background:#e0a100;color:var(--ink)}
+.od-col .od-hint{font-size:12.5px;padding:7px 9px;margin-bottom:10px;font-weight:500;background:rgba(255,255,255,.6)}
+.st-orders.compact{grid-template-columns:minmax(0,1fr);gap:8px}
+.st-orders.compact .st-order{padding:10px 12px}
+.st-orders.compact .st-order-name{font-size:15px}
+.st-orders.compact .st-order-bottom{font-size:13px}
+@media (max-width:640px){
+  .od-tabs{margin:10px -14px 12px;padding:0 14px 2px}
+  .od-tab-history{margin-left:0}
+}
+.st-orders.compact .st-order-top{flex-wrap:wrap;row-gap:0}
+.st-orders.compact .st-ref{white-space:nowrap}
+.st-orders.compact .st-time{flex-basis:100%;margin-left:0;font-size:12.5px}
+.od-col.s-PAIEMENT_A_VERIFIER .od-hint{border-left-color:#e0a100}

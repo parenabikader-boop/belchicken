@@ -10,17 +10,40 @@ export const STATUS_LABEL = {
   ANNULEE: 'Annulée',
 };
 
-// Filtres de la liste, dans l'ordre des onglets. EN_COURS = toutes les commandes non terminées.
 export const ACTIVE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON'];
-export const FILTERS = [
-  { id: 'EN_COURS', label: 'En cours' },
-  { id: 'PAIEMENT_A_VERIFIER', label: 'À vérifier' },
-  { id: 'PAYEE', label: 'Payées' },
-  { id: 'EN_PREPARATION', label: 'En préparation' },
-  { id: 'EN_LIVRAISON', label: 'En livraison' },
+
+// Étapes de la page Commandes, dans l'ordre du travail : un onglet (téléphone) ou une colonne
+// (ordinateur) par statut, avec l'action à faire. Puis l'historique (livrées et annulées).
+export const STAGES = [
+  {
+    id: 'PAIEMENT_A_VERIFIER',
+    label: 'À vérifier',
+    hint: 'Vérifiez ces paiements sur le téléphone marchand, puis confirmez-les avec les frais de livraison.',
+    empty: 'Aucun paiement à vérifier.',
+  },
+  {
+    id: 'PAYEE',
+    label: 'Payées',
+    hint: 'Attendez les frais de livraison : cochez « Frais reçus » dès qu’ils arrivent sur le téléphone marchand.',
+    empty: 'Aucuns frais de livraison attendus.',
+  },
+  {
+    id: 'EN_PREPARATION',
+    label: 'En préparation',
+    hint: 'Préparez ces commandes, puis choisissez le livreur au départ.',
+    empty: 'Aucune commande en préparation.',
+  },
+  {
+    id: 'EN_LIVRAISON',
+    label: 'En livraison',
+    hint: 'Le livreur valide la remise avec le code du client. Appelez-le si une course traîne.',
+    empty: 'Aucune commande en route.',
+  },
+];
+export const HISTORY = { id: 'HISTORIQUE', label: 'Historique', hint: 'Commandes terminées : livrées ou annulées.' };
+export const HISTORY_FILTERS = [
   { id: 'LIVREE', label: 'Livrées' },
   { id: 'ANNULEE', label: 'Annulées' },
-  { id: 'TOUTES', label: 'Toutes' },
 ];
 
 // Bouton unique de chaque étape : passage à l'étape suivante ET message au client (OrderSteps.jsx).
