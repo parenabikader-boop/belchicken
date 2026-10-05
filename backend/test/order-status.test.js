@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { canCancel, nextStatus, transitionError } from '../src/services/order-status.js';
 import { searchWhere, statusWhere } from '../src/services/staff-orders.service.js';
+import { thanksWhere } from '../src/services/customer-messages.js';
 
 test('parcours normal, une étape à la fois', () => {
   assert.equal(nextStatus('PAIEMENT_A_VERIFIER'), 'PAYEE');
@@ -31,9 +32,17 @@ test('annulation : motif obligatoire, impossible une fois livrée ou déjà annu
 });
 
 test('filtres de la liste', () => {
-  assert.deepEqual(statusWhere(undefined), { status: { in: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON'] } });
+  const active = { status: { in: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON'] } };
+  const thanks = thanksWhere();
+  // En cours : les 4 étapes et les livrées à remercier ; l'historique (LIVREE) : livrées et remerciées
+  assert.deepEqual(statusWhere(undefined), { OR: [active, thanks] });
+  assert.deepEqual(statusWhere('A_REMERCIER'), thanks);
+  assert.deepEqual(statusWhere('LIVREE'), { status: 'LIVREE', NOT: thanks });
   assert.deepEqual(statusWhere('TOUTES'), {});
-  assert.deepEqual(statusWhere('LIVREE'), { status: 'LIVREE' });
+  // Envoi automatique : pas d'étape « à remercier »
+  assert.deepEqual(statusWhere(undefined, { auto: true }), active);
+  assert.deepEqual(statusWhere('LIVREE', { auto: true }), { status: 'LIVREE' });
+  assert.deepEqual(statusWhere('A_REMERCIER', { auto: true }), { id: { in: [] } });
   assert.throws(() => statusWhere('N_IMPORTE_QUOI'), /Filtre de statut inconnu/);
 });
 

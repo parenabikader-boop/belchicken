@@ -4,17 +4,21 @@ import { customerAutoEnabled, messageContext } from '../config/env.js';
 import {
   ACTIVE, deliveryError, feeEditError, feeReceivedError, paymentConfirmError, preparationError, STATUSES, transitionError,
 } from './order-status.js';
-import { customerMessage, MESSAGE_KEYS, MESSAGES, noticeError, noticeState } from './customer-messages.js';
+import { customerMessage, MESSAGE_KEYS, MESSAGES, needsThanks, noticeError, noticeState, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
-import { pushCourierAssigned, pushCourseCancelled } from './push.service.js';
+import { pushCourierAssigned, pushCourseCancelled, pushTeamDelivered } from './push.service.js';
 import { codeLocked, courierAssignError, generateDeliveryCode, handoverReasonError, MAX_CODE_ATTEMPTS } from './courier.js';
 
 const LIST_LIMIT = 100;
 
-// Filtre de la liste : 'EN_COURS' (toutes les commandes non terminées), 'TOUTES', ou un statut précis
-export function statusWhere(filter) {
-  if (!filter || filter === 'EN_COURS') return { status: { in: ACTIVE } };
+// Filtre de la liste : 'EN_COURS' (les 4 étapes en cours et les livrées à remercier), 'A_REMERCIER',
+// 'TOUTES', ou un statut précis. 'LIVREE' = l'historique : livrées et déjà remerciées.
+export function statusWhere(filter, { auto = false } = {}) {
+  const thanks = thanksWhere({ auto });
+  if (!filter || filter === 'EN_COURS') return thanks ? { OR: [{ status: { in: ACTIVE } }, thanks] } : { status: { in: ACTIVE } };
   if (filter === 'TOUTES') return {};
+  if (filter === 'A_REMERCIER') return thanks || { id: { in: [] } };
+  if (filter === 'LIVREE' && thanks) return { status: 'LIVREE', NOT: thanks };
   if (STATUSES.includes(filter)) return { status: filter };
   throw new AppError(400, 'Filtre de statut inconnu.', 'FILTRE_INVALIDE');
 }
@@ -33,16 +37,28 @@ export function searchWhere(q) {
 }
 
 export async function listOrders({ status, q }) {
-  const where = { ...statusWhere(status), ...searchWhere(q) };
-  const [orders, counts] = await Promise.all([
+  const auto = customerAutoEnabled();
+  const where = { AND: [statusWhere(status, { auto }), searchWhere(q)] };
+  const thanks = thanksWhere({ auto });
+  const [orders, groups, toThank] = await Promise.all([
     prisma.order.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       take: LIST_LIMIT,
-      include: { items: { select: { quantity: true } } },
+      include: {
+        items: { select: { quantity: true } },
+        // Pour savoir si une commande livrée attend encore son remerciement
+        statusChanges: { where: { toStatus: 'LIVREE' }, select: { toStatus: true, createdAt: true } },
+        events: { where: { messageKey: 'LIVREE' }, select: { type: true, messageKey: true, createdAt: true } },
+      },
     }),
     prisma.order.groupBy({ by: ['status'], _count: { _all: true } }),
+    thanks ? prisma.order.count({ where: thanks }) : 0,
   ]);
+  // Compteurs : les livrées à remercier ont leur propre étape, l'historique (LIVREE) compte les autres
+  const counts = Object.fromEntries(groups.map((c) => [c.status, c._count._all]));
+  counts.A_REMERCIER = toThank;
+  if (counts.LIVREE) counts.LIVREE -= toThank;
   return {
     orders: orders.map((o) => ({
       reference: o.reference,
@@ -57,8 +73,9 @@ export async function listOrders({ status, q }) {
       courierName: o.courierName,
       itemCount: o.items.reduce((n, i) => n + i.quantity, 0),
       hasLocation: o.latitude != null,
+      toThank: needsThanks(o, { auto }),
     })),
-    counts: Object.fromEntries(counts.map((c) => [c.status, c._count._all])),
+    counts,
   };
 }
 
@@ -230,6 +247,7 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, c
     if (to === 'LIVREE') await tx.orderEvent.create({ data: event(order.id, 'LIVRAISON_SANS_CODE', staff) });
   });
   if (courier) notifyCourier(reference, courier.id);
+  if (to === 'LIVREE') notifyDelivered(reference, staff);
   if (cancelledCourierId) notifyCourier(reference, cancelledCourierId, pushCourseCancelled);
   return afterChange(reference);
 }
@@ -257,6 +275,23 @@ export async function listCouriers() {
     select: { id: true, name: true, phone: true, _count: { select: { courses: { where: { status: 'EN_LIVRAISON' } } } } },
   });
   return couriers.map(({ _count, ...c }) => ({ ...c, activeCourses: _count.courses }));
+}
+
+// Commande livrée (par le livreur avec le code, ou validée sans code par un agent) : notification à
+// l'équipe, pour remercier le client. N'échoue jamais. byAgent : l'agent qui a validé sans code.
+export function notifyDelivered(reference, byAgent = null) {
+  prisma.order
+    .findUnique({
+      where: { reference },
+      select: { id: true, reference: true, courierName: true, statusChanges: { where: { toStatus: 'LIVREE' }, select: { createdAt: true } } },
+    })
+    .then((order) => order && pushTeamDelivered(order, {
+      courierName: order.courierName,
+      at: order.statusChanges.at(-1)?.createdAt || new Date(),
+      byAgent: byAgent?.name || null,
+      auto: customerAutoEnabled(),
+    }))
+    .catch((e) => console.error('[push] livrée', e));
 }
 
 // Notification au livreur : nouvelle course, ou course annulée (n'échoue jamais)

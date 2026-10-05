@@ -2,7 +2,7 @@ import webpush from 'web-push';
 import { env, pushEnabled } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
-import { courseCancelledNotification, courseNotification, deviceLabel, newOrderNotification, testNotification } from './push.message.js';
+import { courseCancelledNotification, courseNotification, deliveredNotification, deviceLabel, newOrderNotification, testNotification } from './push.message.js';
 
 // Notifications de l'équipe sur téléphone (Web Push), à côté de l'alerte WhatsApp.
 
@@ -55,6 +55,12 @@ async function sendTo(sub, payload) {
 export async function pushTeamNewOrder(order) {
   if (!pushEnabled()) return;
   await pushAndLog(order, { staffUser: { isActive: true, role: { in: ['PATRON', 'OPERATEUR'] } } }, newOrderNotification(order));
+}
+
+// Commande livrée : Patron et Opérateurs (pas les livreurs). Ne lève jamais d'erreur.
+export async function pushTeamDelivered(order, info) {
+  if (!pushEnabled()) return;
+  await pushAndLog(order, { staffUser: { isActive: true, role: { in: ['PATRON', 'OPERATEUR'] } } }, deliveredNotification(order, info));
 }
 
 // Nouvelle course assignée : seulement les téléphones de ce livreur. Ne lève jamais d'erreur.

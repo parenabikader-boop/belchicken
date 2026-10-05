@@ -164,3 +164,27 @@ export function noticeError(state) {
   if (state.missing) return state.missing;
   return `Prévenez d’abord le client (« ${MESSAGES[state.key].label} »), puis confirmez l’envoi.`;
 }
+
+// ─────────── Livrées · à remercier ───────────
+// Une commande livrée reste dans l'étape « à remercier » tant que l'agent n'a pas confirmé le message
+// de remerciement (LIVREE). Avec l'envoi automatique, il part tout seul : elle va directement dans l'historique.
+// Seules les livraisons à partir de THANKS_SINCE comptent : les anciennes, d'avant cette étape, restent dans l'historique.
+export const THANKS_SINCE = new Date('2026-10-05T00:00:00Z');
+
+// `o` : la commande avec statusChanges et events (createdAt)
+export function needsThanks(o, { auto = false } = {}) {
+  if (auto || o.status !== 'LIVREE') return false;
+  if (stepStart(o, 'LIVREE') < THANKS_SINCE.getTime()) return false;
+  return Boolean(noticeState(o, { auto })?.required);
+}
+
+// Même règle, en filtre Prisma (liste et compteurs de la page Commandes). null = aucune commande.
+// Un remerciement confirmé ne peut exister qu'une fois la commande livrée (LIVREE est la dernière étape).
+export function thanksWhere({ auto = false } = {}) {
+  if (auto) return null;
+  return {
+    status: 'LIVREE',
+    statusChanges: { some: { toStatus: 'LIVREE', createdAt: { gte: THANKS_SINCE } } },
+    events: { none: { type: { in: CONFIRM_TYPES }, messageKey: 'LIVREE' } },
+  };
+}

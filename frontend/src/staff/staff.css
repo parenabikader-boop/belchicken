@@ -595,7 +595,8 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .od-empty{margin:0;background:var(--panel);border:1px dashed #e3c999;border-radius:var(--r-lg);padding:18px 14px;text-align:center;color:var(--muted);font-size:14px}
 .od-detail{font-size:14px;font-weight:700;color:var(--brand-ink);margin:-2px 0 6px}
 
-.od-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
+/* 5 colonnes : le tableau prend plus de largeur que le reste de la page (jusqu'à 1440 px) */
+.od-board{--w:min(1440px,calc(100vw - 48px));width:var(--w);margin-left:calc((100% - var(--w)) / 2);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:start}
 .od-col{background:#fbeedd;border:1px solid #f1dcb4;border-radius:var(--r-lg);padding:10px;min-height:240px}
 .od-col.has{background:#fff8ea}
 .od-col.s-PAIEMENT_A_VERIFIER.has{background:#fff4d6;border-color:#e0a100}
@@ -617,3 +618,14 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .st-orders.compact .st-ref{white-space:nowrap}
 .st-orders.compact .st-time{flex-basis:100%;margin-left:0;font-size:12.5px}
 .od-col.s-PAIEMENT_A_VERIFIER .od-hint{border-left-color:#e0a100}
+.od-tab.thanks:not(.on){border-color:#2b6e2f;background:#e3f1e1}
+.od-tab.thanks:not(.on) span{background:#2b6e2f;color:#fff}
+.od-col.s-A_REMERCIER.has{background:#eef7ec;border-color:#9cc79a}
+.od-col.s-A_REMERCIER.has .od-count{background:#2b6e2f}
+.od-col.s-A_REMERCIER .od-hint,.od-stage.s-A_REMERCIER .od-hint{border-left-color:#2b6e2f}
+.st-order.s-LIVREE.thank{opacity:1}
+.lv-success{display:flex;gap:12px;align-items:flex-start;background:#e3f1e1;border:2px solid #2b6e2f;border-radius:var(--r-lg);padding:14px 14px 14px 16px;margin-bottom:16px;color:#1d4f20}
+.lv-success b{display:block;font-size:18px}
+.lv-success p{margin:2px 0 0;font-size:15px;color:var(--ink)}
+.lv-success-icon{flex:none;width:36px;height:36px;border-radius:50%;background:#2b6e2f;color:#fff;display:grid;place-items:center;font-size:20px;font-weight:800}
+.lv-success-x{margin-left:auto;background:none;border:0;font-size:24px;line-height:1;color:#1d4f20;cursor:pointer;padding:0 4px}

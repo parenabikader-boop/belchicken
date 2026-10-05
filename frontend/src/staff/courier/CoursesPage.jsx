@@ -18,6 +18,7 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState(null);
   const [error, setError] = useState(null);
   const known = useRef(null); // références déjà vues : une nouvelle course sonne
+  const [success, setSuccess] = useState(null); // course qui vient d'être remise
 
   const load = useCallback(async () => {
     try {
@@ -49,6 +50,11 @@ export default function CoursesPage() {
   }, [load]);
 
   const replace = (course) => setCourses((list) => list.map((c) => (c.reference === course.reference ? course : c)));
+  const delivered = (course) => {
+    replace(course);
+    setSuccess(course);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   if (!courses) {
     return error ? <div className="alert err" role="alert"><span>{error.message}</span></div> : <p className="st-muted">Chargement de vos courses…</p>;
@@ -66,6 +72,16 @@ export default function CoursesPage() {
       <AlertsPrompt what="course" />
       {!soundReady && active.length === 0 && <p className="st-muted lv-sound">Touchez l’écran une fois : un son vous prévient de chaque nouvelle course.</p>}
       {error && <div className="alert err" role="alert" style={{ marginBottom: 12 }}><span>{error.message}</span></div>}
+      {success && (
+        <div className="lv-success" role="status">
+          <span className="lv-success-icon" aria-hidden="true">✓</span>
+          <div>
+            <b>Livraison validée</b>
+            <p>Commande {success.reference} remise à {success.customerName}{success.deliveredAt && ` à ${formatTime(success.deliveredAt)}`}. L’équipe est prévenue. Merci !</p>
+          </div>
+          <button type="button" className="lv-success-x" onClick={() => setSuccess(null)} aria-label="Fermer">×</button>
+        </div>
+      )}
 
       {active.length === 0 ? (
         <div className="st-empty">
@@ -75,7 +91,7 @@ export default function CoursesPage() {
       ) : (
         <>
           <p className="lv-count">{active.length} course{active.length > 1 ? 's' : ''} à livrer</p>
-          {active.map((c) => <Course key={c.reference} course={c} onDelivered={replace} onRefresh={load} />)}
+          {active.map((c) => <Course key={c.reference} course={c} onDelivered={delivered} onRefresh={load} />)}
         </>
       )}
 

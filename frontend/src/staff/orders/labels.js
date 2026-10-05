@@ -39,8 +39,16 @@ export const STAGES = [
     hint: 'Le livreur valide la remise avec le code du client. Appelez-le si une course traîne.',
     empty: 'Aucune commande en route.',
   },
+  {
+    // Livrées dont le remerciement n'est pas encore confirmé (toThank, calculé par l'API).
+    // Avec l'envoi automatique, cette étape reste vide : les livrées vont directement dans l'historique.
+    id: 'A_REMERCIER',
+    label: 'Livrées · à remercier',
+    hint: 'Remerciez le client sur WhatsApp, puis confirmez l’envoi : la commande passe ensuite dans l’historique.',
+    empty: 'Aucun client à remercier.',
+  },
 ];
-export const HISTORY = { id: 'HISTORIQUE', label: 'Historique', hint: 'Commandes terminées : livrées ou annulées.' };
+export const HISTORY = { id: 'HISTORIQUE', label: 'Historique', hint: 'Commandes terminées : livrées et remerciées, ou annulées.' };
 export const HISTORY_FILTERS = [
   { id: 'LIVREE', label: 'Livrées' },
   { id: 'ANNULEE', label: 'Annulées' },

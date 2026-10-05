@@ -2,7 +2,7 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { checkHandover, startOfToday, toCourse } from './courier.js';
-import { statusChange } from './staff-orders.service.js';
+import { notifyDelivered, statusChange } from './staff-orders.service.js';
 
 // Courses en cours, plus celles livrées ou annulées aujourd'hui
 export async function listCourses(courier, now = new Date()) {
@@ -56,5 +56,6 @@ export async function deliverWithCode(reference, code, courier) {
     if (updated.count !== 1) throw new AppError(409, 'Cette course vient de changer. La page est mise à jour.', 'COURSE_CHANGEE');
     await tx.orderStatusChange.create({ data: statusChange(order, 'LIVREE', courier) });
   });
+  notifyDelivered(reference);
   return (await listCourses(courier)).find((c) => c.reference === reference);
 }

@@ -25,6 +25,20 @@ export function courseNotification(order) {
   };
 }
 
+// Commande livrée : à l'équipe (Patron et Opérateurs), pour remercier le client.
+// « Commande BC-XXXX livrée par Issa à 14:32 ». Heure du Burkina = UTC.
+export function deliveredNotification(order, { courierName, at, byAgent = null, auto = false }) {
+  const time = new Date(at).toISOString().slice(11, 16).replace(':', ' h ');
+  const who = courierName ? ` par ${courierName}` : '';
+  const how = byAgent ? `Validée sans code par ${byAgent}. ` : '';
+  return {
+    title: `Commande ${order.reference} livrée${who} à ${time}`,
+    body: auto ? `${how}Remerciement envoyé automatiquement au client.` : `${how}Remerciez le client sur WhatsApp, puis confirmez l’envoi.`,
+    url: `/equipe/commandes/${encodeURIComponent(order.reference)}`,
+    tag: `livree-${order.reference}`,
+  };
+}
+
 // Course annulée pendant la livraison : le livreur ne doit pas la remettre
 export const courseCancelledNotification = (order) => ({
   title: `Course ${order.reference} annulée`,

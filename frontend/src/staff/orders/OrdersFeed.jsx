@@ -62,6 +62,7 @@ export function OrdersFeedProvider({ children }) {
   // Commandes arrivées pendant la session et pas encore ouvertes
   const [unseen, setUnseen] = useState(() => new Set());
   const known = useRef(null);
+  const knownThanks = useRef(null); // livrées à remercier déjà vues
   const timer = useRef(null);
   const inFlight = useRef(false);
 
@@ -72,12 +73,14 @@ export function OrdersFeedProvider({ children }) {
     try {
       const data = await staffApi.orders({ status: 'EN_COURS' });
       const refs = data.orders.map((o) => o.reference);
+      // Commande livrée (par le livreur ou un collègue) : un son, comme une nouvelle commande
+      const thanks = data.orders.filter((o) => o.toThank).map((o) => o.reference);
+      const deliveredNow = knownThanks.current && thanks.some((r) => !knownThanks.current.has(r));
+      knownThanks.current = new Set(thanks);
       if (known.current) {
         const fresh = data.orders.filter((o) => !known.current.has(o.reference) && o.status === 'PAIEMENT_A_VERIFIER');
-        if (fresh.length) {
-          setUnseen((s) => new Set([...s, ...fresh.map((o) => o.reference)]));
-          play();
-        }
+        if (fresh.length) setUnseen((s) => new Set([...s, ...fresh.map((o) => o.reference)]));
+        if (fresh.length || deliveredNow) play();
         refs.forEach((r) => known.current.add(r));
       } else {
         // Premier chargement : les commandes déjà là ne sont pas « nouvelles »

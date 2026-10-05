@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatPrice, plural } from '../../utils/format.js';
@@ -7,13 +7,13 @@ import AlertsPrompt from '../alerts/AlertsPrompt.jsx';
 import { formatTime, HISTORY, HISTORY_FILTERS, METHOD_LABEL, STAGES, STATUS_LABEL, timeAgo } from './labels.js';
 
 const REFRESH_MS = 5000;
-// Au-delà : les 4 étapes en colonnes côte à côte ; en dessous : un onglet par étape
+// Au-delà : les 5 étapes en colonnes côte à côte ; en dessous : un onglet par étape
 const WIDE = '(min-width: 1024px)';
 
 // Page Commandes, une étape à la fois (onglets sur téléphone, colonnes sur ordinateur).
 // Les étapes en cours viennent du fil partagé (OrdersFeed.jsx : son, badge, mise à jour toutes les 5 s).
 // L'historique et la recherche ont leur propre requête, rafraîchie elle aussi toutes les 5 s.
-// Adresse : ?etape=PAIEMENT_A_VERIFIER|PAYEE|EN_PREPARATION|EN_LIVRAISON|HISTORIQUE, &statut=LIVREE|ANNULEE, &q=…
+// Adresse : ?etape=PAIEMENT_A_VERIFIER|PAYEE|EN_PREPARATION|EN_LIVRAISON|A_REMERCIER|HISTORIQUE, &statut=LIVREE|ANNULEE, &q=…
 export default function OrdersList() {
   const feed = useOrdersFeed();
   const counts = feed.counts || {};
@@ -98,18 +98,32 @@ export default function OrdersList() {
   );
 }
 
-// Onglet d'une étape : mis en avant s'il contient des commandes, en jaune pour les paiements à vérifier
+// Onglet d'une étape : mis en avant s'il contient des commandes, en jaune pour les paiements à vérifier.
+// L'onglet choisi glisse dans la partie visible de la barre (les derniers sont cachés à droite sur téléphone).
 function StageTab({ stage, count, on, onClick }) {
-  const cls = ['od-tab', on && 'on', count > 0 && 'has', count > 0 && stage.id === 'PAIEMENT_A_VERIFIER' && 'warn'].filter(Boolean).join(' ');
+  const ref = useRef(null);
+  useEffect(() => {
+    const tab = ref.current;
+    const bar = tab?.parentElement;
+    if (!on || !bar) return;
+    // Seulement dans la barre, sans faire bouger la page
+    const t = tab.getBoundingClientRect();
+    const b = bar.getBoundingClientRect();
+    if (t.left < b.left || t.right > b.right) {
+      bar.scrollTo({ left: bar.scrollLeft + t.left - b.left - (b.width - t.width) / 2, behavior: 'smooth' });
+    }
+  }, [on]);
+  const cls = ['od-tab', on && 'on', count > 0 && 'has', count > 0 && stage.id === 'PAIEMENT_A_VERIFIER' && 'warn', count > 0 && stage.id === 'A_REMERCIER' && 'thanks'].filter(Boolean).join(' ');
   return (
-    <button type="button" className={cls} aria-pressed={on} onClick={onClick}>
+    <button ref={ref} type="button" className={cls} aria-pressed={on} onClick={onClick}>
       {stage.label} <span>{count}</span>
     </button>
   );
 }
 
 // Commandes d'une étape : la plus ancienne en premier (celle qui attend depuis le plus longtemps)
-const ofStage = (orders, id) => (orders || []).filter((o) => o.status === id).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+const inStage = (o, id) => (id === 'A_REMERCIER' ? o.status === 'LIVREE' && o.toThank : o.status === id);
+const ofStage = (orders, id) => (orders || []).filter((o) => inStage(o, id)).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
 // Téléphone : une seule étape
 function Stage({ stage, feed }) {
@@ -122,7 +136,7 @@ function Stage({ stage, feed }) {
   );
 }
 
-// Ordinateur : les 4 étapes côte à côte, comme un tableau de suivi
+// Ordinateur : les 5 étapes côte à côte, comme un tableau de suivi
 function Board({ feed }) {
   const counts = feed.counts || {};
   return (
@@ -225,6 +239,7 @@ function OrderList({ orders, unseen, empty, compact = false, withStatus = false 
 function stageDetail(o) {
   if (o.status === 'PAYEE') return o.deliveryFee != null ? `Frais attendus : ${formatPrice(o.deliveryFee)}` : 'Frais à saisir';
   if (o.status === 'EN_LIVRAISON') return o.courierName ? `Livreur : ${o.courierName}` : 'Livreur non indiqué';
+  if (o.status === 'LIVREE') return o.courierName ? `Livrée par ${o.courierName}` : 'Livrée';
   return null;
 }
 
@@ -233,7 +248,7 @@ function OrderCard({ order: o, isNew, withStatus }) {
   const detail = !withStatus && stageDetail(o);
   return (
     <li>
-      <Link to={`/equipe/commandes/${o.reference}`} className={`st-order s-${o.status}${verify ? ' verify' : ''}`}>
+      <Link to={`/equipe/commandes/${o.reference}`} className={`st-order s-${o.status}${verify ? ' verify' : ''}${o.toThank ? ' thank' : ''}`}>
         <div className="st-order-top">
           <b className="st-ref">{o.reference}</b>
           {isNew && <span className="st-new">Nouvelle</span>}
