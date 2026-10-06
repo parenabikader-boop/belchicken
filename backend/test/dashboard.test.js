@@ -50,10 +50,10 @@ test('chiffre d\'affaires : seules les commandes payées et au-delà comptent', 
   const range = periodRange('day', 0, NOW);
   const orders = [
     order('2026-10-02T09:10:00Z', 'PAYEE', 5000, { deliveryFee: 1000 }), // frais saisis, pas encore reçus
-    order('2026-10-02T12:00:00Z', 'LIVREE', 3000, { paymentMethod: 'MOOV_MONEY', deliveryFee: 1500, deliveryFeeReceivedAt: new Date('2026-10-02T12:10:00Z') }),
-    order('2026-10-02T12:30:00Z', 'EN_PREPARATION', 4000, { deliveryFee: 500, deliveryFeeReceivedAt: new Date('2026-10-02T12:40:00Z') }),
+    order('2026-10-02T12:00:00Z', 'LIVREE', 3000, { paymentMethod: 'MOOV_MONEY', deliveryFee: 1500, deliveryFeeMethod: 'ESPECES' }), // payés au livreur en espèces
+    order('2026-10-02T12:30:00Z', 'EN_PREPARATION', 4000, { deliveryFee: 500, deliveryFeeMethod: 'MOBILE_MONEY' }), // ancienne commande : payés avant le départ
     order('2026-10-02T13:00:00Z', 'PAIEMENT_A_VERIFIER', 9000),
-    order('2026-10-02T13:30:00Z', 'ANNULEE', 7000, { cancelReason: 'Client injoignable', deliveryFee: 800, deliveryFeeReceivedAt: new Date('2026-10-02T13:35:00Z') }), // annulée : frais retirés
+    order('2026-10-02T13:30:00Z', 'ANNULEE', 7000, { cancelReason: 'Client injoignable', deliveryFee: 800, deliveryFeeMethod: 'MOBILE_MONEY' }), // annulée : frais retirés
     order('2026-10-02T13:45:00Z', 'ANNULEE', 2000, { cancelReason: 'client injoignable ' }),
     order('2026-10-02T15:00:00Z', 'PAYEE', 99999), // après maintenant : ignorée
     order('2026-10-01T10:00:00Z', 'PAYEE', 6000), // hier avant 14 h 30 : comparaison
@@ -61,7 +61,7 @@ test('chiffre d\'affaires : seules les commandes payées et au-delà comptent', 
   ];
   const d = buildDashboard(orders, range);
   // revenue = plats seulement ; frais de livraison à part, une fois reçus, hors commandes annulées
-  assert.deepEqual(d.summary, { received: 6, paid: 3, revenue: 12000, deliveryRevenue: 2000, deliveryPaid: 2, avgBasket: 4000, cancelled: 2, toVerify: 1 });
+  assert.deepEqual(d.summary, { received: 6, paid: 3, revenue: 12000, deliveryRevenue: 2000, deliveryPaid: 2, deliveryCash: 1500, deliveryCashCount: 1, deliveryMobile: 500, deliveryMobileCount: 1, avgBasket: 4000, cancelled: 2, toVerify: 1 });
   assert.equal(d.previous.revenue, 6000);
   assert.equal(d.timeline.length, 24);
   assert.equal(d.timeline[12].revenue, 7000);

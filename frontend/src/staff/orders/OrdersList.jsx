@@ -4,7 +4,7 @@ import { staffApi } from '../../api/client.js';
 import { formatPrice, plural } from '../../utils/format.js';
 import { useOrdersFeed } from './OrdersFeed.jsx';
 import AlertsPrompt from '../alerts/AlertsPrompt.jsx';
-import { formatTime, HISTORY, HISTORY_FILTERS, METHOD_LABEL, STAGES, STATUS_LABEL, timeAgo } from './labels.js';
+import { FEE_METHOD_LABEL, formatTime, HISTORY, HISTORY_FILTERS, METHOD_LABEL, STAGES, STATUS_LABEL, timeAgo } from './labels.js';
 
 const REFRESH_MS = 5000;
 // Au-delà : les 5 étapes en colonnes côte à côte ; en dessous : un onglet par étape
@@ -237,9 +237,9 @@ function OrderList({ orders, unseen, empty, compact = false, withStatus = false 
 
 // Ce qui compte pour l'étape, sous le nom du client
 function stageDetail(o) {
-  if (o.status === 'PAYEE') return o.deliveryFee != null ? `Frais attendus : ${formatPrice(o.deliveryFee)}` : 'Frais à saisir';
+  if (o.status === 'PAYEE') return o.deliveryFee != null ? `Frais : ${formatPrice(o.deliveryFee)}, payés au livreur` : 'Frais à saisir';
   if (o.status === 'EN_LIVRAISON') return o.courierName ? `Livreur : ${o.courierName}` : 'Livreur non indiqué';
-  if (o.status === 'LIVREE') return o.courierName ? `Livrée par ${o.courierName}` : 'Livrée';
+  if (o.status === 'LIVREE') return [o.courierName ? `Livrée par ${o.courierName}` : 'Livrée', o.deliveryFeeMethod && `frais ${FEE_METHOD_LABEL[o.deliveryFeeMethod]}`].filter(Boolean).join(' · ');
   return null;
 }
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   currentMessageKey, customerMessage, firstName, MESSAGES, messageParams, noticeError, noticeState, renderMessage,
 } from '../src/services/customer-messages.js';
-import { deliveryError, feeEditError, feeReceivedError, paymentConfirmError, preparationError } from '../src/services/order-status.js';
+import { deliveryError, feeEditError, feeMethodError, feeVerifyError, paymentConfirmError } from '../src/services/order-status.js';
 import { feeSchema } from '../src/routes/staff-orders.routes.js';
 
 const ctx = { siteUrl: 'https://belchicken-six.vercel.app/', merchantNumber: '+22670000000' };
@@ -14,11 +14,13 @@ const order = (extra = {}) => ({
   paymentMethod: 'ORANGE_MONEY',
   itemsTotal: 7000,
   deliveryFee: null,
-  deliveryFeeReceivedAt: null,
+  deliveryFeeMethod: null,
+  deliveryFeeVerifiedAt: null,
   status: 'PAYEE',
   ...extra,
 });
-const RECU = new Date('2026-10-04T12:00:00Z');
+const VU = new Date('2026-10-06T12:00:00Z');
+const FEES = 'Frais de livraison : 1 000 F, à payer au livreur à la réception, en espèces ou par Orange Money / Moov Money au +226 70 00 00 00.';
 
 test('prénom : premier mot du nom, avec une majuscule', () => {
   assert.equal(firstName('awa Traoré'), 'Awa');
@@ -31,10 +33,20 @@ test('paiement confirmé : prénom, référence, montants réels, numéro marcha
   assert.equal(
     text,
     'Bonjour Awa, nous avons bien reçu votre paiement de 7 000 F pour la commande BC-7K2Q9M. Merci !\n\n' +
-      'Frais de livraison pour votre quartier : 1 000 F. Merci de les envoyer par Orange Money au +226 70 00 00 00. ' +
-      'Le livreur part dès leur réception.\n\n' +
+      FEES + '\n\n' +
       'Suivez votre commande ici : https://belchicken-six.vercel.app/suivi/BC-7K2Q9M\n\nBelchicken',
   );
+});
+
+test('en préparation et en route : les frais à payer au livreur sont rappelés', () => {
+  assert.equal(
+    renderMessage('EN_PREPARATION', order({ status: 'EN_PREPARATION', deliveryFee: 1000 }), ctx),
+    'Bonjour Awa, votre commande BC-7K2Q9M est en préparation.\n\n' + FEES + '\n\n' +
+      'Suivez votre commande ici : https://belchicken-six.vercel.app/suivi/BC-7K2Q9M\n\nBelchicken',
+  );
+  const route = renderMessage('EN_ROUTE', order({ status: 'EN_LIVRAISON', deliveryFee: 1000, deliveryCode: '0427' }), ctx);
+  assert.match(route, /Donnez ce code au livreur à la réception : 0427\./);
+  assert.ok(route.includes(FEES));
 });
 
 test('annulée : le motif est repris, sans double point final', () => {
@@ -46,8 +58,7 @@ test('un message par étape, grisé tant qu’il manque quelque chose', () => {
   assert.equal(currentMessageKey(order({ status: 'PAIEMENT_A_VERIFIER' })), null);
   assert.deepEqual(currentMessageKey(order()), { key: 'PAIEMENT_CONFIRME', missing: 'Saisissez d’abord les frais de livraison.' });
   assert.deepEqual(currentMessageKey(order({ deliveryFee: 1000 })), { key: 'PAIEMENT_CONFIRME' });
-  assert.deepEqual(currentMessageKey(order({ deliveryFee: 1000, deliveryFeeReceivedAt: RECU })), { key: 'FRAIS_RECUS' });
-  assert.deepEqual(currentMessageKey(order({ status: 'EN_PREPARATION', deliveryFee: 1000, deliveryFeeReceivedAt: RECU })), { key: 'FRAIS_RECUS' });
+  assert.deepEqual(currentMessageKey(order({ status: 'EN_PREPARATION', deliveryFee: 1000 })), { key: 'EN_PREPARATION' });
   assert.deepEqual(currentMessageKey(order({ status: 'EN_LIVRAISON' })), { key: 'EN_ROUTE' });
   assert.deepEqual(currentMessageKey(order({ status: 'LIVREE' })), { key: 'LIVREE' });
   assert.deepEqual(currentMessageKey(order({ status: 'ANNULEE' })), { key: 'ANNULEE' });
@@ -73,21 +84,38 @@ test('modèles prêts pour Meta : variables numérotées dans l’ordre, ni au d
   }
 });
 
-test('le livreur ne part pas tant que les frais ne sont pas saisis ET reçus', () => {
+test('le livreur part dès que les frais sont saisis : ils sont payés à la réception', () => {
   assert.match(deliveryError(order({ status: 'EN_PREPARATION' })), /Saisissez/);
-  assert.match(deliveryError(order({ status: 'EN_PREPARATION', deliveryFee: 1000 })), /pas encore reçus/);
-  assert.equal(deliveryError(order({ status: 'EN_PREPARATION', deliveryFee: 1000, deliveryFeeReceivedAt: RECU })), null);
+  assert.equal(deliveryError(order({ status: 'EN_PREPARATION', deliveryFee: 1000 })), null);
 });
 
-test('frais : modifiables jusqu’au départ du livreur, pas une fois reçus', () => {
+test('frais : modifiables jusqu’au départ du livreur', () => {
   assert.equal(feeEditError(order({ status: 'PAIEMENT_A_VERIFIER' })), null);
   assert.equal(feeEditError(order({ deliveryFee: 1000 })), null);
-  assert.match(feeEditError(order({ deliveryFee: 1000, deliveryFeeReceivedAt: RECU })), /décochez/);
+  assert.equal(feeEditError(order({ status: 'EN_PREPARATION', deliveryFee: 1000 })), null);
   assert.match(feeEditError(order({ status: 'EN_LIVRAISON', deliveryFee: 1000 })), /plus/);
-  assert.match(feeReceivedError(order(), true), /montant/);
-  assert.equal(feeReceivedError(order({ deliveryFee: 1000 }), true), null);
-  assert.equal(feeReceivedError(order({ deliveryFee: 1000, deliveryFeeReceivedAt: RECU }), false), null);
-  assert.match(feeReceivedError(order({ status: 'LIVREE', deliveryFee: 1000, deliveryFeeReceivedAt: RECU }), false), /plus/);
+  // Ancienne commande, frais déjà payés avant le départ
+  assert.match(feeEditError(order({ status: 'EN_PREPARATION', deliveryFee: 1000, deliveryFeeMethod: 'MOBILE_MONEY' })), /déjà payés/);
+});
+
+test('à la remise : espèces ou mobile money obligatoire', () => {
+  const route = order({ status: 'EN_LIVRAISON', deliveryFee: 1000 });
+  assert.match(feeMethodError(route, undefined), /espèces ou mobile money/);
+  assert.match(feeMethodError(route, 'CARTE'), /espèces ou mobile money/);
+  assert.equal(feeMethodError(route, 'ESPECES'), null);
+  assert.equal(feeMethodError(route, 'MOBILE_MONEY'), null);
+  // Ancienne commande, frais déjà payés : rien à choisir
+  assert.equal(feeMethodError({ ...route, deliveryFeeMethod: 'MOBILE_MONEY' }, undefined), null);
+});
+
+test('frais à vérifier : mobile money seulement, une fois livrée', () => {
+  const mm = order({ status: 'LIVREE', deliveryFee: 1000, deliveryFeeMethod: 'MOBILE_MONEY' });
+  assert.equal(feeVerifyError(mm, true), null);
+  assert.match(feeVerifyError({ ...mm, deliveryFeeVerifiedAt: VU }, true), /déjà vérifiés/);
+  assert.equal(feeVerifyError({ ...mm, deliveryFeeVerifiedAt: VU }, false), null);
+  assert.match(feeVerifyError(mm, false), /pas encore vérifiés/);
+  assert.match(feeVerifyError({ ...mm, deliveryFeeMethod: 'ESPECES' }, true), /mobile money/);
+  assert.match(feeVerifyError({ ...mm, status: 'EN_LIVRAISON' }, true), /une fois la commande livrée/);
 });
 
 test('montant des frais : au moins 1 F, entier', () => {
@@ -135,12 +163,26 @@ test('client sans WhatsApp : prévenu par appel compte comme envoyé', () => {
 
 test('la confirmation d’une étape ne vaut pas pour la suivante', () => {
   const o = order({
-    status: 'EN_PREPARATION', deliveryFee: 1000, deliveryFeeReceivedAt: RECU,
+    status: 'EN_PREPARATION', deliveryFee: 1000,
     statusChanges: [{ toStatus: 'PAYEE', createdAt: at('12:05') }, { toStatus: 'EN_PREPARATION', createdAt: at('12:20') }],
-    events: [done('PAIEMENT_CONFIRME', '12:06'), { type: 'FRAIS_RECUS', createdAt: at('12:20') }],
+    events: [done('PAIEMENT_CONFIRME', '12:06')],
   });
-  assert.equal(noticeState(o).key, 'FRAIS_RECUS');
+  assert.equal(noticeState(o).key, 'EN_PREPARATION');
   assert.equal(noticeState(o).required, true);
+  o.events.push(done('EN_PREPARATION', '12:21'));
+  assert.equal(noticeState(o).required, false);
+  // Nouveau montant pendant la préparation : le client doit être prévenu à nouveau
+  o.events.push({ type: 'FRAIS_SAISIS', amount: 1500, createdAt: at('12:30') });
+  assert.equal(noticeState(o).required, true);
+});
+
+test('anciennes commandes : le message « frais reçus » déjà confirmé vaut pour la préparation', () => {
+  const o = order({
+    status: 'EN_PREPARATION', deliveryFee: 1000, deliveryFeeMethod: 'MOBILE_MONEY',
+    statusChanges: [{ toStatus: 'EN_PREPARATION', createdAt: at('12:20') }],
+    events: [done('FRAIS_RECUS', '12:21')],
+  });
+  assert.equal(noticeState(o).required, false);
 });
 
 test('envoi automatique activé : aucune confirmation demandée', () => {
@@ -154,10 +196,8 @@ test('paiement à vérifier : rien à dire au client, rien de bloqué', () => {
   assert.equal(noticeError(null), null);
 });
 
-test('confirmer le paiement demande les frais ; la préparation attend les frais reçus', () => {
+test('confirmer le paiement demande les frais', () => {
   assert.match(paymentConfirmError(null), /frais de livraison/);
   assert.match(paymentConfirmError(0), /invalides/);
   assert.equal(paymentConfirmError(1000), null);
-  assert.match(preparationError(order({ deliveryFee: 1000 })), /Frais reçus/);
-  assert.equal(preparationError(order({ deliveryFee: 1000, deliveryFeeReceivedAt: RECU })), null);
 });

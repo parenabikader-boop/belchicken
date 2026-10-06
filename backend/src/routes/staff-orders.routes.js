@@ -2,10 +2,10 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireStaff } from '../middlewares/staff-auth.js';
 import {
-  changeStatus, confirmNotice, getOrder, listCouriers, listOrders, logMessagePrepared, reassignCourier, setDeliveryFee, setFeeReceived,
+  changeStatus, confirmNotice, getOrder, listCouriers, listOrders, logMessagePrepared, reassignCourier, setDeliveryFee, setFeeVerified,
 } from '../services/staff-orders.service.js';
 import { MESSAGE_KEYS } from '../services/customer-messages.js';
-import { FEE_MAX, FEE_MIN, STATUSES } from '../services/order-status.js';
+import { FEE_MAX, FEE_METHODS, FEE_MIN, STATUSES } from '../services/order-status.js';
 
 // Commandes de l'espace équipe : Patron et Opérateur
 export const staffOrdersRouter = Router();
@@ -49,6 +49,10 @@ const statusSchema = z.object({
   courierId: z.string().max(40).optional(),
   // Frais de livraison donnés avec la confirmation du paiement (to = PAYEE)
   deliveryFee: z.number({ invalid_type_error: 'Indiquez les frais de livraison en F.' }).int('Montant en F, sans centimes.').optional(),
+  // Livraison validée sans code (to = LIVREE) : comment le client a payé les frais au livreur
+  feeMethod: z
+    .enum(FEE_METHODS, { errorMap: () => ({ message: 'Indiquez comment le client a payé les frais de livraison : espèces ou mobile money.' }) })
+    .optional(),
 });
 
 staffOrdersRouter.post('/:reference/status', async (req, res, next) => {
@@ -60,7 +64,7 @@ staffOrdersRouter.post('/:reference/status', async (req, res, next) => {
   }
 });
 
-// Frais de livraison (Patron et Opérateur) : montant selon le quartier, puis « Frais reçus »
+// Frais de livraison (Patron et Opérateur) : montant selon le quartier, avant le départ du livreur
 export const feeSchema = z.object({
   amount: z
     .number({ required_error: 'Indiquez le montant des frais.', invalid_type_error: 'Indiquez le montant des frais en F.' })
@@ -78,10 +82,11 @@ staffOrdersRouter.put('/:reference/delivery-fee', async (req, res, next) => {
   }
 });
 
-staffOrdersRouter.post('/:reference/delivery-fee/received', async (req, res, next) => {
+// Frais payés par mobile money : vérifiés (ou non) sur le téléphone marchand
+staffOrdersRouter.post('/:reference/delivery-fee/verified', async (req, res, next) => {
   try {
-    const { received } = z.object({ received: z.boolean() }).parse(req.body);
-    res.json({ order: await setFeeReceived(reference(req), received, req.staff) });
+    const { verified } = z.object({ verified: z.boolean() }).parse(req.body);
+    res.json({ order: await setFeeVerified(reference(req), verified, req.staff) });
   } catch (e) {
     next(e);
   }

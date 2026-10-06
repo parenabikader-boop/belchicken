@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatPrice } from '../../utils/format.js';
 import { useOrdersFeed } from './OrdersFeed.jsx';
-import { formatDateTime, formatPhone, mapsHref, METHOD_LABEL, STATUS_LABEL, telHref, timeAgo, timelineOf, whatsappHref } from './labels.js';
+import { FEE_METHOD_LABEL, formatDateTime, formatPhone, mapsHref, METHOD_LABEL, STATUS_LABEL, telHref, timeAgo, timelineOf, whatsappHref } from './labels.js';
 import { Actions, CourierBox, DeliveryFee, Notice, useSteps } from './OrderSteps.jsx';
 
 const REFRESH_MS = 5000;
@@ -95,7 +95,9 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
           </dl>
           <p className="st-note">
             Plats seulement. Frais de livraison :{' '}
-            {o.deliveryFee == null ? 'pas encore saisis' : `${formatPrice(o.deliveryFee)}, ${o.deliveryFeeReceivedAt ? 'reçus' : 'à recevoir'}`}.
+            {o.deliveryFee == null
+              ? 'pas encore saisis'
+              : `${formatPrice(o.deliveryFee)}, ${o.deliveryFeeMethod ? `payés ${FEE_METHOD_LABEL[o.deliveryFeeMethod]}` : 'payés au livreur à la réception'}`}.
           </p>
         </section>
 

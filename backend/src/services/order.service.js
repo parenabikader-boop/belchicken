@@ -79,9 +79,10 @@ export function toPublicOrder(order) {
     paymentMethod: order.paymentMethod,
     itemsTotal: order.itemsTotal,
     deliveryFee: order.deliveryFee ?? null,
-    deliveryFeeReceived: order.deliveryFeeReceivedAt != null,
-    // Numéro où envoyer les frais (le même que dans le message WhatsApp), tant qu'ils sont attendus
-    payTo: order.deliveryFee != null && order.deliveryFeeReceivedAt == null ? formatPhone(env.merchantNumber) : null,
+    // Frais payés au livreur à la réception (espèces ou mobile money) : payés une fois la commande remise
+    deliveryFeePaid: order.deliveryFeeMethod != null,
+    // Numéro marchand pour payer les frais par mobile money (le même que dans les messages), tant qu'ils sont attendus
+    payTo: order.deliveryFee != null && order.deliveryFeeMethod == null && order.status !== 'ANNULEE' ? formatPhone(env.merchantNumber) : null,
     steps: changes.map((h) => ({ status: h.toStatus, at: h.createdAt })),
     cancelReason: changes.findLast((h) => h.toStatus === 'ANNULEE')?.reason || null,
     items: order.items.map((i) => ({

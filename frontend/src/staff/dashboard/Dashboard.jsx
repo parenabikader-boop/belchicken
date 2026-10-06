@@ -254,12 +254,23 @@ export default function Dashboard() {
             <Delta now={s.revenue} before={prev.revenue} compare={compare} money />
             <p className="st-muted db-note">Commandes payées seulement (payée, en préparation, en livraison, livrée).</p>
             <div className="db-fees">
-              <h3>Frais de livraison reçus</h3>
+              <h3>Frais de livraison encaissés</h3>
               <p className="db-num">{formatPrice(s.deliveryRevenue)}</p>
               <Delta now={s.deliveryRevenue} before={prev.deliveryRevenue} compare={compare} money />
-              <p className="st-muted db-note">
-                {s.deliveryPaid ? `${plural(s.deliveryPaid, 'commande')} · ` : ''}Comptés une fois cochés « reçus », sauf commande annulée. À part du chiffre des plats.
-              </p>
+              <dl className="db-feesplit">
+                <dt>En espèces</dt>
+                <dd><b>{formatPrice(s.deliveryCash)}</b> <small className="st-muted">{plural(s.deliveryCashCount, 'commande')}</small></dd>
+                <dt>Par mobile money</dt>
+                <dd><b>{formatPrice(s.deliveryMobile)}</b> <small className="st-muted">{plural(s.deliveryMobileCount, 'commande')}</small></dd>
+              </dl>
+              <p className="st-muted db-note">Payés au livreur à la réception, sauf commande annulée. À part du chiffre des plats.</p>
+              {data.cashWithCouriers && (
+                <Link to="/equipe/caisse?onglet=livreurs" className={`db-cash${data.cashWithCouriers.amount ? ' has' : ''}`}>
+                  <span>Espèces encore chez les livreurs</span>
+                  <b>{formatPrice(data.cashWithCouriers.amount)}</b>
+                  <small>{data.cashWithCouriers.count ? `${plural(data.cashWithCouriers.count, 'course')} · à remettre, page Caisse` : 'Tout est remis.'}</small>
+                </Link>
+              )}
             </div>
           </section>
 

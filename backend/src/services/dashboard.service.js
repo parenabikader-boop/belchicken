@@ -12,7 +12,7 @@ export async function getDashboard({ period, offset }) {
       paymentMethod: true,
       itemsTotal: true,
       deliveryFee: true,
-      deliveryFeeReceivedAt: true,
+      deliveryFeeMethod: true,
       courierId: true,
       courierName: true,
       customerName: true,
@@ -46,5 +46,14 @@ export async function getDashboard({ period, offset }) {
       withoutCode: Boolean(delivered?.reason), // validée par l'agent, avec un motif
     };
   });
-  return buildDashboard(orders, range);
+  // Espèces encore chez les livreurs, aujourd'hui (quelle que soit la période affichée)
+  const cash = await prisma.order.aggregate({
+    where: { status: 'LIVREE', deliveryFeeMethod: 'ESPECES', cashRemittanceId: null },
+    _sum: { deliveryFee: true },
+    _count: { _all: true },
+  });
+  return {
+    ...buildDashboard(orders, range),
+    cashWithCouriers: { amount: cash._sum.deliveryFee || 0, count: cash._count._all },
+  };
 }

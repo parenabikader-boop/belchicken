@@ -58,7 +58,7 @@ test('livraison validée par l’agent : motif obligatoire', () => {
   assert.equal(handoverReasonError('Client a effacé le message'), null);
 });
 
-test('le livreur ne voit ni montant, ni code, ni paiement', () => {
+test('le livreur voit seulement les frais à encaisser : ni total des plats, ni code, ni paiement', () => {
   const c = toCourse({
     reference: 'BC-7K2Q9M', status: 'EN_LIVRAISON', courierAssignedAt: new Date(), customerName: 'Awa', customerPhone: '+22676123456',
     addressNote: 'Secteur 22, portail bleu', latitude: 11.18, longitude: -4.29, locationAccuracy: 12,
@@ -68,7 +68,12 @@ test('le livreur ne voit ni montant, ni code, ni paiement', () => {
     statusChanges: [],
   });
   const text = JSON.stringify(c);
-  for (const hidden of ['7000', '3500', '1000', '0427', 'ORANGE', '+22670000000']) assert.ok(!text.includes(hidden), hidden);
+  for (const hidden of ['7000', '3500', '0427', 'ORANGE', '+22670000000']) assert.ok(!text.includes(hidden), hidden);
+  assert.equal(c.deliveryFee, 1000);
+  assert.equal(c.feePaidBefore, false);
+  assert.equal(c.feeMethod, null);
+  // Ancienne commande, frais payés avant le départ : rien à encaisser
+  assert.equal(toCourse({ ...c, courierAssignedAt: null, items: [], deliveryFeeMethod: 'MOBILE_MONEY' }).feePaidBefore, true);
   assert.equal(c.directionsUrl, 'https://www.google.com/maps/dir/?api=1&destination=11.18,-4.29');
   assert.equal(c.attemptsLeft, 4);
   assert.equal(c.items[0].quantity, 2);
@@ -76,7 +81,7 @@ test('le livreur ne voit ni montant, ni code, ni paiement', () => {
 
 test('message « en route » : le code de remise est dedans', () => {
   const ctx = { siteUrl: 'https://belchicken-six.vercel.app', merchantNumber: '+22670000000' };
-  const text = renderMessage('EN_ROUTE', { customerName: 'awa', reference: 'BC-7K2Q9M', deliveryCode: '0427' }, ctx);
+  const text = renderMessage('EN_ROUTE', { customerName: 'awa', reference: 'BC-7K2Q9M', deliveryCode: '0427', deliveryFee: 1000 }, ctx);
   assert.match(text, /Donnez ce code au livreur à la réception : 0427\./);
   assert.match(text, /suivi\/BC-7K2Q9M/);
 });

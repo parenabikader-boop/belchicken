@@ -2,9 +2,9 @@ import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { customerAutoEnabled, messageContext } from '../config/env.js';
 import {
-  ACTIVE, deliveryError, feeEditError, feeReceivedError, paymentConfirmError, preparationError, STATUSES, transitionError,
+  ACTIVE, deliveryError, feeAlreadyPaid, feeEditError, feeMethodError, feeVerifyError, paymentConfirmError, STATUSES, transitionError,
 } from './order-status.js';
-import { customerMessage, MESSAGE_KEYS, MESSAGES, needsThanks, noticeError, noticeState, thanksWhere } from './customer-messages.js';
+import { customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticeState, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
 import { pushCourierAssigned, pushCourseCancelled, pushTeamDelivered } from './push.service.js';
 import { codeLocked, courierAssignError, generateDeliveryCode, handoverReasonError, MAX_CODE_ATTEMPTS } from './courier.js';
@@ -69,7 +69,7 @@ export async function listOrders({ status, q }) {
       paymentMethod: o.paymentMethod,
       itemsTotal: o.itemsTotal,
       deliveryFee: o.deliveryFee,
-      deliveryFeeReceived: o.deliveryFeeReceivedAt != null,
+      deliveryFeeMethod: o.deliveryFeeMethod,
       courierName: o.courierName,
       itemCount: o.items.reduce((n, i) => n + i.quantity, 0),
       hasLocation: o.latitude != null,
@@ -103,7 +103,13 @@ export function toStaffOrder(order) {
     paymentPayerPhone: o.paymentPayerPhone,
     itemsTotal: o.itemsTotal,
     deliveryFee: o.deliveryFee,
-    deliveryFeeReceivedAt: o.deliveryFeeReceivedAt,
+    // Frais payés au livreur à la réception : comment (espèces / mobile money), vérification du mobile money
+    // sur le téléphone marchand, remise des espèces au restaurant. feeAlreadyPaid : anciennes commandes,
+    // frais payés avant le départ du livreur.
+    deliveryFeeMethod: o.deliveryFeeMethod,
+    deliveryFeeVerifiedAt: o.deliveryFeeVerifiedAt,
+    cashRemitted: o.cashRemittanceId != null,
+    feeAlreadyPaid: o.status !== 'LIVREE' && feeAlreadyPaid(o),
     // Livreur et code de remise. Le code est montré à l'équipe (il est dans le message « en route »,
     // et peut être dicté au client par appel), jamais au livreur.
     courier: o.courierName ? { id: o.courierId, name: o.courierName, assignedAt: o.courierAssignedAt } : null,
@@ -136,7 +142,7 @@ export function toStaffOrder(order) {
       amount: e.amount,
       messageKey: e.messageKey,
       courierName: e.courierName,
-      messageLabel: e.messageKey ? MESSAGES[e.messageKey]?.label || e.messageKey : null,
+      messageLabel: e.messageKey ? messageLabel(e.messageKey) : null,
       by: e.staffName,
       at: e.createdAt,
     })),
@@ -172,7 +178,7 @@ async function findForRules(tx, reference) {
   const order = await tx.order.findUnique({
     where: { reference },
     select: {
-      id: true, status: true, deliveryFee: true, deliveryFeeReceivedAt: true, courierId: true,
+      id: true, status: true, deliveryFee: true, deliveryFeeMethod: true, deliveryFeeVerifiedAt: true, courierId: true,
       statusChanges: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
       events: { select: { type: true, messageKey: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
     },
@@ -185,7 +191,12 @@ async function findForRules(tx, reference) {
 async function guardedUpdate(tx, order, data) {
   const updated = await tx.order.updateMany({
     where: {
-      id: order.id, status: order.status, deliveryFee: order.deliveryFee, deliveryFeeReceivedAt: order.deliveryFeeReceivedAt, courierId: order.courierId,
+      id: order.id,
+      status: order.status,
+      deliveryFee: order.deliveryFee,
+      deliveryFeeMethod: order.deliveryFeeMethod,
+      deliveryFeeVerifiedAt: order.deliveryFeeVerifiedAt,
+      courierId: order.courierId,
     },
     data,
   });
@@ -211,9 +222,10 @@ export const statusChange = (order, to, staff, reason = null) => ({
 // Confirmation du paiement (PAYEE) : les frais de livraison sont donnés en même temps (deliveryFee).
 // Départ (EN_LIVRAISON) : le livreur est choisi en même temps (courierId), et le code de remise créé.
 // Livrée (LIVREE) depuis l'espace équipe : seulement quand le client n'a plus son code, avec un motif
-// (le livreur, lui, valide avec le code : courier.service.js).
+// et la façon dont les frais ont été payés au livreur (feeMethod) ; le livreur, lui, valide avec le code
+// (courier.service.js).
 // Chaque étape, sauf l'annulation, demande que le client ait été prévenu de l'étape en cours.
-export async function changeStatus(reference, { from, to, reason, deliveryFee, courierId }, staff) {
+export async function changeStatus(reference, { from, to, reason, deliveryFee, courierId, feeMethod }, staff) {
   let courier = null;
   let cancelledCourierId = null;
   await prisma.$transaction(async (tx) => {
@@ -227,9 +239,8 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, c
       transitionError(order.status, to, reason) ||
       (to !== 'ANNULEE' ? noticeError(notice(order)) : null) ||
       (to === 'PAYEE' ? paymentConfirmError(fee) : null) ||
-      (to === 'EN_PREPARATION' ? preparationError(order) : null) ||
       (to === 'EN_LIVRAISON' ? deliveryError(order) : null) ||
-      (to === 'LIVREE' ? handoverReasonError(reason) : null);
+      (to === 'LIVREE' ? handoverReasonError(reason) || feeMethodError(order, feeMethod) : null);
     if (error) throw new AppError(400, error, 'CHANGEMENT_IMPOSSIBLE');
     if (to === 'EN_LIVRAISON') courier = await findCourier(tx, order, courierId);
 
@@ -237,6 +248,7 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, c
       status: to,
       ...(to === 'PAYEE' ? { deliveryFee: fee } : {}),
       ...(courier ? { ...assignment(courier), deliveryCode: generateDeliveryCode(), deliveryCodeAttempts: 0 } : {}),
+      ...(to === 'LIVREE' && !feeAlreadyPaid(order) ? { deliveryFeeMethod: feeMethod } : {}),
     });
     const withReason = to === 'ANNULEE' || to === 'LIVREE';
     await tx.orderStatusChange.create({ data: statusChange(order, to, staff, withReason ? reason.trim() : null) });
@@ -302,7 +314,7 @@ function notifyCourier(reference, courierId, send = pushCourierAssigned) {
     .catch((e) => console.error('[push] course', e));
 }
 
-// Modification du montant des frais (Patron et Opérateur), avant leur réception.
+// Modification du montant des frais (Patron et Opérateur), tant que le livreur n'est pas parti.
 // Après la confirmation du paiement, un nouveau montant demande un nouveau message au client.
 export async function setDeliveryFee(reference, amount, staff) {
   await prisma.$transaction(async (tx) => {
@@ -316,19 +328,17 @@ export async function setDeliveryFee(reference, amount, staff) {
   return afterChange(reference);
 }
 
-// Cocher « Frais reçus » (après vérification sur le téléphone marchand) : la préparation commence,
-// le client doit en être prévenu. Décocher (erreur de manipulation) reste possible avant le départ du livreur.
-export async function setFeeReceived(reference, received, staff) {
+// Frais payés par mobile money au numéro marchand : l'agent coche après vérification sur le téléphone
+// marchand (page Caisse, onglet « Frais à vérifier »). Décocher reste possible (erreur de manipulation).
+export async function setFeeVerified(reference, verified, staff) {
   await prisma.$transaction(async (tx) => {
     const order = await findForRules(tx, reference);
-    const error = feeReceivedError(order, received) || (received ? noticeError(notice(order)) : null);
+    const error = feeVerifyError(order, verified);
     if (error) throw new AppError(400, error, 'FRAIS_IMPOSSIBLES');
-    const startPreparation = received && order.status === 'PAYEE';
-    await guardedUpdate(tx, order, { deliveryFeeReceivedAt: received ? new Date() : null, ...(startPreparation ? { status: 'EN_PREPARATION' } : {}) });
-    await tx.orderEvent.create({ data: event(order.id, received ? 'FRAIS_RECUS' : 'FRAIS_NON_RECUS', staff) });
-    if (startPreparation) await tx.orderStatusChange.create({ data: statusChange(order, 'EN_PREPARATION', staff) });
+    await guardedUpdate(tx, order, { deliveryFeeVerifiedAt: verified ? new Date() : null });
+    await tx.orderEvent.create({ data: event(order.id, verified ? 'FRAIS_VERIFIES' : 'FRAIS_NON_VERIFIES', staff, { amount: order.deliveryFee }) });
   });
-  return afterChange(reference);
+  return getOrder(reference);
 }
 
 // Un agent a ouvert WhatsApp avec le message de l'étape : noté dans l'historique.

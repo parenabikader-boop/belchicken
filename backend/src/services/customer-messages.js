@@ -8,8 +8,14 @@
 //     l'API (sendCustomerMessage dans whatsapp.service.js) avec les mêmes valeurs.
 // Règles Meta respectées : pas de variable au tout début ni à la toute fin du texte, et des valeurs
 // sans retour à la ligne (voir clean() dans whatsapp.message.js).
-import { formatFcfa, PAYMENT_LABELS } from '../utils/format.js';
+import { formatFcfa } from '../utils/format.js';
 import { clean } from './whatsapp.message.js';
+
+// Phrase des frais de livraison, la même dans les messages et sur la page de suivi. Les frais sont
+// payés au livreur à la réception, en espèces ou par mobile money au numéro marchand.
+const feeLine = (fee, number) =>
+  `Frais de livraison : ${fee}, à payer au livreur à la réception, en espèces ou par Orange Money / Moov Money au ${number}.`;
+export const feeSentence = (o, ctx) => feeLine(formatFcfa(o.deliveryFee), formatPhone(ctx.merchantNumber));
 
 export const MESSAGES = {
   PAIEMENT_CONFIRME: {
@@ -17,18 +23,18 @@ export const MESSAGES = {
     label: 'Paiement confirmé et frais de livraison',
     body:
       'Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande {{2}}. Merci !\n\n' +
-      'Frais de livraison pour votre quartier : {{4}}. Merci de les envoyer par {{5}} au {{6}}. ' +
-      'Le livreur part dès leur réception.\n\n' +
-      'Suivez votre commande ici : {{7}}\n\nBelchicken',
-    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), formatFcfa(o.deliveryFee), PAYMENT_LABELS[o.paymentMethod] || 'Orange Money ou Moov Money', formatPhone(ctx.merchantNumber), trackingUrl(o, ctx)],
+      feeLine('{{4}}', '{{5}}') + '\n\n' +
+      'Suivez votre commande ici : {{6}}\n\nBelchicken',
+    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), formatFcfa(o.deliveryFee), formatPhone(ctx.merchantNumber), trackingUrl(o, ctx)],
   },
-  FRAIS_RECUS: {
+  EN_PREPARATION: {
     template: 'commande_en_preparation',
-    label: 'Frais reçus, commande en préparation',
+    label: 'Commande en préparation',
     body:
-      'Bonjour {{1}}, nous avons bien reçu vos frais de livraison de {{2}}. Votre commande {{3}} est en préparation.\n\n' +
-      'Suivez votre commande ici : {{4}}\n\nBelchicken',
-    params: (o, ctx) => [firstName(o.customerName), formatFcfa(o.deliveryFee), o.reference, trackingUrl(o, ctx)],
+      'Bonjour {{1}}, votre commande {{2}} est en préparation.\n\n' +
+      feeLine('{{3}}', '{{4}}') + '\n\n' +
+      'Suivez votre commande ici : {{5}}\n\nBelchicken',
+    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.deliveryFee), formatPhone(ctx.merchantNumber), trackingUrl(o, ctx)],
   },
   EN_ROUTE: {
     template: 'commande_en_route',
@@ -36,9 +42,10 @@ export const MESSAGES = {
     body:
       'Bonjour {{1}}, votre commande {{2}} est en route ! Le livreur arrive bientôt : gardez votre téléphone près de vous.\n\n' +
       'Donnez ce code au livreur à la réception : {{3}}. Ne le donnez qu’au livreur, quand il vous remet la commande.\n\n' +
-      'Suivez votre commande ici : {{4}}\n\nBelchicken',
+      feeLine('{{4}}', '{{5}}') + '\n\n' +
+      'Suivez votre commande ici : {{6}}\n\nBelchicken',
     // Code de remise à 4 chiffres (courier.js), créé au passage EN_LIVRAISON
-    params: (o, ctx) => [firstName(o.customerName), o.reference, o.deliveryCode || '-', trackingUrl(o, ctx)],
+    params: (o, ctx) => [firstName(o.customerName), o.reference, o.deliveryCode || '-', formatFcfa(o.deliveryFee), formatPhone(ctx.merchantNumber), trackingUrl(o, ctx)],
   },
   LIVREE: {
     template: 'commande_livree',
@@ -57,6 +64,13 @@ export const MESSAGES = {
 };
 
 export const MESSAGE_KEYS = Object.keys(MESSAGES);
+
+// Message de l'ancien fonctionnement (frais payés avant le départ, jusqu'au 5 octobre 2026) : gardé pour
+// l'historique, et sa confirmation compte comme celle du message « en préparation » qui le remplace
+const OLD_LABELS = { FRAIS_RECUS: 'Frais reçus, commande en préparation' };
+const SAME_AS = { EN_PREPARATION: ['EN_PREPARATION', 'FRAIS_RECUS'] };
+const sameMessage = (logged, key) => (SAME_AS[key] || [key]).includes(logged);
+export const messageLabel = (key) => MESSAGES[key]?.label || OLD_LABELS[key] || key;
 
 // « awa traoré » -> « Awa » : le prénom tel que le client l'a tapé, première lettre en majuscule
 export function firstName(name) {
@@ -78,12 +92,12 @@ export const trackingUrl = (o, ctx) => `${ctx.siteUrl.replace(/\/+$/, '')}/suivi
 //   null                   s'il n'y a rien à dire au client à cette étape.
 export function currentMessageKey(o) {
   const feeSet = o.deliveryFee != null;
-  const feeReceived = feeSet && o.deliveryFeeReceivedAt != null;
   switch (o.status) {
     case 'PAYEE':
-    case 'EN_PREPARATION':
-      if (!feeSet) return { key: 'PAIEMENT_CONFIRME', missing: 'Saisissez d’abord les frais de livraison.' };
-      return { key: feeReceived ? 'FRAIS_RECUS' : 'PAIEMENT_CONFIRME' };
+    case 'EN_PREPARATION': {
+      const key = o.status === 'PAYEE' ? 'PAIEMENT_CONFIRME' : 'EN_PREPARATION';
+      return feeSet ? { key } : { key, missing: 'Saisissez d’abord les frais de livraison.' };
+    }
     case 'EN_LIVRAISON':
       return { key: 'EN_ROUTE' };
     case 'LIVREE':
@@ -135,8 +149,8 @@ export function stepStart(o, key) {
   switch (key) {
     case 'PAIEMENT_CONFIRME':
       return Math.max(lastStatusAt(o, 'PAYEE'), lastEventAt(o, 'FRAIS_SAISIS'));
-    case 'FRAIS_RECUS':
-      return lastEventAt(o, 'FRAIS_RECUS') || lastStatusAt(o, 'EN_PREPARATION');
+    case 'EN_PREPARATION':
+      return Math.max(lastStatusAt(o, 'EN_PREPARATION'), lastEventAt(o, 'FRAIS_SAISIS'));
     case 'EN_ROUTE':
       return lastStatusAt(o, 'EN_LIVRAISON');
     default:
@@ -154,7 +168,7 @@ export function noticeState(o, { auto = false } = {}) {
   if (!current) return null;
   const since = stepStart(o, current.key);
   const confirmed =
-    (o.events || []).findLast((e) => CONFIRM_TYPES.includes(e.type) && e.messageKey === current.key && time(e.createdAt) >= since) || null;
+    (o.events || []).findLast((e) => CONFIRM_TYPES.includes(e.type) && sameMessage(e.messageKey, current.key) && time(e.createdAt) >= since) || null;
   return { ...current, confirmed, required: !auto && !confirmed };
 }
 

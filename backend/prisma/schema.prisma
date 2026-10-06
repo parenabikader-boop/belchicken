@@ -31,6 +31,12 @@ enum PaymentMethod {
   ESPECES
 }
 
+// Frais de livraison payés au livreur à la réception : comment le client les a payés
+enum FeePaymentMethod {
+  ESPECES // en espèces au livreur (remises ensuite au restaurant : CashRemittance)
+  MOBILE_MONEY // par Orange Money / Moov Money au numéro marchand (vérifiés par l'équipe)
+}
+
 enum NotificationStatus {
   ENVOYEE
   ECHEC
@@ -145,9 +151,16 @@ model Order {
   itemsTotal Int // total des plats, calculé côté serveur
 
   // Frais de livraison selon le quartier, saisis par l'équipe (au moins 1 F). Vide = pas encore saisis.
-  // Le livreur ne part (EN_LIVRAISON) qu'une fois les frais saisis et reçus (vérifiés sur le téléphone marchand).
+  // Le livreur part une fois les frais saisis ; le client les paie au livreur à la réception,
+  // en espèces ou par mobile money au numéro marchand (choix noté à la remise).
   deliveryFee           Int?
-  deliveryFeeReceivedAt DateTime? // vide = frais pas encore reçus
+  deliveryFeeMethod     FeePaymentMethod? // vide = pas encore payés
+  // Mobile money : vérifiés par l'équipe sur le téléphone marchand (vide = à vérifier).
+  // Anciennes commandes (avant le 6 octobre 2026) : frais reçus avant le départ du livreur.
+  deliveryFeeVerifiedAt DateTime?
+  // Espèces : remise de l'argent par le livreur au restaurant (vide = encore chez le livreur)
+  cashRemittanceId      String?
+  cashRemittance        CashRemittance?   @relation(fields: [cashRemittanceId], references: [id], onDelete: SetNull)
 
   // Livreur assigné au passage EN_LIVRAISON (remplaçable tant que la commande n'est pas livrée).
   // courierName est une copie figée, comme staffName dans l'historique.
@@ -173,6 +186,7 @@ model Order {
   @@index([status])
   @@index([createdAt])
   @@index([courierId, status])
+  @@index([cashRemittanceId])
 }
 
 model OrderItem {
@@ -218,8 +232,10 @@ model OrderStatusChange {
 // Les changements de statut restent dans OrderStatusChange.
 enum OrderEventType {
   FRAIS_SAISIS // frais saisis ou modifiés (montant dans amount)
-  FRAIS_RECUS // « Frais reçus » coché, après vérification sur le téléphone marchand
-  FRAIS_NON_RECUS // case décochée (erreur de manipulation)
+  FRAIS_RECUS // ancien fonctionnement (avant le 6 octobre 2026) : frais reçus avant le départ
+  FRAIS_NON_RECUS // ancien fonctionnement : case décochée
+  FRAIS_VERIFIES // frais payés par mobile money, vérifiés sur le téléphone marchand
+  FRAIS_NON_VERIFIES // vérification annulée (erreur de manipulation)
   MESSAGE_PREPARE // message WhatsApp au client ouvert par un agent (messageKey)
   MESSAGE_ENVOYE // l'agent confirme avoir envoyé le message de l'étape (messageKey)
   CLIENT_APPELE // client sans WhatsApp, prévenu par appel (messageKey = message de l'étape)
@@ -242,6 +258,26 @@ model OrderEvent {
   createdAt   DateTime       @default(now())
 
   @@index([orderId, createdAt])
+}
+
+// Espèces des frais de livraison remises par un livreur au restaurant (bouton « Espèces remises »).
+// Une remise regroupe toutes les commandes payées en espèces que le livreur avait encore sur lui.
+// Les noms sont des copies figées, comme dans l'historique des commandes.
+model CashRemittance {
+  id             String     @id @default(cuid())
+  courierId      String?
+  courier        StaffUser? @relation("CashFromCourier", fields: [courierId], references: [id], onDelete: SetNull)
+  courierName    String
+  amount         Int // total remis, en F
+  orderCount     Int
+  receivedById   String?
+  receivedBy     StaffUser? @relation("CashToStaff", fields: [receivedById], references: [id], onDelete: SetNull)
+  receivedByName String
+  orders         Order[]
+  createdAt      DateTime   @default(now())
+
+  @@index([courierId, createdAt])
+  @@index([createdAt])
 }
 
 model NotificationLog {
@@ -286,6 +322,8 @@ model StaffUser {
   orderEvents       OrderEvent[]
   pushSubscriptions PushSubscription[]
   courses           Order[]             @relation("Courses")
+  cashRemitted      CashRemittance[]    @relation("CashFromCourier")
+  cashReceived      CashRemittance[]    @relation("CashToStaff")
 }
 
 // Une ligne par appareil connecté. Le navigateur garde le jeton dans un cookie httpOnly ;

@@ -41,36 +41,31 @@ export function transitionError(from, to, reason) {
 }
 
 // ─────────── Frais de livraison ───────────
-// Saisis par l'équipe selon le quartier (au moins 1 F), puis cochés « reçus » après vérification
-// sur le téléphone marchand. Le livreur ne part (EN_LIVRAISON) qu'une fois les frais saisis et reçus.
+// Saisis par l'équipe selon le quartier (au moins 1 F), avec la confirmation du paiement.
+// Le client les paie AU LIVREUR, à la réception : en espèces, ou par mobile money au numéro marchand.
+// Le livreur (ou l'agent qui valide sans code) note comment ils ont été payés ; le mobile money est
+// ensuite vérifié par l'équipe sur le téléphone marchand, les espèces remises au restaurant (cash.js).
 export const FEE_MIN = 1;
 export const FEE_MAX = 50000;
+export const FEE_METHODS = ['ESPECES', 'MOBILE_MONEY'];
+export const FEE_METHOD_LABEL = { ESPECES: 'Espèces', MOBILE_MONEY: 'Mobile money au numéro marchand' };
 // Les frais se modifient tant que le livreur n'est pas parti
 const FEE_EDITABLE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION'];
 
+// Frais déjà réglés avant la remise : seulement les anciennes commandes (avant le 6 octobre 2026),
+// dont les frais étaient payés avant le départ du livreur. Le livreur n'encaisse alors rien.
+export const feeAlreadyPaid = (order) => order.deliveryFeeMethod != null;
+
 // Avant le départ du livreur : null si permis, sinon le message
 export function deliveryError(order) {
-  if (order.deliveryFee == null) return 'Saisissez d’abord les frais de livraison : le livreur part une fois les frais reçus.';
-  if (!order.deliveryFeeReceivedAt) return 'Frais de livraison pas encore reçus : le livreur part une fois les frais reçus. Cochez « Frais reçus » après vérification sur le téléphone marchand.';
+  if (order.deliveryFee == null) return 'Saisissez d’abord les frais de livraison : le livreur les encaisse à la réception.';
   return null;
 }
 
 // Saisie ou modification du montant
 export function feeEditError(order) {
-  if (!FEE_EDITABLE.includes(order.status)) return 'Les frais ne se modifient plus à cette étape.';
-  if (order.deliveryFeeReceivedAt) return 'Les frais sont déjà reçus : décochez « Frais reçus » pour modifier le montant.';
-  return null;
-}
-
-// Cocher (received = true) ou décocher « Frais reçus »
-export function feeReceivedError(order, received) {
-  if (!FEE_EDITABLE.includes(order.status)) return 'Les frais ne se modifient plus à cette étape.';
-  if (received) {
-    if (order.deliveryFee == null) return 'Saisissez d’abord le montant des frais de livraison.';
-    if (order.deliveryFeeReceivedAt) return 'Les frais sont déjà notés comme reçus.';
-  } else if (!order.deliveryFeeReceivedAt) {
-    return 'Les frais ne sont pas notés comme reçus.';
-  }
+  if (!FEE_EDITABLE.includes(order.status)) return 'Les frais ne se modifient plus une fois le livreur parti.';
+  if (feeAlreadyPaid(order)) return 'Les frais de cette commande sont déjà payés.';
   return null;
 }
 
@@ -82,8 +77,19 @@ export function paymentConfirmError(fee) {
   return null;
 }
 
-// La préparation commence une fois les frais reçus (le message « frais reçus » dit « en préparation »)
-export function preparationError(order) {
-  if (order.deliveryFeeReceivedAt) return null;
-  return 'Cochez d’abord « Frais reçus » : la préparation commence une fois les frais reçus.';
+// À la remise (livreur avec le code, ou agent sans code) : comment le client a payé les frais.
+// Obligatoire, sauf si les frais étaient déjà payés (anciennes commandes).
+export function feeMethodError(order, method) {
+  if (feeAlreadyPaid(order)) return null;
+  if (!FEE_METHODS.includes(method)) return 'Indiquez comment le client a payé les frais de livraison : espèces ou mobile money.';
+  return null;
+}
+
+// Cocher (verified = true) ou décocher « Frais vérifiés » : mobile money seulement, une fois livrée
+export function feeVerifyError(order, verified) {
+  if (order.deliveryFeeMethod !== 'MOBILE_MONEY') return 'Ces frais n’ont pas été payés par mobile money.';
+  if (order.status !== 'LIVREE') return 'Les frais se vérifient une fois la commande livrée.';
+  if (verified && order.deliveryFeeVerifiedAt) return 'Ces frais sont déjà vérifiés.';
+  if (!verified && !order.deliveryFeeVerifiedAt) return 'Ces frais ne sont pas encore vérifiés.';
+  return null;
 }

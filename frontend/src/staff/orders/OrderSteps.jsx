@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { staffApi } from '../../api/client.js';
 import { formatPrice } from '../../utils/format.js';
-import { ACTIVE, deliveryBlock, FEE_EDITABLE, formatPhone, formatTime, METHOD_LABEL, NEXT_ACTION } from './labels.js';
+import { ACTIVE, deliveryBlock, FEE_EDITABLE, FEE_METHODS, formatPhone, formatTime, METHOD_LABEL, NEXT_ACTION } from './labels.js';
 
 // Étapes d'une commande : un seul bouton par étape, qui enregistre l'étape ET ouvre WhatsApp avec le
 // message du client. L'étape suivante reste bloquée (ici et par l'API) tant que l'agent n'a pas
@@ -157,6 +157,7 @@ export function Actions({ order: o, steps }) {
   const [reason, setReason] = useState('');
   const [fee, setFee] = useState('');
   const [courierId, setCourierId] = useState('');
+  const [feeMethod, setFeeMethod] = useState('');
 
   // Changement de statut (par nous ou un collègue) : on referme ce qui était ouvert
   useEffect(() => {
@@ -194,22 +195,6 @@ export function Actions({ order: o, steps }) {
     );
   }
 
-  if (mode === 'confirm' && o.status === 'PAYEE') {
-    return (
-      <div className="st-action confirm">
-        <b>Avez-vous vérifié les frais de livraison sur le téléphone marchand ?</b>
-        <p><strong>{formatPrice(o.deliveryFee)}</strong> reçus par {METHOD_LABEL[o.paymentMethod]}. La préparation commence.</p>
-        {steps.error && <p className="st-err">{steps.error}</p>}
-        <div className="st-action-row">
-          <button type="button" className="btn btn-p" disabled={steps.busy} onClick={() => go(() => staffApi.setFeeReceived(o.reference, true))}>
-            {steps.busy ? 'Enregistrement…' : 'Oui, frais reçus : prévenir le client'}
-          </button>
-          <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
-        </div>
-      </div>
-    );
-  }
-
   // Départ : choix du livreur. Le code de remise est créé et ajouté au message « en route ».
   if (mode === 'depart' && o.status === 'EN_PREPARATION') {
     return (
@@ -226,16 +211,23 @@ export function Actions({ order: o, steps }) {
     );
   }
 
-  // Client sans son code : l'agent valide à la place du livreur, avec un motif
+  // Client sans son code : l'agent valide à la place du livreur, avec un motif et la façon dont
+  // les frais ont été payés au livreur (comme le livreur le fait avec le code)
   if (mode === 'handover' && o.status === 'EN_LIVRAISON') {
+    const needMethod = !o.feeAlreadyPaid;
     return (
-      <form className="st-action cancel" onSubmit={async (e) => { e.preventDefault(); if (await go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'LIVREE', reason }))) setReason(''); }}>
+      <form className="st-action cancel" onSubmit={async (e) => { e.preventDefault(); if (await go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'LIVREE', reason, feeMethod: needMethod ? feeMethod : undefined }))) setReason(''); }}>
         <label htmlFor="st-handover"><b>Pourquoi valider la livraison sans le code ?</b></label>
         <textarea id="st-handover" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder="Ex. : client a effacé le message, livreur a vérifié par appel…" autoFocus />
+        {needMethod ? (
+          <FeeMethodPicker fee={o.deliveryFee} value={feeMethod} onChange={setFeeMethod} />
+        ) : (
+          <p className="st-muted">Frais de livraison déjà payés avant le départ du livreur.</p>
+        )}
         <p className="st-muted">À faire seulement si la commande a bien été remise. Le motif est noté dans l’historique.</p>
         {steps.error && <p className="st-err">{steps.error}</p>}
         <div className="st-action-row">
-          <button type="submit" className="btn btn-p" disabled={steps.busy || reason.trim().length < 3}>{steps.busy ? 'Enregistrement…' : 'Valider la livraison et remercier le client'}</button>
+          <button type="submit" className="btn btn-p" disabled={steps.busy || reason.trim().length < 3 || (needMethod && !feeMethod)}>{steps.busy ? 'Enregistrement…' : 'Valider la livraison et remercier le client'}</button>
           <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
         </div>
       </form>
@@ -261,8 +253,7 @@ export function Actions({ order: o, steps }) {
     if (o.status === 'PAIEMENT_A_VERIFIER') {
       setFee(o.deliveryFee != null ? String(o.deliveryFee) : '');
       setMode('confirm');
-    } else if (o.status === 'PAYEE') setMode('confirm');
-    else if (o.status === 'EN_PREPARATION') {
+    } else if (o.status === 'EN_PREPARATION') {
       setCourierId('');
       setMode('depart');
     } else go(() => staffApi.setStatus(o.reference, { from: o.status, to: next.to }));
@@ -286,7 +277,7 @@ export function Actions({ order: o, steps }) {
       {steps.error && !mode && <p className="st-err">{steps.error}</p>}
       <div className="st-action-row">
         {o.status === 'EN_LIVRAISON' ? (
-          <button type="button" className="btn btn-s" disabled={steps.busy || Boolean(blocked)} onClick={() => { setReason(''); setMode('handover'); }}>
+          <button type="button" className="btn btn-s" disabled={steps.busy || Boolean(blocked)} onClick={() => { setReason(''); setFeeMethod(''); setMode('handover'); }}>
             Le client n’a plus son code : valider la livraison
           </button>
         ) : (
@@ -301,27 +292,29 @@ export function Actions({ order: o, steps }) {
   );
 }
 
-// Frais de livraison : saisis en confirmant le paiement. Ici : les voir, les corriger avant leur
-// réception (le client reçoit alors le nouveau montant), et la case « Frais reçus » des commandes
-// passées en préparation avant cette règle.
+// Frais de livraison : saisis en confirmant le paiement, modifiables jusqu'au départ du livreur
+// (le client reçoit alors le nouveau montant). Payés au livreur à la réception : une fois la commande
+// livrée, on voit comment, et l'agent coche le mobile money après vérification sur le téléphone marchand.
 export function DeliveryFee({ order: o, steps }) {
-  const editable = FEE_EDITABLE.includes(o.status) && o.status !== 'PAIEMENT_A_VERIFIER';
-  const received = Boolean(o.deliveryFeeReceivedAt);
+  const editable = FEE_EDITABLE.includes(o.status) && o.status !== 'PAIEMENT_A_VERIFIER' && !o.feeAlreadyPaid;
+  const method = o.deliveryFeeMethod;
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState('');
 
   useEffect(() => {
     setEditing(false);
-  }, [o.deliveryFee, o.deliveryFeeReceivedAt, o.status]);
+  }, [o.deliveryFee, o.status]);
 
   const save = async (e) => {
     e.preventDefault();
     const amount = Number(value.replace(/\s/g, ''));
     if (await steps.run(() => staffApi.setDeliveryFee(o.reference, amount))) setEditing(false);
   };
+  const paid = o.status === 'LIVREE' && method;
+  const ok = paid && (method === 'ESPECES' ? o.cashRemitted : Boolean(o.deliveryFeeVerifiedAt));
 
   return (
-    <section className={`st-box of-fee${received ? ' ok' : ''}`}>
+    <section className={`st-box of-fee${ok ? ' ok' : ''}`}>
       <h2>Frais de livraison</h2>
       {editing ? (
         <form className="of-fee-form" onSubmit={save}>
@@ -338,28 +331,63 @@ export function DeliveryFee({ order: o, steps }) {
       ) : (
         <p className="of-fee-value">
           {o.deliveryFee == null ? <span className="st-muted">À saisir en confirmant le paiement.</span> : <b>{formatPrice(o.deliveryFee)}</b>}
-          {editable && !received && o.deliveryFee != null && (
+          {editable && o.deliveryFee != null && (
             <button type="button" className="st-text-btn" onClick={() => { setValue(String(o.deliveryFee)); setEditing(true); }}>Modifier</button>
           )}
         </p>
       )}
 
-      {o.deliveryFee != null && (editable || received) && o.status !== 'PAYEE' && (
-        <label className={`of-check${!editable ? ' locked' : ''}`}>
+      {o.deliveryFee != null && !paid && o.status !== 'ANNULEE' && (
+        <p className="st-note">
+          {o.feeAlreadyPaid
+            ? 'Déjà payés avant le départ du livreur (ancien fonctionnement) : rien à encaisser.'
+            : 'À payer au livreur à la réception, en espèces ou par mobile money au numéro marchand.'}
+        </p>
+      )}
+
+      {paid && method === 'ESPECES' && (
+        <p className={`of-paid${o.cashRemitted ? ' done' : ''}`}>
+          <b>Payés en espèces au livreur</b>
+          <small>{o.cashRemitted ? 'Espèces remises au restaurant.' : `Encore chez ${o.courier?.name || 'le livreur'} : à remettre (page Caisse).`}</small>
+        </p>
+      )}
+      {paid && method === 'MOBILE_MONEY' && (
+        <label className="of-check">
           <input
             type="checkbox"
-            checked={received}
-            disabled={steps.busy || !editable}
-            onChange={(e) => steps.run(() => staffApi.setFeeReceived(o.reference, e.target.checked), { whatsapp: e.target.checked })}
+            checked={Boolean(o.deliveryFeeVerifiedAt)}
+            disabled={steps.busy}
+            onChange={(e) => steps.run(() => staffApi.setFeeVerified(o.reference, e.target.checked), { whatsapp: false })}
           />
           <span>
-            <b>Frais reçus</b>
-            <small>{received ? `Reçus à ${formatTime(o.deliveryFeeReceivedAt)}` : 'À cocher après vérification sur le téléphone marchand (ouvre le message au client).'}</small>
+            <b>Payés par mobile money : vérifiés sur le téléphone marchand</b>
+            <small>
+              {o.deliveryFeeVerifiedAt
+                ? `Vérifiés à ${formatTime(o.deliveryFeeVerifiedAt)}`
+                : `À cocher quand ${formatPrice(o.deliveryFee)} sont bien arrivés sur le téléphone marchand.`}
+            </small>
           </span>
         </label>
       )}
-      {o.status === 'PAYEE' && <p className="st-note">Le livreur part une fois les frais reçus : utilisez le bouton de l’étape ci-dessus.</p>}
     </section>
+  );
+}
+
+// Comment le client a payé les frais au livreur : espèces ou mobile money (obligatoire à la remise)
+export function FeeMethodPicker({ fee, value, onChange, big = false }) {
+  return (
+    <fieldset className={`fm-pick${big ? ' big' : ''}`}>
+      <legend>Frais de livraison{fee != null && <> : <b>{formatPrice(fee)}</b></>}. Comment le client a-t-il payé ?</legend>
+      {FEE_METHODS.map((m) => (
+        <label key={m.id} className={`fm-opt${value === m.id ? ' on' : ''}`}>
+          <input type="radio" name="frais" value={m.id} checked={value === m.id} onChange={() => onChange(m.id)} />
+          <span>
+            <b>{m.label}</b>
+            <small>{m.hint}</small>
+          </span>
+        </label>
+      ))}
+    </fieldset>
   );
 }
 

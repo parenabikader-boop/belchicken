@@ -8,8 +8,10 @@ export const PERIODS = ['day', 'week', 'month'];
 // Seules les commandes payées (et au-delà) comptent dans le chiffre d'affaires
 export const PAID = ['PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'LIVREE'];
 const isPaid = (o) => PAID.includes(o.status);
-// Frais de livraison : comptés une fois reçus, sauf si la commande a été annulée ensuite
-const feeCounted = (o) => o.deliveryFee != null && o.deliveryFeeReceivedAt != null && o.status !== 'ANNULEE';
+// Frais de livraison : comptés une fois payés (au livreur, à la réception), sauf commande annulée.
+// Anciennes commandes : payés avant le départ, notés « mobile money » par la migration du 6 octobre 2026.
+const feeCounted = (o) => o.deliveryFee != null && o.deliveryFeeMethod != null && o.status !== 'ANNULEE';
+const feeSum = (list) => list.reduce((s, o) => s + o.deliveryFee, 0);
 
 export const dashboardQuerySchema = z.object({
   period: z.enum(PERIODS).default('day'),
@@ -50,12 +52,19 @@ export function summarize(orders) {
   const paid = orders.filter(isPaid);
   const revenue = paid.reduce((s, o) => s + o.itemsTotal, 0); // plats seulement
   const fees = orders.filter(feeCounted);
+  const cash = fees.filter((o) => o.deliveryFeeMethod === 'ESPECES');
+  const mobile = fees.filter((o) => o.deliveryFeeMethod === 'MOBILE_MONEY');
   return {
     received: orders.length,
     paid: paid.length,
     revenue,
-    deliveryRevenue: fees.reduce((s, o) => s + o.deliveryFee, 0),
+    deliveryRevenue: feeSum(fees),
     deliveryPaid: fees.length,
+    // Frais séparés par mode : espèces au livreur, mobile money au numéro marchand
+    deliveryCash: feeSum(cash),
+    deliveryCashCount: cash.length,
+    deliveryMobile: feeSum(mobile),
+    deliveryMobileCount: mobile.length,
     avgBasket: paid.length ? Math.round(revenue / paid.length) : 0,
     cancelled: orders.filter((o) => o.status === 'ANNULEE').length,
     toVerify: orders.filter((o) => o.status === 'PAIEMENT_A_VERIFIER').length,

@@ -629,3 +629,57 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .lv-success p{margin:2px 0 0;font-size:15px;color:var(--ink)}
 .lv-success-icon{flex:none;width:36px;height:36px;border-radius:50%;background:#2b6e2f;color:#fff;display:grid;place-items:center;font-size:20px;font-weight:800}
 .lv-success-x{margin-left:auto;background:none;border:0;font-size:24px;line-height:1;color:#1d4f20;cursor:pointer;padding:0 4px}
+
+/* ─────────── Frais payés au livreur à la réception ─────────── */
+.of-paid{margin-top:12px!important;padding:12px;border:1px solid #e3c999;border-radius:var(--r);background:#fff8ea;display:grid;gap:2px}
+.of-paid small{color:var(--muted);font-size:13px}
+.of-paid.done{background:#eef7ec;border-color:#9cc79a}
+/* Choix espèces / mobile money (agent et livreur) */
+.fm-pick{border:0;margin:12px 0 4px;padding:0;display:grid;gap:8px}
+.fm-pick legend{font-size:14px;font-weight:600;margin-bottom:8px;padding:0}
+.fm-opt{display:flex;align-items:center;gap:12px;border:2px solid #e3c999;border-radius:var(--r);padding:10px 12px;background:var(--panel);cursor:pointer}
+.fm-opt input{width:20px;height:20px;accent-color:var(--brand);flex:none}
+.fm-opt span{display:grid}
+.fm-opt small{color:var(--muted);font-size:13px}
+.fm-opt.on{border-color:var(--brand);background:#fff1ec}
+.fm-pick.big .fm-opt{padding:14px;font-size:17px}
+.fm-pick.big legend{font-size:16px}
+/* Livreur : frais à encaisser, bien visibles */
+.lv-fee{margin:0;padding:12px 16px;background:#fff4d6;border-bottom:2px solid #e0a100;display:grid;gap:2px}
+.lv-fee span{font-size:19px;font-weight:700}
+.lv-fee b{font-size:24px;font-weight:800}
+.lv-fee small{color:var(--muted);font-size:13.5px}
+.lv-fee.paid{background:#eef7ec;border-bottom-color:#9cc79a}
+.lv-success-fee{margin-top:6px!important;font-size:15px}
+/* Page Caisse */
+.ca-hint{border-left-color:var(--muted)}
+.ca-list,.ca-orders,.ca-history{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.ca-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--panel);border:1px solid #f1dcb4;border-left:4px solid #e0a100;border-radius:var(--r-lg);padding:12px 14px}
+.ca-row.done{border-left-color:#2b6e2f;opacity:.85}
+.ca-main{display:grid;gap:2px;flex:1;min-width:200px}
+.ca-main span{font-size:14px}
+.ca-amount{font-size:20px;font-weight:800;white-space:nowrap}
+.ca-row .st-err{flex-basis:100%;margin:0}
+.ca-sec{margin-top:24px}
+.ca-sec h2{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.ca-couriers{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.ca-courier header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:4px}
+.ca-courier header b{font-size:18px}
+.ca-courier.has{border:2px solid #e0a100;background:#fffaf0}
+.ca-old{color:var(--brand)}
+.ca-orders{margin:10px 0 12px;gap:0}
+.ca-orders li{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.ca-orders li small{grid-column:1 / 3}
+.ca-orders li b{grid-row:1 / 3;grid-column:3;align-self:center}
+.ca-history li{display:grid;gap:2px;background:var(--panel);border:1px solid #f1dcb4;border-radius:var(--r);padding:10px 12px;font-size:14px}
+.ca-done{margin-top:10px!important;color:#1d4f20;font-weight:700}
+/* Tableau de bord : frais par mode, espèces chez les livreurs */
+.db-feesplit{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:10px 0 0;font-size:14px}
+.db-feesplit dt{color:var(--muted)}
+.db-feesplit dd{margin:0}
+.db-cash{display:grid;gap:2px;margin-top:12px;padding:10px 12px;border-radius:var(--r);border:1px solid #9cc79a;background:#eef7ec;color:inherit;text-decoration:none}
+.db-cash span{font-size:13px;font-weight:700}
+.db-cash b{font-size:20px}
+.db-cash small{color:var(--muted);font-size:12.5px}
+.db-cash.has{border:2px solid #e0a100;background:#fff4d6}
+.lv-success p.lv-success-fee b{display:inline;font-size:inherit}

@@ -3,6 +3,8 @@
 //
 // - L'agent assigne un livreur au passage EN_LIVRAISON ; un code de remise à 4 chiffres est créé
 //   et ajouté au message « en route » envoyé au client.
+// - Le livreur encaisse les frais de livraison à la réception (espèces ou mobile money au numéro
+//   marchand) et note comment ils ont été payés en validant la remise.
 // - Le livreur tape le code donné par le client pour passer la commande à LIVREE. Il ne reçoit
 //   jamais le code : l'API le vérifie. Après 5 codes faux, la saisie est bloquée sur cette commande.
 // - Client sans son code : l'agent valide à sa place, avec un motif noté dans l'historique.
@@ -65,7 +67,8 @@ export const startOfToday = (now = new Date()) => new Date(Date.UTC(now.getUTCFu
 // Lien Google Maps : itinéraire jusqu'à la position du client
 export const directionsUrl = (lat, lng) => `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 
-// Ce que le livreur voit d'une course : jamais de montant, de code, de paiement ni d'historique
+// Ce que le livreur voit d'une course : les frais de livraison qu'il encaisse, et c'est tout.
+// Jamais le total des plats, le code, le paiement des plats ni l'historique.
 export function toCourse(o) {
   const deliveredAt = o.statusChanges?.findLast((h) => h.toStatus === 'LIVREE')?.createdAt || null;
   return {
@@ -73,6 +76,10 @@ export function toCourse(o) {
     status: o.status,
     assignedAt: o.courierAssignedAt,
     deliveredAt,
+    // Frais à encaisser à la réception ; feePaidBefore : anciennes commandes, frais déjà payés avant le départ
+    deliveryFee: o.deliveryFee,
+    feePaidBefore: o.status === 'EN_LIVRAISON' && o.deliveryFeeMethod != null,
+    feeMethod: o.status === 'LIVREE' ? o.deliveryFeeMethod : null,
     customerName: o.customerName,
     customerPhone: o.customerPhone,
     addressNote: o.addressNote,

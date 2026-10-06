@@ -60,7 +60,7 @@ export async function notifyTeamNewOrder(order) {
 // Éteint tant que WHATSAPP_CUSTOMER_AUTO n'est pas à 1 : les agents envoient alors eux-mêmes le message
 // depuis le détail de la commande (lien wa.me). Chaque message ne part qu'une fois par commande
 // (journal NotificationLog, template = nom du modèle). Ne lève jamais d'erreur.
-// `order` : la commande avec deliveryFee, deliveryFeeReceivedAt et cancelReason.
+// `order` : la commande avec deliveryFee et cancelReason.
 export async function autoNotifyCustomer(order) {
   if (!customerAutoEnabled()) return;
   const current = currentMessageKey(order);

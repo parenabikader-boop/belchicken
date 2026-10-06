@@ -141,7 +141,7 @@ export default function Confirmation() {
                 <dd>
                   {fee == null
                     ? 'Selon votre quartier : affichés ici après la vérification de votre paiement'
-                    : `${formatPrice(fee)} · ${order.deliveryFeeReceived ? 'reçus, merci' : 'à envoyer avant le départ du livreur'}`}
+                    : `${formatPrice(fee)} · ${order.deliveryFeePaid ? 'payés, merci' : 'à payer au livreur à la réception'}`}
                 </dd>
               </>
             )}
@@ -197,10 +197,24 @@ function Tracking({ order, offline }) {
   );
 }
 
+// Frais de livraison : payés au livreur à la réception, en espèces ou par mobile money au numéro marchand
+function FeeToPay({ fee, payTo, children }) {
+  return (
+    <div className="trk-fee">
+      {children}
+      <p>Frais de livraison</p>
+      <b>{formatPrice(fee)}</b>
+      <p>
+        À payer au livreur à la réception, en espèces ou par <b>Orange Money / Moov Money</b> au <b className="trk-num">{payTo}</b>.
+      </p>
+    </div>
+  );
+}
+
 function Now({ order }) {
   const fee = order.deliveryFee;
   const payTo = order.payTo || MERCHANT;
-  const method = METHOD_LABEL[order.paymentMethod] || 'Orange Money ou Moov Money';
+  const feeDue = fee != null && !order.deliveryFeePaid;
 
   switch (order.status) {
     case 'ANNULEE':
@@ -215,17 +229,22 @@ function Now({ order }) {
     case 'PAYEE':
     case 'EN_PREPARATION':
       if (fee == null) return <p className="trk-now">Paiement vérifié, merci ! Nous calculons les frais de livraison pour votre quartier : ils s’affichent ici dans un instant et vous sont envoyés sur WhatsApp.</p>;
-      if (!order.deliveryFeeReceived) {
+      if (feeDue) {
         return (
-          <div className="trk-fee">
-            <p>Frais de livraison pour votre quartier</p>
-            <b>{formatPrice(fee)}</b>
-            <p>À envoyer par <b>{method}</b> au <b className="trk-num">{payTo}</b>. Le livreur part dès leur réception.</p>
-          </div>
+          <FeeToPay fee={fee} payTo={payTo}>
+            <p className="trk-fee-lead">{order.status === 'EN_PREPARATION' ? 'Votre commande est en préparation.' : 'Paiement vérifié, merci ! Votre commande va être préparée.'}</p>
+          </FeeToPay>
         );
       }
       return <p className="trk-now ok">Frais de livraison de <b>{formatPrice(fee)}</b> bien reçus. {order.status === 'EN_PREPARATION' ? 'Votre commande est en préparation.' : 'Votre commande va être préparée.'}</p>;
     case 'EN_LIVRAISON':
+      if (feeDue) {
+        return (
+          <FeeToPay fee={fee} payTo={payTo}>
+            <p className="trk-fee-lead">Votre commande est en route ! Gardez votre téléphone près de vous : le livreur peut vous appeler. Donnez-lui le code reçu sur WhatsApp.</p>
+          </FeeToPay>
+        );
+      }
       return <p className="trk-now ok">Votre commande est en route ! Gardez votre téléphone près de vous : le livreur peut vous appeler.</p>;
     case 'LIVREE':
       return <p className="trk-now ok">Commande livrée. Merci de votre confiance et bon appétit !</p>;

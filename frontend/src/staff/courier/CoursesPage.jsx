@@ -3,11 +3,13 @@ import { staffApi } from '../../api/client.js';
 import { useStaff } from '../StaffContext.jsx';
 import { useChime } from '../orders/OrdersFeed.jsx';
 import AlertsPrompt from '../alerts/AlertsPrompt.jsx';
-import { formatPhone, formatTime, telHref, whatsappHref } from '../orders/labels.js';
+import { FEE_METHOD_LABEL, formatPhone, formatTime, telHref, whatsappHref } from '../orders/labels.js';
+import { FeeMethodPicker } from '../orders/OrderSteps.jsx';
+import { formatPrice } from '../../utils/format.js';
 
 // /equipe/courses : le livreur ne voit que ses courses du jour (l'API ne lui donne rien d'autre).
-// Aucun montant : le client a tout payé avant le départ. Pour remettre la commande, le livreur
-// tape le code à 4 chiffres que le client a reçu sur WhatsApp.
+// Seul montant affiché : les frais de livraison à encaisser (le client a payé les plats d'avance). Pour remettre
+// la commande, le livreur tape le code à 4 chiffres reçu par le client sur WhatsApp et note comment les frais ont été payés.
 
 const POLL_VISIBLE_MS = 10000;
 const POLL_HIDDEN_MS = 30000;
@@ -78,6 +80,12 @@ export default function CoursesPage() {
           <div>
             <b>Livraison validée</b>
             <p>Commande {success.reference} remise à {success.customerName}{success.deliveredAt && ` à ${formatTime(success.deliveredAt)}`}. L’équipe est prévenue. Merci !</p>
+            {success.feeMethod && (
+              <p className="lv-success-fee">
+                Frais : <b>{formatPrice(success.deliveryFee)} {FEE_METHOD_LABEL[success.feeMethod]}</b>
+                {success.feeMethod === 'ESPECES' ? ', à remettre au restaurant.' : ', l’équipe vérifie sur le téléphone marchand.'}
+              </p>
+            )}
           </div>
           <button type="button" className="lv-success-x" onClick={() => setSuccess(null)} aria-label="Fermer">×</button>
         </div>
@@ -102,7 +110,14 @@ export default function CoursesPage() {
             {done.map((c) => (
               <li key={c.reference} className={c.status === 'ANNULEE' ? 'cancel' : ''}>
                 <span><b>{c.reference}</b> · {c.customerName}</span>
-                {c.status === 'ANNULEE' ? <em>Annulée : ne pas livrer</em> : <em>Livrée{c.deliveredAt && ` à ${formatTime(c.deliveredAt)}`}</em>}
+                {c.status === 'ANNULEE' ? (
+                  <em>Annulée : ne pas livrer</em>
+                ) : (
+                  <em>
+                    Livrée{c.deliveredAt && ` à ${formatTime(c.deliveredAt)}`}
+                    {c.feeMethod && ` · ${formatPrice(c.deliveryFee)} ${FEE_METHOD_LABEL[c.feeMethod]}`}
+                  </em>
+                )}
               </li>
             ))}
           </ul>
@@ -119,6 +134,16 @@ function Course({ course: c, onDelivered, onRefresh }) {
         <b>{c.reference}</b>
         <span className="st-muted">Assignée à {formatTime(c.assignedAt)}</span>
       </header>
+
+      {/* Frais de livraison : le seul montant que le livreur voit */}
+      {c.feePaidBefore ? (
+        <p className="lv-fee paid"><span>Frais déjà payés</span><small>Rien à encaisser pour cette course.</small></p>
+      ) : c.deliveryFee != null && (
+        <p className="lv-fee">
+          <span>Frais à encaisser : <b>{formatPrice(c.deliveryFee)}</b></span>
+          <small>En espèces, ou par Orange Money / Moov Money au numéro marchand, au choix du client.</small>
+        </p>
+      )}
 
       <section className="lv-sec">
         <p className="lv-name">{c.customerName}</p>
@@ -166,9 +191,12 @@ function Course({ course: c, onDelivered, onRefresh }) {
   );
 }
 
-// Remise : le livreur tape le code que le client lui donne
+// Remise : le livreur tape le code que le client lui donne, et indique comment les frais ont été payés
+// (les deux sont obligatoires ; l'API vérifie aussi)
 function Handover({ course: c, onDelivered, onRefresh }) {
   const [code, setCode] = useState('');
+  const [feeMethod, setFeeMethod] = useState('');
+  const needMethod = !c.feePaidBefore;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -186,7 +214,7 @@ function Handover({ course: c, onDelivered, onRefresh }) {
     setBusy(true);
     setError('');
     try {
-      onDelivered(await staffApi.deliver(c.reference, code));
+      onDelivered(await staffApi.deliver(c.reference, code, needMethod ? feeMethod : undefined));
     } catch (err) {
       setError(err.message);
       setCode('');
@@ -197,6 +225,7 @@ function Handover({ course: c, onDelivered, onRefresh }) {
 
   return (
     <form className="lv-code" onSubmit={submit}>
+      {needMethod && <FeeMethodPicker fee={c.deliveryFee} value={feeMethod} onChange={setFeeMethod} big />}
       <label htmlFor={`code-${c.reference}`}><b>Code du client</b></label>
       <p className="st-muted">Le client a reçu ce code à 4 chiffres sur WhatsApp. Demandez-le au moment de remettre la commande.</p>
       <div className="lv-code-row">
@@ -210,7 +239,7 @@ function Handover({ course: c, onDelivered, onRefresh }) {
           value={code}
           onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
         />
-        <button type="submit" className="btn btn-p" disabled={busy || code.length !== 4}>{busy ? 'Vérification…' : 'Valider la livraison'}</button>
+        <button type="submit" className="btn btn-p" disabled={busy || code.length !== 4 || (needMethod && !feeMethod)}>{busy ? 'Vérification…' : 'Valider la livraison'}</button>
       </div>
       {error && <p className="st-err" role="alert">{error}</p>}
     </form>

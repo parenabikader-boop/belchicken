@@ -50,7 +50,7 @@ function Handover({ info, onClose }) {
 // Rôles créés depuis cette page (les comptes Patron : npm run equipe:patron)
 const NEW_ROLES = [
   { role: 'OPERATEUR', help: 'Voit et fait avancer les commandes, rend un plat disponible ou non. Ni chiffres, ni prix, ni comptes.' },
-  { role: 'LIVREUR', help: 'Voit seulement ses courses du jour (client, adresse, plats, sans aucun montant) et valide la remise avec le code du client.' },
+  { role: 'LIVREUR', help: 'Voit seulement ses courses du jour (client, adresse, plats et frais de livraison à encaisser, sans autre montant) et valide la remise avec le code du client.' },
 ];
 
 function NewMember({ onCreated, onCancel }) {

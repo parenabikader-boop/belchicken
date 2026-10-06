@@ -765,3 +765,4 @@ main.p-menu{padding-bottom:0}
   .rc-actions .btn{flex:1 1 100%}
 }
 @media print{.trk-live,.btn-wa{display:none!important}}
+.trk-fee .trk-fee-lead{font-weight:600;margin:0 0 10px;padding-bottom:10px;border-bottom:1px dashed rgba(0,0,0,.15)}

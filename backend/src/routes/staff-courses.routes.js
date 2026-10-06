@@ -28,8 +28,14 @@ const codeLimiter = rateLimit({
 
 staffCoursesRouter.post('/:reference/deliver', codeLimiter, async (req, res, next) => {
   try {
-    const { code } = z.object({ code: z.string({ required_error: 'Tapez le code du client.' }).max(20) }).parse(req.body);
-    res.json({ course: await deliverWithCode(String(req.params.reference).toUpperCase(), code, req.staff) });
+    const { code, feeMethod } = z
+      .object({
+        code: z.string({ required_error: 'Tapez le code du client.' }).max(20),
+        // Comment le client a payé les frais de livraison (vérifié dans le service)
+        feeMethod: z.string().max(20).optional(),
+      })
+      .parse(req.body);
+    res.json({ course: await deliverWithCode(String(req.params.reference).toUpperCase(), code, feeMethod, req.staff) });
   } catch (e) {
     next(e);
   }

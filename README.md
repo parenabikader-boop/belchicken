@@ -131,7 +131,7 @@ Erreurs, toujours au format `{ error: { code, message, details } }` avec un mess
 ### `GET /api/orders/:reference`
 
 Récapitulatif public d'une commande, pour la page de suivi : plats, total, statut, étapes datées (`steps`),
-frais de livraison (`deliveryFee`, `deliveryFeeReceived`), numéro où les envoyer (`payTo`, tant qu'ils sont attendus)
+frais de livraison (`deliveryFee`, `deliveryFeePaid`), numéro marchand pour les payer par mobile money (`payTo`, tant qu'ils sont attendus)
 et motif d'annulation. Jamais de nom, de numéro du client, de position ni de nom d'agent.
 
 Page de suivi du client : `/confirmation/:reference` juste après l'envoi, et `/suivi/:reference` (adresse courte
@@ -165,8 +165,9 @@ Le paramètre {{5}} indique le moyen de paiement, par exemple « Orange Money de
 ## Messages WhatsApp au client
 
 À chaque étape, le détail d'une commande (espace équipe) propose le message à envoyer au client :
-paiement confirmé avec les frais de livraison, le numéro marchand et le lien de suivi (`PAIEMENT_CONFIRME`) ;
-frais reçus, commande en préparation (`FRAIS_RECUS`) ; en route (`EN_ROUTE`) ; livrée (`LIVREE`) ; annulée avec le motif (`ANNULEE`).
+paiement confirmé (`PAIEMENT_CONFIRME`) ; commande en préparation (`EN_PREPARATION`) ; en route, avec le code de remise
+(`EN_ROUTE`) ; livrée (`LIVREE`) ; annulée avec le motif (`ANNULEE`). Les trois premiers rappellent les frais :
+« Frais de livraison : X F, à payer au livreur à la réception, en espèces ou par Orange Money / Moov Money au [numéro marchand]. »
 Le bouton ouvre WhatsApp sur le téléphone de l'agent (lien `wa.me`), message déjà écrit avec le prénom, la référence
 et les vrais montants. L'historique de la commande note « WhatsApp ouvert avec le message » (table `OrderEvent`).
 
@@ -176,9 +177,9 @@ et les vrais montants. L'historique de la commande note « WhatsApp ouvert avec 
 | Étape | Bouton | Message |
 |---|---|---|
 | Paiement à vérifier | Confirmer le paiement et prévenir le client (avec les frais) | `PAIEMENT_CONFIRME` |
-| Payée | Frais reçus : lancer la préparation et prévenir le client | `FRAIS_RECUS` |
+| Payée | Lancer la préparation et prévenir le client | `EN_PREPARATION` |
 | En préparation | Choisir le livreur et prévenir le client | `EN_ROUTE` (avec le code de remise) |
-| En livraison | Le livreur tape le code du client (ou l'agent valide sans code, avec un motif) | `LIVREE` |
+| En livraison | Le livreur tape le code du client et choisit comment les frais ont été payés (ou l'agent valide sans code, avec un motif et le mode de paiement) | `LIVREE` |
 | À tout moment | Annuler et prévenir le client | `ANNULEE` |
 
 Au retour, l'espace équipe demande « Avez-vous envoyé le message au client ? » (« Oui, envoyé » / « Pas encore »),
@@ -195,8 +196,41 @@ Les textes sont écrits une seule fois, dans `backend/src/services/customer-mess
 (`{{1}}`, `{{2}}`…, testé dans `test/customer-messages.test.js`). Pour qu'ils partent tout seuls plus tard :
 
 1. Créez chez Meta un modèle de catégorie **Utilité**, langue français, pour chaque message : nom = `template`,
-   corps = `body` recopié tel quel (le modèle `commande_en_route` contient le code de remise, `{{3}}`) (`commande_paiement_confirme`, `commande_en_preparation`, `commande_en_route`,
-   `commande_livree`, `commande_annulee`).
+   corps = `body` recopié tel quel (`commande_paiement_confirme`, `commande_en_preparation`, `commande_en_route`,
+   `commande_livree`, `commande_annulee`). Le modèle `commande_en_route` contient le code de remise (`{{3}}`).
+   Textes à soumettre (version du 6 octobre 2026, frais payés au livreur) :
+
+```
+commande_paiement_confirme
+Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande {{2}}. Merci !
+
+Frais de livraison : {{4}}, à payer au livreur à la réception, en espèces ou par Orange Money / Moov Money au {{5}}.
+
+Suivez votre commande ici : {{6}}
+
+Belchicken
+
+commande_en_preparation
+Bonjour {{1}}, votre commande {{2}} est en préparation.
+
+Frais de livraison : {{3}}, à payer au livreur à la réception, en espèces ou par Orange Money / Moov Money au {{4}}.
+
+Suivez votre commande ici : {{5}}
+
+Belchicken
+
+commande_en_route
+Bonjour {{1}}, votre commande {{2}} est en route ! Le livreur arrive bientôt : gardez votre téléphone près de vous.
+
+Donnez ce code au livreur à la réception : {{3}}. Ne le donnez qu’au livreur, quand il vous remet la commande.
+
+Frais de livraison : {{4}}, à payer au livreur à la réception, en espèces ou par Orange Money / Moov Money au {{5}}.
+
+Suivez votre commande ici : {{6}}
+
+Belchicken
+```
+
 2. Une fois les 5 modèles approuvés, mettez `WHATSAPP_CUSTOMER_AUTO=1` sur Render.
 
 Le serveur envoie alors le message de l'étape après chaque changement (statut, frais), une seule fois par commande
@@ -260,19 +294,28 @@ Connexion par numéro de téléphone et mot de passe ; trois rôles : `PATRON` (
 - Statuts : `PAIEMENT_A_VERIFIER` → `PAYEE` → `EN_PREPARATION` → `EN_LIVRAISON` → `LIVREE`, ou `ANNULEE` avec un motif.
   Historique dans la table `OrderStatusChange`.
 - Frais de livraison (Patron et Opérateur) : donnés en confirmant le paiement (`POST …/status` `{ to: 'PAYEE', deliveryFee }`),
-  corrigés avec `PUT /api/staff/orders/:reference/delivery-fee` `{ amount }` (au moins 1 F) tant qu'ils ne sont pas reçus,
-  puis `POST /api/staff/orders/:reference/delivery-fee/received` `{ received }` (« Frais reçus », après vérification sur
-  le téléphone marchand) : une commande payée passe alors en préparation. La préparation et le départ du livreur
-  (`EN_LIVRAISON`) sont refusés par l'API tant que les frais ne sont pas reçus. Règles dans `src/services/order-status.js`.
-  Colonnes `Order.deliveryFee` et `Order.deliveryFeeReceivedAt` ; chaque action est notée dans `OrderEvent`.
+  corrigés avec `PUT /api/staff/orders/:reference/delivery-fee` `{ amount }` (au moins 1 F) jusqu'au départ du livreur.
+  Le client les paie **au livreur, à la réception**, en espèces ou par mobile money au numéro marchand : le départ
+  (`EN_LIVRAISON`) demande seulement que les frais soient saisis. À la remise, le mode de paiement (`feeMethod` :
+  `ESPECES` | `MOBILE_MONEY`) est obligatoire, pour le livreur comme pour l'agent qui valide sans code
+  (`Order.deliveryFeeMethod`). Mobile money : vérifié par l'équipe, `POST /api/staff/orders/:reference/delivery-fee/verified`
+  `{ verified }` (`Order.deliveryFeeVerifiedAt`, événements `FRAIS_VERIFIES` / `FRAIS_NON_VERIFIES`). Règles dans
+  `src/services/order-status.js`. Anciennes commandes (avant le 6 octobre 2026, frais reçus avant le départ) : notées
+  `MOBILE_MONEY` par la migration `frais_au_livreur`, le livreur voit « Frais déjà payés ».
+- Caisse (Patron et Opérateur), page `/equipe/caisse` (`frontend/src/staff/cash/`), deux onglets :
+  « Frais à vérifier » (mobile money pas encore vérifié) et « Caisse livreurs » (espèces encore chez chaque livreur,
+  dont celles des jours précédents). `GET /api/staff/caisse` ; « Espèces remises » : `POST /api/staff/caisse/remises`
+  `{ courierId, references }` crée une `CashRemittance` (livreur, montant, nombre de courses, qui l'a reçue, quand) et la
+  relie aux commandes (`Order.cashRemittanceId`). Règles dans `src/services/cash.js` (testées dans `test/cash.test.js`).
 - Message préparé : `POST /api/staff/orders/:reference/messages` `{ key }` (voir « Messages WhatsApp au client »).
-- Tableau de bord : le chiffre d'affaires des plats et les frais de livraison reçus sont séparés. Les frais comptent une
-  fois cochés « reçus », sauf si la commande a été annulée ensuite.
+- Tableau de bord : le chiffre d'affaires des plats et les frais de livraison sont séparés. Les frais comptent une fois
+  payés au livreur, sauf commande annulée, séparés en espèces et mobile money ; plus les espèces encore chez les livreurs
+  (`cashWithCouriers`, quelle que soit la période).
 - Espace livreur (rôle `LIVREUR`) : à la connexion sur `/equipe`, le livreur arrive sur `/equipe/courses`
   (`frontend/src/staff/courier/`) ; toute autre page le ramène là, et l'API lui refuse tout le reste (commandes, menu,
   tableau de bord, équipe). Il voit ses courses en livraison et celles livrées ou annulées aujourd'hui : client (Appeler,
-  WhatsApp), repères, itinéraire Google Maps, plats. Jamais de montant, de paiement ni de code (`toCourse()`).
-  API : `GET /api/staff/courses`, `POST /api/staff/courses/:reference/deliver` `{ code }`.
+  WhatsApp), repères, itinéraire Google Maps, plats, et « Frais à encaisser : X F ». Aucun autre montant, ni paiement des
+  plats, ni code (`toCourse()`). API : `GET /api/staff/courses`, `POST /api/staff/courses/:reference/deliver` `{ code, feeMethod }`.
 - Départ du livreur : `POST …/status` `{ to: 'EN_LIVRAISON', courierId }` (livreur obligatoire, compte `LIVREUR` actif).
   Un code de remise à 4 chiffres est créé (`Order.deliveryCode`) et ajouté au message `EN_ROUTE`. Le livreur reçoit une
   notification « Nouvelle course » (et « Course annulée » si la commande est annulée pendant la livraison). Liste des
@@ -280,7 +323,8 @@ Connexion par numéro de téléphone et mot de passe ; trois rôles : `PATRON` (
   `{ courierId }` (le code ne change pas). Le code n'apparaît jamais sur la page de suivi publique.
 - Remise : le bon code fait passer la commande à `LIVREE`. Chaque code faux est compté (`deliveryCodeAttempts`, événement
   `CODE_INCORRECT`) ; après 5, la saisie est bloquée sur cette commande. Client sans son code : l'agent valide avec
-  `POST …/status` `{ to: 'LIVREE', reason }` (motif obligatoire, événement `LIVRAISON_SANS_CODE`). Règles dans
+  `POST …/status` `{ to: 'LIVREE', reason, feeMethod }` (motif et mode de paiement des frais obligatoires, événement
+  `LIVRAISON_SANS_CODE`). Règles dans
   `src/services/courier.js` (testées dans `test/courier.test.js`).
 - Tableau de bord : livraisons par livreur et temps moyen (passage `EN_LIVRAISON` → `LIVREE`), et nombre de livraisons
   validées sans code.

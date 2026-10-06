@@ -58,11 +58,16 @@ export const staffApi = {
   order: (reference) => staffRequest(`/orders/${encodeURIComponent(reference)}`).then((d) => d.order),
   setStatus: (reference, body) =>
     staffRequest(`/orders/${encodeURIComponent(reference)}/status`, { method: 'POST', body: JSON.stringify(body) }).then((d) => d.order),
-  // Frais de livraison (montant en F) et « Frais reçus »
+  // Frais de livraison (montant en F), modifiables jusqu'au départ du livreur
   setDeliveryFee: (reference, amount) =>
     staffRequest(`/orders/${encodeURIComponent(reference)}/delivery-fee`, { method: 'PUT', body: JSON.stringify({ amount }) }).then((d) => d.order),
-  setFeeReceived: (reference, received) =>
-    staffRequest(`/orders/${encodeURIComponent(reference)}/delivery-fee/received`, { method: 'POST', body: JSON.stringify({ received }) }).then((d) => d.order),
+  // Frais payés par mobile money : vérifiés (ou non) sur le téléphone marchand
+  setFeeVerified: (reference, verified) =>
+    staffRequest(`/orders/${encodeURIComponent(reference)}/delivery-fee/verified`, { method: 'POST', body: JSON.stringify({ verified }) }).then((d) => d.order),
+
+  // Caisse : frais à vérifier, espèces chez les livreurs, remises
+  cash: () => staffRequest('/caisse'),
+  remitCash: (courierId, references) => staffRequest('/caisse/remises', { method: 'POST', body: JSON.stringify({ courierId, references }) }),
   // Message WhatsApp ouvert par l'agent : noté dans l'historique. keepalive : la requête part même
   // si le téléphone bascule aussitôt sur WhatsApp.
   // Client prévenu de l'étape en cours : by = 'WHATSAPP' (message envoyé) ou 'APPEL'
@@ -78,8 +83,9 @@ export const staffApi = {
 
   // Espace livreur : ses courses du jour, et la remise avec le code du client
   courses: () => staffRequest('/courses'),
-  deliver: (reference, code) =>
-    staffRequest(`/courses/${encodeURIComponent(reference)}/deliver`, { method: 'POST', body: JSON.stringify({ code }) }).then((d) => d.course),
+  // feeMethod : comment le client a payé les frais (ESPECES ou MOBILE_MONEY)
+  deliver: (reference, code, feeMethod) =>
+    staffRequest(`/courses/${encodeURIComponent(reference)}/deliver`, { method: 'POST', body: JSON.stringify({ code, feeMethod }) }).then((d) => d.course),
 
   // Menu : disponibilité pour toute l'équipe, le reste pour le Patron (vérifié par l'API)
   menu: () => staffRequest('/menu'),

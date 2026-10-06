@@ -24,8 +24,8 @@ export const STAGES = [
   {
     id: 'PAYEE',
     label: 'Payées',
-    hint: 'Attendez les frais de livraison : cochez « Frais reçus » dès qu’ils arrivent sur le téléphone marchand.',
-    empty: 'Aucuns frais de livraison attendus.',
+    hint: 'Lancez la préparation. Les frais de livraison seront payés au livreur, à la réception.',
+    empty: 'Aucune commande à lancer.',
   },
   {
     id: 'EN_PREPARATION',
@@ -55,16 +55,23 @@ export const HISTORY_FILTERS = [
 ];
 
 // Bouton unique de chaque étape : passage à l'étape suivante ET message au client (OrderSteps.jsx).
-// PAYEE -> EN_PREPARATION se fait en cochant les frais reçus.
+// Les frais de livraison sont payés au livreur à la réception : rien à attendre avant la préparation.
 export const NEXT_ACTION = {
   PAIEMENT_A_VERIFIER: { to: 'PAYEE', label: 'Confirmer le paiement et prévenir le client' },
-  PAYEE: { to: 'EN_PREPARATION', label: 'Frais reçus : lancer la préparation et prévenir le client' },
+  PAYEE: { to: 'EN_PREPARATION', label: 'Lancer la préparation et prévenir le client' },
   EN_PREPARATION: { to: 'EN_LIVRAISON', label: 'Choisir le livreur et prévenir le client' },
   // Livrée : validée par le livreur avec le code du client, ou par l'agent avec un motif (OrderSteps.jsx)
   EN_LIVRAISON: { to: 'LIVREE', label: 'Livrée : remercier le client' },
 };
 
 export const METHOD_LABEL = { ORANGE_MONEY: 'Orange Money', MOOV_MONEY: 'Moov Money', ESPECES: 'Espèces' };
+
+// Frais de livraison payés au livreur à la réception : comment le client les a payés
+export const FEE_METHODS = [
+  { id: 'ESPECES', label: 'Espèces', hint: 'remis au livreur en main propre' },
+  { id: 'MOBILE_MONEY', label: 'Mobile money au numéro marchand', hint: 'Orange Money ou Moov Money' },
+];
+export const FEE_METHOD_LABEL = { ESPECES: 'en espèces', MOBILE_MONEY: 'par mobile money' };
 
 // +22676123456 -> "+226 76 12 34 56"
 export function formatPhone(phone) {
@@ -96,7 +103,6 @@ export const FEE_EDITABLE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION'];
 // Ce qui empêche le livreur de partir, ou null
 export function deliveryBlock(o) {
   if (o.deliveryFee == null) return 'Saisissez d’abord les frais de livraison ci-dessous.';
-  if (!o.deliveryFeeReceivedAt) return 'Le livreur part une fois les frais reçus : cochez « Frais reçus » après vérification sur le téléphone marchand.';
   return null;
 }
 
@@ -113,8 +119,10 @@ export function timelineOf(o) {
     kind: `e-${e.type}`,
     title: {
       FRAIS_SAISIS: `Frais de livraison : ${formatPrice(e.amount)}`,
-      FRAIS_RECUS: 'Frais de livraison reçus',
+      FRAIS_RECUS: 'Frais de livraison reçus avant le départ',
       FRAIS_NON_RECUS: '« Frais reçus » décoché',
+      FRAIS_VERIFIES: `Frais vérifiés sur le téléphone marchand : ${formatPrice(e.amount)}`,
+      FRAIS_NON_VERIFIES: 'Vérification des frais annulée',
       MESSAGE_PREPARE: 'WhatsApp ouvert avec le message',
       MESSAGE_ENVOYE: 'Message envoyé au client (confirmé)',
       CLIENT_APPELE: 'Client prévenu par appel',

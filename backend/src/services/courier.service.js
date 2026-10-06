@@ -2,6 +2,7 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { checkHandover, startOfToday, toCourse } from './courier.js';
+import { feeAlreadyPaid, feeMethodError } from './order-status.js';
 import { notifyDelivered, statusChange } from './staff-orders.service.js';
 
 // Courses en cours, plus celles livrées ou annulées aujourd'hui
@@ -25,13 +26,17 @@ export async function listCourses(courier, now = new Date()) {
   ];
 }
 
-// Le livreur tape le code du client. Bon code : LIVREE. Code faux : compté, bloqué après 5.
-export async function deliverWithCode(reference, code, courier) {
+// Le livreur tape le code du client et indique comment les frais ont été payés (feeMethod : ESPECES
+// ou MOBILE_MONEY, obligatoire). Bon code : LIVREE. Code faux : compté, bloqué après 5.
+export async function deliverWithCode(reference, code, feeMethod, courier) {
   const order = await prisma.order.findUnique({
     where: { reference },
-    select: { id: true, status: true, courierId: true, deliveryCode: true, deliveryCodeAttempts: true },
+    select: { id: true, status: true, courierId: true, deliveryCode: true, deliveryCodeAttempts: true, deliveryFeeMethod: true },
   });
   if (!order || order.courierId !== courier.id) throw new AppError(404, 'Course introuvable.', 'COURSE_INTROUVABLE');
+  // Mode de paiement des frais vérifié avant le code : un oubli ne compte pas comme un code faux
+  const feeError = order.status === 'EN_LIVRAISON' ? feeMethodError(order, feeMethod) : null;
+  if (feeError) throw new AppError(400, feeError, 'FRAIS_MANQUANTS');
   const result = checkHandover(order, courier.id, code);
   const who = { staffUserId: courier.id, staffName: courier.name };
 
@@ -51,7 +56,7 @@ export async function deliverWithCode(reference, code, courier) {
   await prisma.$transaction(async (tx) => {
     const updated = await tx.order.updateMany({
       where: { id: order.id, status: 'EN_LIVRAISON', courierId: courier.id },
-      data: { status: 'LIVREE' },
+      data: { status: 'LIVREE', ...(feeAlreadyPaid(order) ? {} : { deliveryFeeMethod: feeMethod }) },
     });
     if (updated.count !== 1) throw new AppError(409, 'Cette course vient de changer. La page est mise à jour.', 'COURSE_CHANGEE');
     await tx.orderStatusChange.create({ data: statusChange(order, 'LIVREE', courier) });

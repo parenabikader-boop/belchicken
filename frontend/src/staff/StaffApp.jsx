@@ -15,6 +15,7 @@ import AlertsPage from './alerts/AlertsPage.jsx';
 import PasswordPage, { ForcedPassword } from './account/PasswordPage.jsx';
 import TeamPage from './team/TeamPage.jsx';
 import CoursesPage from './courier/CoursesPage.jsx';
+import CashPage from './cash/CashPage.jsx';
 import InstallBanner from '../components/InstallBanner.jsx';
 import './staff.css';
 
@@ -74,6 +75,7 @@ function TeamRoutes() {
         <Route path="commandes" element={<OrdersList />} />
         <Route path="commandes/:reference" element={<OrderDetail />} />
         <Route path="menu" element={<MenuAdmin />} />
+        <Route path="caisse" element={<CashPage />} />
         <Route path="alertes" element={<AlertsPage />} />
         <Route path="mot-de-passe" element={<PasswordPage />} />
         <Route element={<RequirePatron />}>
@@ -183,6 +185,7 @@ function StaffShell() {
               {unseen.size > 0 && <span className="st-badge" aria-label={`${unseen.size} nouvelles`}>{unseen.size}</span>}
             </NavLink>
             <NavLink to="/equipe/menu">Menu</NavLink>
+            <NavLink to="/equipe/caisse">Caisse</NavLink>
             {user.role === 'PATRON' && <NavLink to="/equipe/accueil">Accueil</NavLink>}
             {user.role === 'PATRON' && <NavLink to="/equipe/tableau-de-bord"><span className="st-lg">Tableau de bord</span><span className="st-sm">Chiffres</span></NavLink>}
             {user.role === 'PATRON' && <NavLink to="/equipe/equipe">Équipe</NavLink>}
