@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { WHATSAPP } from '../components/Layout.jsx';
-import { whatsappHref } from '../restaurant.js';
+import { DIRECTIONS_URL, RESTAURANT, whatsappHref } from '../restaurant.js';
 import PayCode from '../components/PayCode.jsx';
 import { METHOD_LABEL } from '../utils/payment.js';
 import { TunnelHead } from '../components/PageParts.jsx';
@@ -13,14 +13,20 @@ import { formatPrice } from '../utils/format.js';
 const REFRESH_MS = 20000;
 const FINAL = ['LIVREE', 'ANNULEE'];
 
-// Frise : les étapes vues par le client
-const STEPS = [
+// Frise : les étapes vues par le client (livraison, ou à emporter avec « Prête » et « Retirée »)
+const DELIVERY_STEPS = [
   { status: 'PAIEMENT_A_VERIFIER', label: 'Commande reçue' },
   { status: 'PAYEE', label: 'Paiement vérifié' },
   { status: 'EN_PREPARATION', label: 'En préparation' },
   { status: 'EN_LIVRAISON', label: 'En route' },
   { status: 'LIVREE', label: 'Livrée' },
 ];
+const PICKUP_STEPS = [
+  ...DELIVERY_STEPS.slice(0, 3),
+  { status: 'PRETE', label: 'Prête à retirer' },
+  { status: 'LIVREE', label: 'Retirée' },
+];
+const isPickup = (order) => order.mode === 'A_EMPORTER';
 
 const formatDate = (iso) => {
   const d = new Date(iso);
@@ -89,7 +95,8 @@ export default function Confirmation() {
   }
 
   const recap = fresh?.recap;
-  const delivery = recap && [recap.geo && 'Position partagée', recap.addr].filter(Boolean).join(' · ');
+  const pickup = isPickup(order);
+  const delivery = !pickup && recap && [recap.geo && 'Position partagée', recap.addr].filter(Boolean).join(' · ');
   const fee = order.deliveryFee;
 
   return (
@@ -137,7 +144,8 @@ export default function Confirmation() {
             <dt>Paiement</dt>
             <dd>{METHOD_LABEL[order.paymentMethod] || order.paymentMethod}{recap && ` · depuis le ${recap.payer}`}</dd>
             {delivery && <><dt>Livraison</dt><dd>{delivery}</dd></>}
-            {(fee != null || order.status !== 'ANNULEE') && (
+            {pickup && <><dt>À emporter</dt><dd>Retrait au restaurant, {RESTAURANT.address} · sans frais de livraison</dd></>}
+            {!pickup && (fee != null || order.status !== 'ANNULEE') && (
               <>
                 <dt>Frais de livraison</dt>
                 <dd>
@@ -161,6 +169,7 @@ export default function Confirmation() {
 
 // Où en est la commande : frise des étapes et ce que le client doit savoir maintenant
 function Tracking({ order, offline }) {
+  const STEPS = isPickup(order) ? PICKUP_STEPS : DELIVERY_STEPS;
   const cancelled = order.status === 'ANNULEE';
   const at = Object.fromEntries((order.steps || []).map((s) => [s.status, s.at]));
   at.PAIEMENT_A_VERIFIER ??= order.createdAt;
@@ -220,9 +229,35 @@ function FeeToPay({ fee, feePayment, children }) {
   );
 }
 
+// À emporter : pas de frais, l'adresse du restaurant quand la commande est prête
+function PickupNow({ order }) {
+  switch (order.status) {
+    case 'PAIEMENT_A_VERIFIER':
+      return <p className="trk-now">Nous vérifions votre paiement de <b>{formatPrice(order.itemsTotal)}</b> sur notre téléphone marchand. Nous vous écrivons sur WhatsApp dès que votre commande est prête.</p>;
+    case 'PAYEE':
+      return <p className="trk-now ok">Paiement vérifié, merci ! Votre commande va être préparée. Nous vous écrivons dès qu’elle est prête à retirer.</p>;
+    case 'EN_PREPARATION':
+      return <p className="trk-now">Votre commande est en préparation. Nous vous écrivons sur WhatsApp dès qu’elle est prête à retirer.</p>;
+    case 'PRETE':
+      return (
+        <div className="trk-ready">
+          <p className="trk-fee-lead">Votre commande est prête ! Venez la retirer au restaurant.</p>
+          <p><b>{RESTAURANT.name}</b><br />{RESTAURANT.address}, {RESTAURANT.city}</p>
+          <p className="muted">Au comptoir, donnez votre nom ou la référence <b>{order.reference}</b>.</p>
+          <a className="btn btn-p" href={DIRECTIONS_URL} target="_blank" rel="noreferrer">Itinéraire</a>
+        </div>
+      );
+    case 'LIVREE':
+      return <p className="trk-now ok">Commande retirée. Merci de votre confiance et bon appétit !</p>;
+    default:
+      return null;
+  }
+}
+
 function Now({ order }) {
   const fee = order.deliveryFee;
   const feeDue = fee != null && !order.deliveryFeePaid;
+  if (isPickup(order) && order.status !== 'ANNULEE') return <PickupNow order={order} />;
 
   switch (order.status) {
     case 'ANNULEE':

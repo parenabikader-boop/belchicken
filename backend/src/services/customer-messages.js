@@ -67,6 +67,39 @@ export const MESSAGES = {
     body: 'Bonjour {{1}}, votre commande {{2}} a été livrée. Merci de votre confiance et bon appétit ! À bientôt chez Belchicken Burkina.',
     params: (o) => [firstName(o.customerName), o.reference],
   },
+  // ─── À emporter : pas de frais de livraison, le client vient au restaurant ───
+  PAIEMENT_CONFIRME_EMPORTER: {
+    template: 'emporter_paiement_confirme',
+    label: 'Paiement confirmé (à emporter)',
+    body:
+      'Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande à emporter {{2}}. Merci !\n\n' +
+      'Nous vous écrivons dès qu’elle est prête à retirer au restaurant.\n\n' +
+      'Suivez votre commande ici : {{4}}\n\nBelchicken Burkina',
+    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), trackingUrl(o, ctx)],
+  },
+  EN_PREPARATION_EMPORTER: {
+    template: 'emporter_en_preparation',
+    label: 'Commande en préparation (à emporter)',
+    body:
+      'Bonjour {{1}}, votre commande à emporter {{2}} est en préparation. Nous vous écrivons dès qu’elle est prête.\n\n' +
+      'Suivez votre commande ici : {{3}}\n\nBelchicken Burkina',
+    params: (o, ctx) => [firstName(o.customerName), o.reference, trackingUrl(o, ctx)],
+  },
+  COMMANDE_PRETE: {
+    template: 'emporter_commande_prete',
+    label: 'Commande prête à retirer',
+    body:
+      'Bonjour {{1}}, votre commande {{2}} est prête ! Vous pouvez venir la retirer au restaurant.\n\n' +
+      'Adresse : {{3}}\nItinéraire : {{4}}\n\n' +
+      'Au comptoir, donnez votre nom ou la référence de la commande.\n\nBelchicken Burkina',
+    params: (o, ctx) => [firstName(o.customerName), o.reference, ctx.restaurantAddress, ctx.restaurantMapsUrl],
+  },
+  RETIREE: {
+    template: 'emporter_commande_retiree',
+    label: 'Commande retirée, remerciement',
+    body: 'Bonjour {{1}}, vous avez retiré votre commande {{2}}. Merci de votre confiance et bon appétit ! À bientôt chez Belchicken Burkina.',
+    params: (o) => [firstName(o.customerName), o.reference],
+  },
   ANNULEE: {
     template: 'commande_annulee',
     label: 'Commande annulée, avec le motif',
@@ -105,6 +138,7 @@ export const trackingUrl = (o, ctx) => `${ctx.siteUrl.replace(/\/+$/, '')}/suivi
 //   { key, missing }       s'il manque quelque chose (le bouton est grisé avec cette explication) ;
 //   null                   s'il n'y a rien à dire au client à cette étape.
 export function currentMessageKey(o) {
+  if (o.mode === 'A_EMPORTER') return pickupMessageKey(o);
   const feeSet = o.deliveryFee != null;
   switch (o.status) {
     case 'PAYEE':
@@ -122,6 +156,22 @@ export function currentMessageKey(o) {
       return null; // paiement à vérifier : on ne promet rien au client
   }
 }
+
+// À emporter : pas de frais à attendre, le message « prête » donne l'adresse du restaurant
+const PICKUP_KEYS = {
+  PAYEE: 'PAIEMENT_CONFIRME_EMPORTER',
+  EN_PREPARATION: 'EN_PREPARATION_EMPORTER',
+  PRETE: 'COMMANDE_PRETE',
+  LIVREE: 'RETIREE',
+  ANNULEE: 'ANNULEE',
+};
+function pickupMessageKey(o) {
+  const key = PICKUP_KEYS[o.status];
+  return key ? { key } : null;
+}
+
+// Messages de remerciement (après LIVREE) : livraison ou retrait au comptoir
+export const THANKS_KEYS = ['LIVREE', 'RETIREE'];
 
 // Valeurs des variables {{1}}, {{2}}… pour cette commande, nettoyées pour Meta
 export const messageParams = (key, o, ctx) => MESSAGES[key].params(o, ctx).map((p) => clean(p));
@@ -167,6 +217,14 @@ export function stepStart(o, key) {
       return Math.max(lastStatusAt(o, 'EN_PREPARATION'), lastEventAt(o, 'FRAIS_SAISIS'));
     case 'EN_ROUTE':
       return lastStatusAt(o, 'EN_LIVRAISON');
+    case 'PAIEMENT_CONFIRME_EMPORTER':
+      return lastStatusAt(o, 'PAYEE');
+    case 'EN_PREPARATION_EMPORTER':
+      return lastStatusAt(o, 'EN_PREPARATION');
+    case 'COMMANDE_PRETE':
+      return lastStatusAt(o, 'PRETE');
+    case 'RETIREE':
+      return lastStatusAt(o, 'LIVREE');
     default:
       return lastStatusAt(o, key); // LIVREE, ANNULEE
   }
@@ -202,7 +260,7 @@ export const THANKS_SINCE = new Date('2026-10-05T00:00:00Z');
 // `o` : la commande avec statusChanges et events (createdAt)
 export function needsThanks(o, { auto = false } = {}) {
   if (auto || o.status !== 'LIVREE') return false;
-  if (stepStart(o, 'LIVREE') < THANKS_SINCE.getTime()) return false;
+  if (stepStart(o, 'LIVREE') < THANKS_SINCE.getTime()) return false; // même début pour RETIREE
   return Boolean(noticeState(o, { auto })?.required);
 }
 
@@ -213,6 +271,6 @@ export function thanksWhere({ auto = false } = {}) {
   return {
     status: 'LIVREE',
     statusChanges: { some: { toStatus: 'LIVREE', createdAt: { gte: THANKS_SINCE } } },
-    events: { none: { type: { in: CONFIRM_TYPES }, messageKey: 'LIVREE' } },
+    events: { none: { type: { in: CONFIRM_TYPES }, messageKey: { in: THANKS_KEYS } } },
   };
 }

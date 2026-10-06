@@ -85,7 +85,7 @@ export default function Commande() {
           <div className="box-b">
             <table><tbody>
               <tr><td>{plural(count, 'article')}</td><td>{formatPrice(total)}</td></tr>
-              <tr><td>Livraison</td><td className="muted">Confirmée par l'équipe</td></tr>
+              <tr><td>Livraison</td><td className="muted">Selon le quartier · gratuit à emporter</td></tr>
               <tr className="tot"><td>Total des plats</td><td>{formatPrice(total)}</td></tr>
             </tbody></table>
             {blocked && <p className="err-line" style={{ marginTop: 12 }}>Retirez les plats indisponibles pour continuer.</p>}

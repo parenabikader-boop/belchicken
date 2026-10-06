@@ -200,8 +200,9 @@ l'historique (`MESSAGE_ENVOYE` ou `CLIENT_APPELE`, avec qui et quand). Règles :
 
 Codes marchands : `ORANGE_MONEY_CODE`, `MOOV_MONEY_CODE`, `TELECEL_MONEY_CODE` et `MERCHANT_NAME` (voir `GET /api/payment`),
 les mêmes sur le site et dans les messages. Adresse, téléphone, WhatsApp, horaires et position du restaurant :
-`frontend/src/restaurant.js`. Adresse du message
-« commande prête » (à emporter) : `RESTAURANT_ADDRESS`.
+`frontend/src/restaurant.js`. Message « commande prête » (à emporter) : `RESTAURANT_ADDRESS` (adresse seule,
+vide = « Kamsonghin, en face de Sonia Hôtel ») et `RESTAURANT_MAPS_URL` (lien Itinéraire, vide = Google Maps vers le
+Plus Code 9F2J+V8).
 
 Le lien de suivi utilise `PUBLIC_SITE_URL` : l'adresse du site public, `https://belchicken-six.vercel.app`
 (valeur par défaut du code, à changer seulement si le site change d'adresse).
@@ -254,9 +255,39 @@ Telecel Money : ```{{8}}```
 Suivez votre commande ici : {{9}}
 
 Belchicken Burkina
+
+emporter_paiement_confirme
+Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande à emporter {{2}}. Merci !
+
+Nous vous écrivons dès qu’elle est prête à retirer au restaurant.
+
+Suivez votre commande ici : {{4}}
+
+Belchicken Burkina
+
+emporter_en_preparation
+Bonjour {{1}}, votre commande à emporter {{2}} est en préparation. Nous vous écrivons dès qu’elle est prête.
+
+Suivez votre commande ici : {{3}}
+
+Belchicken Burkina
+
+emporter_commande_prete
+Bonjour {{1}}, votre commande {{2}} est prête ! Vous pouvez venir la retirer au restaurant.
+
+Adresse : {{3}}
+Itinéraire : {{4}}
+
+Au comptoir, donnez votre nom ou la référence de la commande.
+
+Belchicken Burkina
+
+emporter_commande_retiree
+Bonjour {{1}}, vous avez retiré votre commande {{2}}. Merci de votre confiance et bon appétit ! À bientôt chez Belchicken Burkina.
 ~~~
 
 `commande_livree` et `commande_annulee` se terminent maintenant par « Belchicken Burkina » : à resoumettre aussi.
+Les 4 modèles `emporter_…` servent aux commandes à emporter (voir « À emporter » plus bas).
 
 2. Une fois les 5 modèles approuvés, mettez `WHATSAPP_CUSTOMER_AUTO=1` sur Render.
 
@@ -405,3 +436,25 @@ Photos : envoyées par l'API à Cloudinary (dossier `CLOUDINARY_FOLDER`, `belchi
 qui est effacé à chaque déploiement. Les photos d'origine restent servies depuis `frontend/public/` tant qu'elles ne sont pas remplacées.
 
 Point à confirmer : Fuego Wings 8 pièces à la carte, affiché à 10 000 F, plus cher que le menu N° 30 à 9 500 F.
+
+## À emporter
+
+Le client choisit « Livraison » ou « À emporter » sur la page Vos informations (`Order.mode` : `LIVRAISON` par défaut,
+`A_EMPORTER`). À emporter : il paie le total des plats par code marchand (Orange Money, Moov Money ou Telecel Money),
+comme pour la livraison ; ni position, ni frais de livraison, ni livreur.
+
+Étapes : `PAIEMENT_A_VERIFIER` → `PAYEE` → `EN_PREPARATION` → `PRETE` (« Prête à retirer ») → `LIVREE` (affichée
+« Retirée »). Annulation possible jusqu'à `PRETE` comprise. Règles : `FLOWS` dans `src/services/order-status.js`.
+
+| Étape | Bouton (espace équipe) | Message au client |
+|---|---|---|
+| Paiement à vérifier | Confirmer le paiement et prévenir le client (sans frais) | `PAIEMENT_CONFIRME_EMPORTER` |
+| Payée | Lancer la préparation et prévenir le client | `EN_PREPARATION_EMPORTER` |
+| En préparation | Commande prête : prévenir le client | `COMMANDE_PRETE` (adresse + lien Itinéraire) |
+| Prête à retirer | Remise au client : le remercier (au comptoir, après avoir vérifié le nom ou la référence) | `RETIREE` |
+
+La page Commandes a une étape « À retirer » (colonne sur ordinateur). Une commande retirée passe dans
+« Livrées · à remercier » jusqu'à la confirmation du remerciement, comme une livraison. Alertes : « Nouvelle commande …
+· à emporter », « Commande … retirée au comptoir à … ». Page de suivi : frise « Prête à retirer », « Retirée », adresse
+et bouton Itinéraire quand la commande est prête. Migration `20261006150000_a_emporter` (enum `FulfillmentMode`,
+colonne `Order.mode`, statut `PRETE`).

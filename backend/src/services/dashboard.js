@@ -7,7 +7,7 @@ import { MOBILE_MONEY_METHODS } from './payment-codes.js';
 const DAY = 24 * 3600 * 1000;
 export const PERIODS = ['day', 'week', 'month'];
 // Seules les commandes payées (et au-delà) comptent dans le chiffre d'affaires
-export const PAID = ['PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'LIVREE'];
+export const PAID = ['PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE', 'LIVREE'];
 const isPaid = (o) => PAID.includes(o.status);
 // Frais de livraison : comptés une fois payés (au livreur, à la réception), sauf commande annulée.
 // Anciennes commandes : payés avant le départ, notés « mobile money » par la migration du 6 octobre 2026.

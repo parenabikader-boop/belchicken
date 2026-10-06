@@ -4,16 +4,16 @@ import { staffApi } from '../../api/client.js';
 import { formatPrice, plural } from '../../utils/format.js';
 import { useOrdersFeed } from './OrdersFeed.jsx';
 import AlertsPrompt from '../alerts/AlertsPrompt.jsx';
-import { FEE_METHOD_LABEL, formatTime, HISTORY, HISTORY_FILTERS, METHOD_LABEL, STAGES, STATUS_LABEL, timeAgo } from './labels.js';
+import { FEE_METHOD_LABEL, formatTime, HISTORY, HISTORY_FILTERS, isPickup, METHOD_LABEL, STAGES, statusLabel, timeAgo } from './labels.js';
 
 const REFRESH_MS = 5000;
-// Au-delà : les 5 étapes en colonnes côte à côte ; en dessous : un onglet par étape
+// Au-delà : les 6 étapes en colonnes côte à côte ; en dessous : un onglet par étape
 const WIDE = '(min-width: 1024px)';
 
 // Page Commandes, une étape à la fois (onglets sur téléphone, colonnes sur ordinateur).
 // Les étapes en cours viennent du fil partagé (OrdersFeed.jsx : son, badge, mise à jour toutes les 5 s).
 // L'historique et la recherche ont leur propre requête, rafraîchie elle aussi toutes les 5 s.
-// Adresse : ?etape=PAIEMENT_A_VERIFIER|PAYEE|EN_PREPARATION|EN_LIVRAISON|A_REMERCIER|HISTORIQUE, &statut=LIVREE|ANNULEE, &q=…
+// Adresse : ?etape=PAIEMENT_A_VERIFIER|PAYEE|EN_PREPARATION|EN_LIVRAISON|PRETE|A_REMERCIER|HISTORIQUE, &statut=LIVREE|ANNULEE, &q=…
 export default function OrdersList() {
   const feed = useOrdersFeed();
   const counts = feed.counts || {};
@@ -136,7 +136,7 @@ function Stage({ stage, feed }) {
   );
 }
 
-// Ordinateur : les 5 étapes côte à côte, comme un tableau de suivi
+// Ordinateur : les 6 étapes côte à côte, comme un tableau de suivi
 function Board({ feed }) {
   const counts = feed.counts || {};
   return (
@@ -237,6 +237,11 @@ function OrderList({ orders, unseen, empty, compact = false, withStatus = false 
 
 // Ce qui compte pour l'étape, sous le nom du client
 function stageDetail(o) {
+  if (isPickup(o)) {
+    if (o.status === 'PRETE') return 'Le client vient la retirer';
+    if (o.status === 'LIVREE') return 'Retirée au comptoir';
+    return 'À emporter · sans frais';
+  }
   if (o.status === 'PAYEE') return o.deliveryFee != null ? `Frais : ${formatPrice(o.deliveryFee)}, payés au livreur` : 'Frais à saisir';
   if (o.status === 'EN_LIVRAISON') return o.courierName ? `Livreur : ${o.courierName}` : 'Livreur non indiqué';
   if (o.status === 'LIVREE') return [o.courierName ? `Livrée par ${o.courierName}` : 'Livrée', o.deliveryFeeMethod && `frais ${FEE_METHOD_LABEL[o.deliveryFeeMethod]}`].filter(Boolean).join(' · ');
@@ -252,13 +257,14 @@ function OrderCard({ order: o, isNew, withStatus }) {
         <div className="st-order-top">
           <b className="st-ref">{o.reference}</b>
           {isNew && <span className="st-new">Nouvelle</span>}
+          {isPickup(o) && <span className="st-pickup">À emporter</span>}
           <span className="st-time">{formatTime(o.createdAt)} · {timeAgo(o.createdAt)}</span>
         </div>
         <div className="st-order-name">{o.customerName}</div>
         {detail && <div className="od-detail">{detail}</div>}
         <div className="st-order-bottom">
           <span>{plural(o.itemCount, 'article')} · <b>{formatPrice(o.itemsTotal)}</b> · {METHOD_LABEL[o.paymentMethod]}</span>
-          {withStatus && <span className={`st-pill p-${o.status}`}>{STATUS_LABEL[o.status]}</span>}
+          {withStatus && <span className={`st-pill p-${o.status}`}>{statusLabel(o)}</span>}
         </div>
       </Link>
     </li>

@@ -60,9 +60,12 @@ export const createOrderSchema = z
       })
       .optional(),
     addressNote: optionalText(300),
+    // Livraison (par défaut, anciennes versions du site) ou à emporter (retrait au restaurant)
+    mode: z.enum(['LIVRAISON', 'A_EMPORTER'], { errorMap: () => ({ message: 'Choisissez livraison ou à emporter.' }) }).default('LIVRAISON'),
     items: z.array(item).min(1, 'La commande est vide.').max(40),
   })
-  .refine((o) => o.location || (o.addressNote && o.addressNote.length >= 5), {
+  // Livraison : une position ou des repères. À emporter : rien à demander.
+  .refine((o) => o.mode === 'A_EMPORTER' || o.location || (o.addressNote && o.addressNote.length >= 5), {
     message: 'Partagez votre position ou indiquez votre quartier et un repère.',
     path: ['addressNote'],
   });

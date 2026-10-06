@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatPrice } from '../../utils/format.js';
 import { useOrdersFeed } from './OrdersFeed.jsx';
-import { FEE_METHOD_LABEL, formatDateTime, formatPhone, mapsHref, METHOD_LABEL, STATUS_LABEL, telHref, timeAgo, timelineOf, whatsappHref } from './labels.js';
+import { FEE_METHOD_LABEL, formatDateTime, formatPhone, isPickup, mapsHref, METHOD_LABEL, statusLabel, telHref, timeAgo, timelineOf, whatsappHref } from './labels.js';
 import { Actions, CourierBox, DeliveryFee, Notice, useSteps } from './OrderSteps.jsx';
 
 const REFRESH_MS = 5000;
@@ -63,7 +63,10 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
           <h1 className="st-title">{o.reference}</h1>
           <p className="st-muted">Reçue le {formatDateTime(o.createdAt)} · {timeAgo(o.createdAt)}</p>
         </div>
-        <span className={`st-pill p-${o.status}`}>{STATUS_LABEL[o.status]}</span>
+        <span className="st-pills">
+          {isPickup(o) && <span className="st-pill p-EMPORTER">À emporter</span>}
+          <span className={`st-pill p-${o.status}`}>{statusLabel(o)}</span>
+        </span>
       </div>
 
       {error && <div className="alert err" role="alert" style={{ marginBottom: 12 }}><span>{error.message}</span></div>}
@@ -73,7 +76,7 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
 
       <div className="st-grid">
         <CourierBox order={o} onChange={updated} />
-        <DeliveryFee order={o} steps={steps} />
+        {!isPickup(o) && <DeliveryFee order={o} steps={steps} />}
 
         <section className="st-box">
           <h2>Client</h2>
@@ -93,14 +96,24 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
             <dd>{o.paymentPayerPhone ? <a href={telHref(o.paymentPayerPhone)}>{formatPhone(o.paymentPayerPhone)}</a> : '—'}</dd>
             <dt>Montant à recevoir</dt><dd><b>{formatPrice(o.itemsTotal)}</b></dd>
           </dl>
+          {isPickup(o) ? (
+            <p className="st-note">À emporter : pas de frais de livraison.</p>
+          ) : (
           <p className="st-note">
             Plats seulement. Frais de livraison :{' '}
             {o.deliveryFee == null
               ? 'pas encore saisis'
               : `${formatPrice(o.deliveryFee)}, ${o.deliveryFeeMethod ? `payés ${FEE_METHOD_LABEL[o.deliveryFeeMethod]}` : 'payés au livreur à la réception'}`}.
           </p>
+          )}
         </section>
 
+        {isPickup(o) ? (
+          <section className="st-box">
+            <h2>À emporter</h2>
+            <p>Le client vient retirer sa commande au restaurant. Pas de livreur, pas de frais.</p>
+          </section>
+        ) : (
         <section className="st-box">
           <h2>Livraison</h2>
           {o.location ? (
@@ -114,6 +127,7 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
           <h3>Repères</h3>
           <p>{o.addressNote || <span className="st-muted">Aucun repère indiqué.</span>}</p>
         </section>
+        )}
 
         <section className="st-box st-items">
           <h2>Plats</h2>

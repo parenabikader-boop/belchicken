@@ -31,11 +31,11 @@ export const env = {
       TELECEL_MONEY: process.env.TELECEL_MONEY_CODE || '*808*4*1*2331833*MONTANT#',
     },
   },
-  // Adresse du restaurant et lien Google Maps (Plus Code 9F2J+V8 Ouagadougou), pour le message
-  // « commande prête » des commandes à emporter. Jamais la boîte postale.
-  restaurantAddress:
-    process.env.RESTAURANT_ADDRESS ||
-    'Kamsonghin, en face de Sonia Hôtel : https://www.google.com/maps/dir/?api=1&destination=12.352187,-1.519188',
+  // Adresse du restaurant et lien Google Maps « Itinéraire » (Plus Code 9F2J+V8 Ouagadougou), pour le
+  // message « commande prête » des commandes à emporter. Les mêmes que frontend/src/restaurant.js.
+  // Jamais la boîte postale.
+  restaurantAddress: process.env.RESTAURANT_ADDRESS || 'Kamsonghin, en face de Sonia Hôtel',
+  restaurantMapsUrl: process.env.RESTAURANT_MAPS_URL || 'https://www.google.com/maps/dir/?api=1&destination=12.352187,-1.519188',
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
     apiKey: process.env.CLOUDINARY_API_KEY || '',
@@ -62,6 +62,7 @@ export const messageContext = () => ({
   siteUrl: env.siteUrl,
   payment: env.payment,
   restaurantAddress: env.restaurantAddress,
+  restaurantMapsUrl: env.restaurantMapsUrl,
 });
 
 export const cloudinaryEnabled = () =>

@@ -6,11 +6,16 @@ export const STATUS_LABEL = {
   PAYEE: 'Payée',
   EN_PREPARATION: 'En préparation',
   EN_LIVRAISON: 'En livraison',
+  PRETE: 'Prête à retirer',
   LIVREE: 'Livrée',
   ANNULEE: 'Annulée',
 };
 
-export const ACTIVE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON'];
+// À emporter : retirée au restaurant (PRETE, puis LIVREE affichée « Retirée »), sans frais ni livreur
+export const isPickup = (o) => o?.mode === 'A_EMPORTER';
+export const statusLabel = (o, status = o.status) => (isPickup(o) && status === 'LIVREE' ? 'Retirée' : STATUS_LABEL[status]);
+
+export const ACTIVE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE'];
 
 // Étapes de la page Commandes, dans l'ordre du travail : un onglet (téléphone) ou une colonne
 // (ordinateur) par statut, avec l'action à faire. Puis l'historique (livrées et annulées).
@@ -18,7 +23,7 @@ export const STAGES = [
   {
     id: 'PAIEMENT_A_VERIFIER',
     label: 'À vérifier',
-    hint: 'Vérifiez ces paiements sur le téléphone marchand, puis confirmez-les avec les frais de livraison.',
+    hint: 'Vérifiez ces paiements sur le téléphone marchand, puis confirmez-les avec les frais de livraison (aucun frais pour les commandes à emporter).',
     empty: 'Aucun paiement à vérifier.',
   },
   {
@@ -30,7 +35,7 @@ export const STAGES = [
   {
     id: 'EN_PREPARATION',
     label: 'En préparation',
-    hint: 'Préparez ces commandes, puis choisissez le livreur au départ.',
+    hint: 'Préparez ces commandes, puis choisissez le livreur au départ. À emporter : prévenez le client qu’elle est prête.',
     empty: 'Aucune commande en préparation.',
   },
   {
@@ -40,17 +45,24 @@ export const STAGES = [
     empty: 'Aucune commande en route.',
   },
   {
+    // À emporter : prêtes, le client vient au comptoir
+    id: 'PRETE',
+    label: 'À retirer',
+    hint: 'Commandes à emporter prêtes : au comptoir, vérifiez le nom ou la référence, puis remettez-les au client.',
+    empty: 'Aucune commande à retirer.',
+  },
+  {
     // Livrées dont le remerciement n'est pas encore confirmé (toThank, calculé par l'API).
     // Avec l'envoi automatique, cette étape reste vide : les livrées vont directement dans l'historique.
     id: 'A_REMERCIER',
     label: 'Livrées · à remercier',
-    hint: 'Remerciez le client sur WhatsApp, puis confirmez l’envoi : la commande passe ensuite dans l’historique.',
+    hint: 'Livrées ou retirées au comptoir : remerciez le client sur WhatsApp, puis confirmez l’envoi. La commande passe ensuite dans l’historique.',
     empty: 'Aucun client à remercier.',
   },
 ];
-export const HISTORY = { id: 'HISTORIQUE', label: 'Historique', hint: 'Commandes terminées : livrées et remerciées, ou annulées.' };
+export const HISTORY = { id: 'HISTORIQUE', label: 'Historique', hint: 'Commandes terminées : livrées ou retirées et remerciées, ou annulées.' };
 export const HISTORY_FILTERS = [
-  { id: 'LIVREE', label: 'Livrées' },
+  { id: 'LIVREE', label: 'Livrées / retirées' },
   { id: 'ANNULEE', label: 'Annulées' },
 ];
 
@@ -63,6 +75,12 @@ export const NEXT_ACTION = {
   // Livrée : validée par le livreur avec le code du client, ou par l'agent avec un motif (OrderSteps.jsx)
   EN_LIVRAISON: { to: 'LIVREE', label: 'Livrée : remercier le client' },
 };
+// À emporter : « prête » au lieu du départ du livreur, puis remise au comptoir
+const PICKUP_ACTION = {
+  EN_PREPARATION: { to: 'PRETE', label: 'Commande prête : prévenir le client' },
+  PRETE: { to: 'LIVREE', label: 'Remise au client : le remercier' },
+};
+export const nextAction = (o) => (isPickup(o) && PICKUP_ACTION[o.status]) || NEXT_ACTION[o.status];
 
 export const METHOD_LABEL = { ORANGE_MONEY: 'Orange Money', MOOV_MONEY: 'Moov Money', TELECEL_MONEY: 'Telecel Money', ESPECES: 'Espèces' };
 
@@ -110,7 +128,7 @@ export function deliveryBlock(o) {
 export function timelineOf(o) {
   const statuses = o.history.map((h) => ({
     kind: `p-${h.toStatus}`,
-    title: h.fromStatus ? STATUS_LABEL[h.toStatus] : 'Commande reçue',
+    title: h.fromStatus ? statusLabel(o, h.toStatus) : 'Commande reçue',
     note: h.reason ? `Motif : ${h.reason}` : null,
     by: h.by || 'site de commande',
     at: h.at,

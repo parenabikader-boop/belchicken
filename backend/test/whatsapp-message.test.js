@@ -34,3 +34,13 @@ test('paiement Moov Money avec le numéro qui a payé', () => {
   });
   assert.equal(params[4], 'Moov Money depuis +22660442108');
 });
+
+test('alerte équipe : une commande à emporter le dit à la place de l’adresse', () => {
+  const params = buildNewOrderParams({
+    reference: 'BC-EMP001', customerName: 'Awa', customerPhone: '+22676123456', paymentMethod: 'TELECEL_MONEY',
+    paymentPayerPhone: '+22658123456', itemsTotal: 5500, mode: 'A_EMPORTER', latitude: null, addressNote: null,
+    items: [{ quantity: 1, productNumber: 7, productName: 'Finest', variantLabel: 'Menu', choice: null }],
+  });
+  assert.equal(params[4], 'Telecel Money depuis +22658123456');
+  assert.equal(params[5], 'À emporter : le client vient la retirer au restaurant');
+});

@@ -8,7 +8,12 @@ import { feeSchema } from '../src/routes/staff-orders.routes.js';
 
 // Codes marchands d'essai, différents pour vérifier que chacun est à sa place
 const TEST_PAYMENT = { merchantName: 'ECOFOOD', codes: { ORANGE_MONEY: '*1*11*MONTANT#', MOOV_MONEY: '*2*22*MONTANT#', TELECEL_MONEY: '*3*33*MONTANT#' } };
-const ctx = { siteUrl: 'https://belchicken-six.vercel.app/', payment: TEST_PAYMENT };
+const ctx = {
+  siteUrl: 'https://belchicken-six.vercel.app/',
+  payment: TEST_PAYMENT,
+  restaurantAddress: 'Kamsonghin, en face de Sonia Hôtel',
+  restaurantMapsUrl: 'https://www.google.com/maps/dir/?api=1&destination=12.352187,-1.519188',
+};
 const order = (extra = {}) => ({
   reference: 'BC-7K2Q9M',
   customerName: 'awa Traoré',
@@ -207,4 +212,38 @@ test('confirmer le paiement demande les frais', () => {
   assert.match(paymentConfirmError(null), /frais de livraison/);
   assert.match(paymentConfirmError(0), /invalides/);
   assert.equal(paymentConfirmError(1000), null);
+});
+
+// ─── À emporter ───
+const pickup = (extra = {}) => order({ mode: 'A_EMPORTER', ...extra });
+
+test('à emporter : messages sans frais, à chaque étape', () => {
+  assert.deepEqual(currentMessageKey(pickup({ status: 'PAIEMENT_A_VERIFIER' })), null);
+  assert.deepEqual(currentMessageKey(pickup({ status: 'PAYEE' })), { key: 'PAIEMENT_CONFIRME_EMPORTER' });
+  assert.deepEqual(currentMessageKey(pickup({ status: 'EN_PREPARATION' })), { key: 'EN_PREPARATION_EMPORTER' });
+  assert.deepEqual(currentMessageKey(pickup({ status: 'PRETE' })), { key: 'COMMANDE_PRETE' });
+  assert.deepEqual(currentMessageKey(pickup({ status: 'LIVREE' })), { key: 'RETIREE' });
+  assert.deepEqual(currentMessageKey(pickup({ status: 'ANNULEE' })), { key: 'ANNULEE' });
+  const paid = renderMessage('PAIEMENT_CONFIRME_EMPORTER', pickup({ status: 'PAYEE' }), ctx);
+  assert.match(paid, /paiement de 7 000 F pour la commande à emporter BC-7K2Q9M/);
+  assert.doesNotMatch(paid, /Frais de livraison/);
+});
+
+test('commande prête : adresse du restaurant et lien Itinéraire, jamais la boîte postale', () => {
+  assert.equal(
+    renderMessage('COMMANDE_PRETE', pickup({ status: 'PRETE' }), ctx),
+    'Bonjour Awa, votre commande BC-7K2Q9M est prête ! Vous pouvez venir la retirer au restaurant.\n\n' +
+      'Adresse : Kamsonghin, en face de Sonia Hôtel\n' +
+      'Itinéraire : https://www.google.com/maps/dir/?api=1&destination=12.352187,-1.519188\n\n' +
+      'Au comptoir, donnez votre nom ou la référence de la commande.\n\nBelchicken Burkina',
+  );
+  assert.doesNotMatch(MESSAGES.COMMANDE_PRETE.body, /BP/);
+});
+
+test('à emporter : l’étape « prête » demande que le client soit prévenu avant la remise', () => {
+  const at = new Date('2026-10-06T12:00:00Z');
+  const o = pickup({ status: 'PRETE', statusChanges: [{ toStatus: 'PRETE', createdAt: at }], events: [] });
+  assert.match(noticeError(noticeState(o)), /Commande prête à retirer/);
+  const sent = { ...o, events: [{ type: 'MESSAGE_ENVOYE', messageKey: 'COMMANDE_PRETE', createdAt: new Date(at.getTime() + 1000) }] };
+  assert.equal(noticeError(noticeState(sent)), null);
 });

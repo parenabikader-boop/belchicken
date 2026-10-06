@@ -1,41 +1,52 @@
 // Règles des statuts de commande (sans base de données, testées dans test/order-status.test.js).
 //
-// PAIEMENT_A_VERIFIER -> PAYEE -> EN_PREPARATION -> EN_LIVRAISON -> LIVREE
+// Livraison  : PAIEMENT_A_VERIFIER -> PAYEE -> EN_PREPARATION -> EN_LIVRAISON -> LIVREE
+// À emporter : PAIEMENT_A_VERIFIER -> PAYEE -> EN_PREPARATION -> PRETE -> LIVREE (affichée « Retirée »)
 // ANNULEE possible depuis tout statut sauf LIVREE et ANNULEE, avec un motif obligatoire.
 // Aucun passage automatique : PAYEE est posé à la main, après vérification sur le téléphone marchand.
 
-export const STATUSES = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'LIVREE', 'ANNULEE'];
-export const FLOW = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'LIVREE'];
-export const ACTIVE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON'];
+export const STATUSES = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE', 'LIVREE', 'ANNULEE'];
+export const MODES = ['LIVRAISON', 'A_EMPORTER'];
+export const FLOWS = {
+  LIVRAISON: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'LIVREE'],
+  A_EMPORTER: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE', 'LIVREE'],
+};
+export const FLOW = FLOWS.LIVRAISON;
+export const ACTIVE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE'];
 export const INITIAL_STATUS = 'PAIEMENT_A_VERIFIER';
+export const isPickup = (order) => order?.mode === 'A_EMPORTER';
 
 export const STATUS_LABEL = {
   PAIEMENT_A_VERIFIER: 'Paiement à vérifier',
   PAYEE: 'Payée',
   EN_PREPARATION: 'En préparation',
   EN_LIVRAISON: 'En livraison',
+  PRETE: 'Prête à retirer',
   LIVREE: 'Livrée',
   ANNULEE: 'Annulée',
 };
+// Libellé selon le mode : une commande à emporter remise au comptoir est « Retirée »
+export const statusLabel = (status, mode) => (mode === 'A_EMPORTER' && status === 'LIVREE' ? 'Retirée' : STATUS_LABEL[status]);
 
-export const nextStatus = (status) => {
-  const i = FLOW.indexOf(status);
-  return i >= 0 && i < FLOW.length - 1 ? FLOW[i + 1] : null;
+export const nextStatus = (status, mode = 'LIVRAISON') => {
+  const flow = FLOWS[mode] || FLOW;
+  const i = flow.indexOf(status);
+  return i >= 0 && i < flow.length - 1 ? flow[i + 1] : null;
 };
 
 export const canCancel = (status) => ACTIVE.includes(status);
 
 // Renvoie null si le changement est permis, sinon le message d'erreur (en français)
-export function transitionError(from, to, reason) {
+export function transitionError(from, to, reason, mode = 'LIVRAISON') {
   if (!STATUSES.includes(to)) return 'Statut inconnu.';
-  if (from === to) return `La commande est déjà « ${STATUS_LABEL[to]} ».`;
+  if (from === to) return `La commande est déjà « ${statusLabel(to, mode)} ».`;
   if (to === 'ANNULEE') {
-    if (!canCancel(from)) return `Une commande « ${STATUS_LABEL[from]} » ne peut plus être annulée.`;
+    if (!canCancel(from)) return `Une commande « ${statusLabel(from, mode)} » ne peut plus être annulée.`;
     if (!reason || reason.trim().length < 3) return "Indiquez le motif de l'annulation.";
     return null;
   }
-  if (nextStatus(from) !== to) {
-    return `Passage impossible de « ${STATUS_LABEL[from]} » à « ${STATUS_LABEL[to]} ».`;
+  if (nextStatus(from, mode) !== to) {
+    return `Passage impossible de « ${statusLabel(from, mode)} » à « ${statusLabel(to, mode)} ».`;
   }
   return null;
 }
@@ -64,6 +75,7 @@ export function deliveryError(order) {
 
 // Saisie ou modification du montant
 export function feeEditError(order) {
+  if (isPickup(order)) return 'Commande à emporter : pas de frais de livraison.';
   if (!FEE_EDITABLE.includes(order.status)) return 'Les frais ne se modifient plus une fois le livreur parti.';
   if (feeAlreadyPaid(order)) return 'Les frais de cette commande sont déjà payés.';
   return null;
@@ -71,7 +83,9 @@ export function feeEditError(order) {
 
 // Confirmer le paiement : les frais de livraison sont donnés en même temps, car le message
 // « paiement confirmé » les annonce au client
-export function paymentConfirmError(fee) {
+// À emporter : pas de frais de livraison.
+export function paymentConfirmError(fee, mode = 'LIVRAISON') {
+  if (mode === 'A_EMPORTER') return fee == null ? null : 'Commande à emporter : pas de frais de livraison.';
   if (fee == null) return 'Indiquez les frais de livraison : ils sont annoncés au client avec la confirmation du paiement.';
   if (!Number.isInteger(fee) || fee < FEE_MIN || fee > FEE_MAX) return 'Frais de livraison invalides (de 1 F à 50 000 F).';
   return null;
@@ -80,6 +94,7 @@ export function paymentConfirmError(fee) {
 // À la remise (livreur avec le code, ou agent sans code) : comment le client a payé les frais.
 // Obligatoire, sauf si les frais étaient déjà payés (anciennes commandes).
 export function feeMethodError(order, method) {
+  if (isPickup(order)) return null;
   if (feeAlreadyPaid(order)) return null;
   if (!FEE_METHODS.includes(method)) return 'Indiquez comment le client a payé les frais de livraison : espèces ou mobile money.';
   return null;

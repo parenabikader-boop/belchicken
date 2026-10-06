@@ -21,8 +21,15 @@ enum OrderStatus {
   PAYEE
   EN_PREPARATION
   EN_LIVRAISON
-  LIVREE
+  LIVREE // livrée, ou retirée au comptoir pour une commande à emporter
   ANNULEE
+  PRETE // à emporter : prête, le client peut venir la retirer
+}
+
+// Livraison à domicile, ou commande à emporter (retirée au restaurant, sans frais ni livreur)
+enum FulfillmentMode {
+  LIVRAISON
+  A_EMPORTER
 }
 
 enum PaymentMethod {
@@ -139,6 +146,9 @@ model Order {
 
   customerName  String
   customerPhone String // normalisé +226XXXXXXXX
+
+  // À emporter : ni position, ni frais de livraison, ni livreur. PRETE puis LIVREE (« Retirée »).
+  mode FulfillmentMode @default(LIVRAISON)
 
   paymentMethod     PaymentMethod
   paymentPayerPhone String?

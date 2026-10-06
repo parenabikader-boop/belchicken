@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { staffApi } from '../../api/client.js';
 import { formatPrice } from '../../utils/format.js';
-import { ACTIVE, deliveryBlock, FEE_EDITABLE, FEE_METHODS, formatPhone, formatTime, METHOD_LABEL, NEXT_ACTION } from './labels.js';
+import { ACTIVE, deliveryBlock, FEE_EDITABLE, FEE_METHODS, formatPhone, formatTime, isPickup, METHOD_LABEL, nextAction } from './labels.js';
 
 // Étapes d'une commande : un seul bouton par étape, qui enregistre l'étape ET ouvre WhatsApp avec le
 // message du client. L'étape suivante reste bloquée (ici et par l'API) tant que l'agent n'a pas
@@ -152,8 +152,9 @@ export function Notice({ order: o, steps, onChange }) {
 
 // Bouton de l'étape suivante (avec confirmation pour le paiement et les frais) et annulation
 export function Actions({ order: o, steps }) {
-  const next = NEXT_ACTION[o.status];
-  const [mode, setMode] = useState(null); // null | 'confirm' | 'depart' | 'handover' | 'cancel'
+  const next = nextAction(o);
+  const pickup = isPickup(o);
+  const [mode, setMode] = useState(null); // null | 'confirm' | 'depart' | 'handover' | 'counter' | 'cancel'
   const [reason, setReason] = useState('');
   const [fee, setFee] = useState('');
   const [courierId, setCourierId] = useState('');
@@ -169,26 +170,32 @@ export function Actions({ order: o, steps }) {
   const notified = !o.notice?.required;
   const blocked = !notified
     ? 'Prévenez d’abord le client : confirmez l’envoi du message ci-dessus.'
-    : o.status === 'EN_PREPARATION' ? deliveryBlock(o) : null;
+    : o.status === 'EN_PREPARATION' && !pickup ? deliveryBlock(o) : null;
   const go = (call) => steps.run(call);
   const amount = Number(fee.replace(/\s/g, ''));
 
   if (mode === 'confirm' && o.status === 'PAIEMENT_A_VERIFIER') {
     return (
-      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'PAYEE', deliveryFee: amount })); }}>
+      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'PAYEE', ...(pickup ? {} : { deliveryFee: amount }) })); }}>
         <b>Avez-vous vérifié le paiement sur le téléphone marchand ?</b>
         <p>
           <strong>{formatPrice(o.itemsTotal)}</strong> reçus par {METHOD_LABEL[o.paymentMethod]}
           {o.paymentPayerPhone && <> depuis le <strong>{formatPhone(o.paymentPayerPhone)}</strong></>}.
         </p>
-        <label htmlFor="st-fee" className="st-fee-label">Frais de livraison pour le quartier du client (annoncés dans le message)</label>
-        <span className="of-amount">
-          <input id="st-fee" type="text" inputMode="numeric" autoComplete="off" placeholder="ex. 1000" value={fee} onChange={(e) => setFee(e.target.value.replace(/[^\d\s]/g, ''))} autoFocus />
-          <span>F</span>
-        </span>
+        {pickup ? (
+          <p className="st-muted">Commande à emporter : pas de frais de livraison.</p>
+        ) : (
+          <>
+            <label htmlFor="st-fee" className="st-fee-label">Frais de livraison pour le quartier du client (annoncés dans le message)</label>
+            <span className="of-amount">
+              <input id="st-fee" type="text" inputMode="numeric" autoComplete="off" placeholder="ex. 1000" value={fee} onChange={(e) => setFee(e.target.value.replace(/[^\d\s]/g, ''))} autoFocus />
+              <span>F</span>
+            </span>
+          </>
+        )}
         {steps.error && <p className="st-err">{steps.error}</p>}
         <div className="st-action-row">
-          <button type="submit" className="btn btn-p" disabled={steps.busy || !(amount >= 1)}>{steps.busy ? 'Enregistrement…' : 'Oui, paiement reçu : prévenir le client'}</button>
+          <button type="submit" className="btn btn-p" disabled={steps.busy || (!pickup && !(amount >= 1))}>{steps.busy ? 'Enregistrement…' : 'Oui, paiement reçu : prévenir le client'}</button>
           <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
         </div>
       </form>
@@ -234,6 +241,21 @@ export function Actions({ order: o, steps }) {
     );
   }
 
+  // À emporter : remise au comptoir, après avoir reconnu le client
+  if (mode === 'counter' && o.status === 'PRETE') {
+    return (
+      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'LIVREE' })); }}>
+        <b>Le client est au comptoir ?</b>
+        <p>Vérifiez son nom (<strong>{o.customerName}</strong>) ou la référence <strong>{o.reference}</strong>, puis remettez-lui la commande.</p>
+        {steps.error && <p className="st-err">{steps.error}</p>}
+        <div className="st-action-row">
+          <button type="submit" className="btn btn-p" disabled={steps.busy}>{steps.busy ? 'Enregistrement…' : 'Oui, commande remise : remercier le client'}</button>
+          <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
+        </div>
+      </form>
+    );
+  }
+
   if (mode === 'cancel') {
     return (
       <form className="st-action cancel" onSubmit={async (e) => { e.preventDefault(); if (await go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'ANNULEE', reason }))) setReason(''); }}>
@@ -253,9 +275,11 @@ export function Actions({ order: o, steps }) {
     if (o.status === 'PAIEMENT_A_VERIFIER') {
       setFee(o.deliveryFee != null ? String(o.deliveryFee) : '');
       setMode('confirm');
-    } else if (o.status === 'EN_PREPARATION') {
+    } else if (o.status === 'EN_PREPARATION' && !pickup) {
       setCourierId('');
       setMode('depart');
+    } else if (o.status === 'PRETE') {
+      setMode('counter');
     } else go(() => staffApi.setStatus(o.reference, { from: o.status, to: next.to }));
   };
 
@@ -268,6 +292,7 @@ export function Actions({ order: o, steps }) {
           {o.paymentPayerPhone && <> depuis le <b>{formatPhone(o.paymentPayerPhone)}</b></>}.
         </p>
       )}
+      {o.status === 'PRETE' && <p className="st-wait">À emporter : le client vient la retirer au restaurant.</p>}
       {o.status === 'EN_LIVRAISON' && (
         <p className="st-wait">
           Le livreur valide la livraison avec le <b>code du client</b>.

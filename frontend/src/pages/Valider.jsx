@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { TunnelHead } from '../components/PageParts.jsx';
+import { DIRECTIONS_URL, HOURS, RESTAURANT } from '../restaurant.js';
 import PayCode from '../components/PayCode.jsx';
 import { useCart, useCartDetails } from '../context/CartContext.jsx';
 import { useMenu } from '../context/MenuContext.jsx';
@@ -9,7 +10,13 @@ import { formatPrice, plural } from '../utils/format.js';
 import { fillCode, MOBILE_MONEY, usePaymentCodes } from '../utils/payment.js';
 
 const DRAFT_KEY = 'belchicken.infos.v1';
-const EMPTY = { name: '', phone: '', method: null, payer: '', addr: '', geo: null };
+const EMPTY = { name: '', phone: '', method: null, payer: '', mode: 'LIVRAISON', addr: '', geo: null };
+
+// Livraison à domicile, ou à emporter (retrait au restaurant, sans frais de livraison)
+const MODES = [
+  { id: 'LIVRAISON', label: 'Livraison', sub: 'Chez vous ou au bureau, frais selon le quartier' },
+  { id: 'A_EMPORTER', label: 'À emporter', sub: 'Vous retirez la commande au restaurant, sans frais' },
+];
 
 const METHODS = MOBILE_MONEY;
 
@@ -32,6 +39,7 @@ function readDraft() {
     const draft = { ...EMPTY, ...JSON.parse(sessionStorage.getItem(DRAFT_KEY)) };
     // Un brouillon d'avant la suppression des espèces peut encore contenir ESPECES
     if (!METHODS.some((m) => m.id === draft.method)) draft.method = null;
+    if (!MODES.some((m) => m.id === draft.mode)) draft.mode = 'LIVRAISON';
     return draft;
   } catch {
     return EMPTY;
@@ -76,7 +84,7 @@ function validate(f) {
   {
     if (!isPhone(f.payer)) fail('payer', 'Indiquez le numéro ayant payé.');
   }
-  if (!f.geo && f.addr.trim().length < 5) {
+  if (f.mode === 'LIVRAISON' && !f.geo && f.addr.trim().length < 5) {
     fields.geo = 'Partagez votre position ou indiquez votre quartier et un repère.';
     fail('addr', 'Indiquez au moins un quartier et un repère.', 'Indiquez votre lieu de livraison.');
   }
@@ -217,6 +225,7 @@ export default function Valider() {
   };
 
   const blocked = items.some((i) => !i.product.isAvailable);
+  const delivery = form.mode === 'LIVRAISON';
 
   const submit = async () => {
     if (sending) return;
@@ -229,10 +238,11 @@ export default function Valider() {
     const payload = {
       customer: { name: form.name.trim(), phone: form.phone.trim() },
       payment: { method: form.method, payerPhone: form.payer.trim() },
-      ...(form.geo && {
+      mode: form.mode,
+      ...(delivery && form.geo && {
         location: { latitude: form.geo.latitude, longitude: form.geo.longitude, accuracy: form.geo.accuracy },
       }),
-      ...(form.addr.trim() && { addressNote: form.addr.trim() }),
+      ...(delivery && form.addr.trim() && { addressNote: form.addr.trim() }),
       // Jamais de prix : le serveur les recalcule
       items: lines.map((l) => ({
         productId: l.productId,
@@ -253,7 +263,8 @@ export default function Valider() {
         phone: payload.customer.phone,
         method: form.method,
         payer: payload.payment.payerPhone,
-        geo: !!form.geo,
+        mode: form.mode,
+        geo: delivery && !!form.geo,
         addr: payload.addressNote || '',
       };
       // Le panier est vidé par la page de confirmation : le vider ici ferait d'abord revenir
@@ -351,21 +362,44 @@ export default function Valider() {
               </section>
 
               <section className="box">
-                <div className="box-h"><span className="n">3</span><h2>Lieu de livraison</h2></div>
+                <div className="box-h"><span className="n">3</span><h2>Livraison ou à emporter</h2></div>
                 <div className="box-b">
-                  <div className={`geo${form.geo && !geoState ? ' ok' : ''}`}>
-                    <div className="ic"><PinIcon /></div>
-                    <div style={{ flex: 1 }} aria-live="polite"><b>{geoTitle}</b><span>{geoSub}</span></div>
-                    <button type="button" className="btn btn-s" style={{ padding: '9px 16px' }} onClick={locate} disabled={geoState === 'searching'}>
-                      {form.geo ? 'Actualiser' : 'Partager'}
-                    </button>
+                  <div className="methods modes" role="radiogroup" aria-label="Livraison ou à emporter">
+                    {MODES.map((m) => (
+                      <button key={m.id} type="button" role="radio" aria-checked={form.mode === m.id} className={`opt${form.mode === m.id ? ' on' : ''}`} onClick={() => set('mode', m.id)}>
+                        <span className="rd" aria-hidden="true" />
+                        <span className="l"><b>{m.label}</b><small>{m.sub}</small></span>
+                      </button>
+                    ))}
                   </div>
-                  {errors.geo && <p className="err-line">{errors.geo}</p>}
-                  <div className="fields" style={{ marginTop: 16 }}>
-                    <Field id="c-addr" label="Quartier et points de repère" hint="Obligatoire si vous ne partagez pas votre position" error={errors.addr} full>
-                      <textarea {...input('addr')} placeholder="Patte d’Oie, portail bleu après la pharmacie" maxLength={300} />
-                    </Field>
-                  </div>
+                  {delivery ? (
+                    <>
+                      <div className={`geo${form.geo && !geoState ? ' ok' : ''}`} style={{ marginTop: 16 }}>
+                        <div className="ic"><PinIcon /></div>
+                        <div style={{ flex: 1 }} aria-live="polite"><b>{geoTitle}</b><span>{geoSub}</span></div>
+                        <button type="button" className="btn btn-s" style={{ padding: '9px 16px' }} onClick={locate} disabled={geoState === 'searching'}>
+                          {form.geo ? 'Actualiser' : 'Partager'}
+                        </button>
+                      </div>
+                      {errors.geo && <p className="err-line">{errors.geo}</p>}
+                      <div className="fields" style={{ marginTop: 16 }}>
+                        <Field id="c-addr" label="Quartier et points de repère" hint="Obligatoire si vous ne partagez pas votre position" error={errors.addr} full>
+                          <textarea {...input('addr')} placeholder="Patte d’Oie, portail bleu après la pharmacie" maxLength={300} />
+                        </Field>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="pickup">
+                      <div className="ic"><PinIcon /></div>
+                      <div className="pickup-t">
+                        <b>{RESTAURANT.name}</b>
+                        <span>{RESTAURANT.address}, {RESTAURANT.city}</span>
+                        <small>{HOURS.map((h) => `${h.days} : ${h.time}`).join(' · ')}</small>
+                        <small>Nous vous écrivons sur WhatsApp dès que votre commande est prête.</small>
+                      </div>
+                      <a className="btn btn-s" href={DIRECTIONS_URL} target="_blank" rel="noreferrer">Itinéraire</a>
+                    </div>
+                  )}
                 </div>
               </section>
             </div>
@@ -382,7 +416,11 @@ export default function Valider() {
                   ))}
                   <tr className="tot"><td>Total des plats</td><td>{formatPrice(total)}</td></tr>
                 </tbody></table>
-                <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>Frais de livraison selon votre quartier : indiqués après la vérification de votre paiement, sur WhatsApp et sur la page de suivi. Vous les payez au livreur à la réception, en espèces ou par mobile money avec le code marchand.</p>
+                {delivery ? (
+                  <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>Frais de livraison selon votre quartier : indiqués après la vérification de votre paiement, sur WhatsApp et sur la page de suivi. Vous les payez au livreur à la réception, en espèces ou par mobile money avec le code marchand.</p>
+                ) : (
+                  <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>À emporter : pas de frais de livraison. Vous retirez votre commande au restaurant, {RESTAURANT.address}.</p>
+                )}
                 {blocked && <p className="err-line" style={{ marginTop: 12 }}>Un plat n'est plus disponible. Retirez-le dans Ma commande pour continuer.</p>}
                 <button type="submit" className="btn btn-p btn-block" style={{ marginTop: 16 }} disabled={sending || blocked}>
                   {sending ? 'Envoi en cours…' : 'Envoyer ma commande'}

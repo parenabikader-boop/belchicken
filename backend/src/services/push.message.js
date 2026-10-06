@@ -7,7 +7,7 @@ export function newOrderNotification(order) {
   const count = order.items.reduce((n, i) => n + i.quantity, 0);
   return {
     title: `Nouvelle commande ${order.reference} · ${formatFcfa(order.itemsTotal)}`,
-    body: `${count} article${count > 1 ? 's' : ''} · ${PAYMENT_LABELS[order.paymentMethod] || 'Paiement'} à vérifier`,
+    body: `${count} article${count > 1 ? 's' : ''}${order.mode === 'A_EMPORTER' ? ' · à emporter' : ''} · ${PAYMENT_LABELS[order.paymentMethod] || 'Paiement'} à vérifier`,
     url: `/equipe/commandes/${encodeURIComponent(order.reference)}`,
     tag: `commande-${order.reference}`, // une seule notification par commande
   };
@@ -27,12 +27,14 @@ export function courseNotification(order) {
 
 // Commande livrée : à l'équipe (Patron et Opérateurs), pour remercier le client.
 // « Commande BC-XXXX livrée par Issa à 14:32 ». Heure du Burkina = UTC.
+// À emporter : « Commande BC-XXXX retirée au comptoir à 14:32 ».
 export function deliveredNotification(order, { courierName, at, byAgent = null, auto = false }) {
   const time = new Date(at).toISOString().slice(11, 16).replace(':', ' h ');
-  const who = courierName ? ` par ${courierName}` : '';
-  const how = byAgent ? `Validée sans code par ${byAgent}. ` : '';
+  const pickup = order.mode === 'A_EMPORTER';
+  const who = !pickup && courierName ? ` par ${courierName}` : '';
+  const how = !pickup && byAgent ? `Validée sans code par ${byAgent}. ` : '';
   return {
-    title: `Commande ${order.reference} livrée${who} à ${time}`,
+    title: `Commande ${order.reference} ${pickup ? 'retirée au comptoir' : 'livrée'}${who} à ${time}`,
     body: auto ? `${how}Remerciement envoyé automatiquement au client.` : `${how}Remerciez le client sur WhatsApp, puis confirmez l’envoi.`,
     url: `/equipe/commandes/${encodeURIComponent(order.reference)}`,
     tag: `livree-${order.reference}`,

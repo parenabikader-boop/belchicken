@@ -789,3 +789,21 @@ main.p-menu{padding-bottom:0}
 .util .closed .dot{background:#b9a99a}
 /* Infos pratiques : bouton Itinéraire */
 .info-route{margin-top:12px;display:inline-flex}
+
+/* Livraison ou à emporter */
+.methods.modes{grid-template-columns:repeat(2,1fr)}
+.modes .opt{justify-content:flex-start}
+.modes .opt small{display:block;font-size:13px;color:var(--muted);font-weight:400}
+@media (max-width:640px){.methods.modes{grid-template-columns:1fr}}
+.pickup{display:flex;gap:14px;align-items:center;margin-top:16px;border:1.5px solid var(--ok);background:var(--ok-soft);border-radius:var(--r);padding:14px 16px}
+.pickup .ic{width:42px;height:42px;border-radius:50%;background:var(--panel);display:grid;place-items:center;color:var(--ok);flex:none}
+.pickup-t{flex:1;display:grid;gap:2px}
+.pickup-t b{font-size:15px}
+.pickup-t span{font-size:14px}
+.pickup-t small{font-size:12.5px;color:var(--muted)}
+.pickup .btn{padding:9px 16px;flex:none}
+@media (max-width:640px){.pickup{flex-wrap:wrap}.pickup .btn{width:100%}}
+/* Suivi à emporter : commande prête, adresse et itinéraire */
+.trk-ready{margin:14px 0 0;padding:14px 16px;border-radius:var(--r);background:var(--ok-soft);border-left:4px solid var(--ok);display:grid;gap:8px;justify-items:start}
+.trk-ready p{margin:0;font-size:15px}
+.trk-ready .trk-fee-lead{border-bottom:none;padding-bottom:0;margin:0}

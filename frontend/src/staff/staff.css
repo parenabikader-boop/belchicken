@@ -597,7 +597,7 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .od-detail{font-size:14px;font-weight:700;color:var(--brand-ink);margin:-2px 0 6px}
 
 /* 5 colonnes : le tableau prend plus de largeur que le reste de la page (jusqu'à 1440 px) */
-.od-board{--w:min(1440px,calc(100vw - 48px));width:var(--w);margin-left:calc((100% - var(--w)) / 2);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:start}
+.od-board{--w:min(1560px,calc(100vw - 32px));width:var(--w);margin-left:calc((100% - var(--w)) / 2);display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:start}
 .od-col{background:#fbeedd;border:1px solid #f1dcb4;border-radius:var(--r-lg);padding:10px;min-height:240px}
 .od-col.has{background:#fff8ea}
 .od-col.s-PAIEMENT_A_VERIFIER.has{background:#fff4d6;border-color:#e0a100}
@@ -684,3 +684,12 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .db-cash small{color:var(--muted);font-size:12.5px}
 .db-cash.has{border:2px solid #e0a100;background:#fff4d6}
 .lv-success p.lv-success-fee b{display:inline;font-size:inherit}
+
+/* À emporter : badge, statut « prête », colonne « À retirer » */
+.st-pills{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.st-pill.p-PRETE{background:#e3f1e4;color:#2b6e2f}
+.st-pill.p-EMPORTER{background:#f6cf76;color:#5c3900}
+.st-pickup{font-size:11px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;background:#fff1d6;color:#8a5a00;border-radius:999px;padding:2px 8px}
+.od-col.s-PRETE.has{background:#eef7ec;border-color:#9cc79a}
+.od-col.s-PRETE.has .od-count{background:#2b6e2f}
+.od-col.s-PRETE .od-hint,.od-stage.s-PRETE .od-hint{border-left-color:#2b6e2f}

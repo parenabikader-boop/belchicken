@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canCancel, nextStatus, transitionError } from '../src/services/order-status.js';
+import { canCancel, feeEditError, feeMethodError, nextStatus, paymentConfirmError, transitionError } from '../src/services/order-status.js';
 import { searchWhere, statusWhere } from '../src/services/staff-orders.service.js';
 import { thanksWhere } from '../src/services/customer-messages.js';
 
@@ -32,9 +32,9 @@ test('annulation : motif obligatoire, impossible une fois livrée ou déjà annu
 });
 
 test('filtres de la liste', () => {
-  const active = { status: { in: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON'] } };
+  const active = { status: { in: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE'] } };
   const thanks = thanksWhere();
-  // En cours : les 4 étapes et les livrées à remercier ; l'historique (LIVREE) : livrées et remerciées
+  // En cours : les étapes en cours et les livrées à remercier ; l'historique (LIVREE) : livrées et remerciées
   assert.deepEqual(statusWhere(undefined), { OR: [active, thanks] });
   assert.deepEqual(statusWhere('A_REMERCIER'), thanks);
   assert.deepEqual(statusWhere('LIVREE'), { status: 'LIVREE', NOT: thanks });
@@ -54,4 +54,22 @@ test('recherche par référence, nom ou téléphone', () => {
   const tel = searchWhere('76 12 34 56');
   assert.ok(tel.OR.some((c) => c.customerPhone?.contains === '76123456'));
   assert.deepEqual(searchWhere('Awa').OR[1], { customerName: { contains: 'Awa', mode: 'insensitive' } });
+});
+
+test('à emporter : préparation, prête, puis retirée (jamais en livraison)', () => {
+  assert.equal(nextStatus('EN_PREPARATION', 'A_EMPORTER'), 'PRETE');
+  assert.equal(nextStatus('PRETE', 'A_EMPORTER'), 'LIVREE');
+  assert.equal(transitionError('EN_PREPARATION', 'PRETE', null, 'A_EMPORTER'), null);
+  assert.match(transitionError('EN_PREPARATION', 'EN_LIVRAISON', null, 'A_EMPORTER'), /Passage impossible/);
+  assert.match(transitionError('EN_PREPARATION', 'PRETE'), /Passage impossible/); // livraison
+  assert.match(transitionError('LIVREE', 'ANNULEE', 'Erreur', 'A_EMPORTER'), /« Retirée » ne peut plus être annulée/);
+  assert.equal(transitionError('PRETE', 'ANNULEE', 'Client jamais venu', 'A_EMPORTER'), null);
+  assert.equal(canCancel('PRETE'), true);
+});
+
+test('à emporter : pas de frais de livraison', () => {
+  assert.equal(paymentConfirmError(undefined, 'A_EMPORTER'), null);
+  assert.match(paymentConfirmError(1000, 'A_EMPORTER'), /pas de frais/);
+  assert.match(feeEditError({ mode: 'A_EMPORTER', status: 'PAYEE' }), /pas de frais/);
+  assert.equal(feeMethodError({ mode: 'A_EMPORTER', deliveryFeeMethod: null }, undefined), null);
 });

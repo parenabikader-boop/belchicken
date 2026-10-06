@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { deviceLabel, newOrderNotification } from '../src/services/push.message.js';
+import { deliveredNotification, deviceLabel, newOrderNotification } from '../src/services/push.message.js';
 import { MAX_FAILURES, shouldRemove } from '../src/services/push.service.js';
 import { endpointSchema, subscriptionSchema } from '../src/routes/staff-push.routes.js';
 
@@ -58,4 +58,11 @@ test('nom lisible du téléphone', () => {
   assert.equal(deviceLabel('Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 Chrome/129.0 Mobile Safari/537.36'), 'Android · Chrome');
   assert.equal(deviceLabel('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Version/17.5 Mobile/15E148 Safari/604.1'), 'iPhone · Safari');
   assert.equal(deviceLabel(''), 'Appareil');
+});
+
+test('notifications à emporter : nouvelle commande et retrait au comptoir', () => {
+  const n = newOrderNotification({ reference: 'BC-E', mode: 'A_EMPORTER', paymentMethod: 'ORANGE_MONEY', itemsTotal: 5500, items: [{ quantity: 1 }] });
+  assert.equal(n.body, '1 article · à emporter · Orange Money à vérifier');
+  const d = deliveredNotification({ reference: 'BC-E', mode: 'A_EMPORTER' }, { courierName: null, at: '2026-10-06T14:32:00Z' });
+  assert.equal(d.title, 'Commande BC-E retirée au comptoir à 14 h 32');
 });

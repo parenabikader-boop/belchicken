@@ -2,9 +2,9 @@ import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { customerAutoEnabled, messageContext } from '../config/env.js';
 import {
-  ACTIVE, deliveryError, feeAlreadyPaid, feeEditError, feeMethodError, feeVerifyError, paymentConfirmError, STATUSES, transitionError,
+  ACTIVE, deliveryError, feeAlreadyPaid, feeEditError, feeMethodError, feeVerifyError, isPickup, paymentConfirmError, STATUSES, transitionError,
 } from './order-status.js';
-import { customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticeState, thanksWhere } from './customer-messages.js';
+import { customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticeState, THANKS_KEYS, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
 import { pushCourierAssigned, pushCourseCancelled, pushTeamDelivered } from './push.service.js';
 import { codeLocked, courierAssignError, generateDeliveryCode, handoverReasonError, MAX_CODE_ATTEMPTS } from './courier.js';
@@ -49,7 +49,7 @@ export async function listOrders({ status, q }) {
         items: { select: { quantity: true } },
         // Pour savoir si une commande livrée attend encore son remerciement
         statusChanges: { where: { toStatus: 'LIVREE' }, select: { toStatus: true, createdAt: true } },
-        events: { where: { messageKey: 'LIVREE' }, select: { type: true, messageKey: true, createdAt: true } },
+        events: { where: { messageKey: { in: THANKS_KEYS } }, select: { type: true, messageKey: true, createdAt: true } },
       },
     }),
     prisma.order.groupBy({ by: ['status'], _count: { _all: true } }),
@@ -63,6 +63,7 @@ export async function listOrders({ status, q }) {
     orders: orders.map((o) => ({
       reference: o.reference,
       status: o.status,
+      mode: o.mode,
       createdAt: o.createdAt,
       customerName: o.customerName,
       customerPhone: o.customerPhone,
@@ -96,6 +97,7 @@ export function toStaffOrder(order) {
   return {
     reference: o.reference,
     status: o.status,
+    mode: o.mode,
     createdAt: o.createdAt,
     customerName: o.customerName,
     customerPhone: o.customerPhone,
@@ -178,7 +180,7 @@ async function findForRules(tx, reference) {
   const order = await tx.order.findUnique({
     where: { reference },
     select: {
-      id: true, status: true, deliveryFee: true, deliveryFeeMethod: true, deliveryFeeVerifiedAt: true, courierId: true,
+      id: true, status: true, mode: true, deliveryFee: true, deliveryFeeMethod: true, deliveryFeeVerifiedAt: true, courierId: true,
       statusChanges: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
       events: { select: { type: true, messageKey: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
     },
@@ -224,6 +226,8 @@ export const statusChange = (order, to, staff, reason = null) => ({
 // Livrée (LIVREE) depuis l'espace équipe : seulement quand le client n'a plus son code, avec un motif
 // et la façon dont les frais ont été payés au livreur (feeMethod) ; le livreur, lui, valide avec le code
 // (courier.service.js).
+// À emporter : PRETE (« Commande prête », message avec l'adresse du restaurant), puis LIVREE quand
+// l'agent remet la commande au client au comptoir (sans code, sans motif, sans frais).
 // Chaque étape, sauf l'annulation, demande que le client ait été prévenu de l'étape en cours.
 export async function changeStatus(reference, { from, to, reason, deliveryFee, courierId, feeMethod }, staff) {
   let courier = null;
@@ -234,29 +238,30 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, c
     if (from && from !== order.status) {
       throw new AppError(409, "Quelqu'un a déjà changé le statut de cette commande. La page est mise à jour.", 'STATUT_DEJA_CHANGE');
     }
-    const fee = to === 'PAYEE' ? deliveryFee ?? order.deliveryFee : order.deliveryFee;
+    const pickup = isPickup(order);
+    const fee = pickup ? deliveryFee ?? null : to === 'PAYEE' ? deliveryFee ?? order.deliveryFee : order.deliveryFee;
     const error =
-      transitionError(order.status, to, reason) ||
+      transitionError(order.status, to, reason, order.mode) ||
       (to !== 'ANNULEE' ? noticeError(notice(order)) : null) ||
-      (to === 'PAYEE' ? paymentConfirmError(fee) : null) ||
+      (to === 'PAYEE' ? paymentConfirmError(fee, order.mode) : null) ||
       (to === 'EN_LIVRAISON' ? deliveryError(order) : null) ||
-      (to === 'LIVREE' ? handoverReasonError(reason) || feeMethodError(order, feeMethod) : null);
+      (to === 'LIVREE' && !pickup ? handoverReasonError(reason) || feeMethodError(order, feeMethod) : null);
     if (error) throw new AppError(400, error, 'CHANGEMENT_IMPOSSIBLE');
     if (to === 'EN_LIVRAISON') courier = await findCourier(tx, order, courierId);
 
     await guardedUpdate(tx, order, {
       status: to,
-      ...(to === 'PAYEE' ? { deliveryFee: fee } : {}),
+      ...(to === 'PAYEE' && !pickup ? { deliveryFee: fee } : {}),
       ...(courier ? { ...assignment(courier), deliveryCode: generateDeliveryCode(), deliveryCodeAttempts: 0 } : {}),
-      ...(to === 'LIVREE' && !feeAlreadyPaid(order) ? { deliveryFeeMethod: feeMethod } : {}),
+      ...(to === 'LIVREE' && !pickup && !feeAlreadyPaid(order) ? { deliveryFeeMethod: feeMethod } : {}),
     });
-    const withReason = to === 'ANNULEE' || to === 'LIVREE';
+    const withReason = to === 'ANNULEE' || (to === 'LIVREE' && !pickup);
     await tx.orderStatusChange.create({ data: statusChange(order, to, staff, withReason ? reason.trim() : null) });
-    if (to === 'PAYEE' && fee !== order.deliveryFee) {
+    if (to === 'PAYEE' && !pickup && fee !== order.deliveryFee) {
       await tx.orderEvent.create({ data: event(order.id, 'FRAIS_SAISIS', staff, { amount: fee }) });
     }
     if (courier) await tx.orderEvent.create({ data: event(order.id, 'LIVREUR_ASSIGNE', staff, { courierName: courier.name }) });
-    if (to === 'LIVREE') await tx.orderEvent.create({ data: event(order.id, 'LIVRAISON_SANS_CODE', staff) });
+    if (to === 'LIVREE' && !pickup) await tx.orderEvent.create({ data: event(order.id, 'LIVRAISON_SANS_CODE', staff) });
   });
   if (courier) notifyCourier(reference, courier.id);
   if (to === 'LIVREE') notifyDelivered(reference, staff);
@@ -295,7 +300,7 @@ export function notifyDelivered(reference, byAgent = null) {
   prisma.order
     .findUnique({
       where: { reference },
-      select: { id: true, reference: true, courierName: true, statusChanges: { where: { toStatus: 'LIVREE' }, select: { createdAt: true } } },
+      select: { id: true, reference: true, mode: true, courierName: true, statusChanges: { where: { toStatus: 'LIVREE' }, select: { createdAt: true } } },
     })
     .then((order) => order && pushTeamDelivered(order, {
       courierName: order.courierName,

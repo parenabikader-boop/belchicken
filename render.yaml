@@ -49,6 +49,8 @@ services:
         sync: false
       - key: RESTAURANT_ADDRESS
         sync: false
+      - key: RESTAURANT_MAPS_URL
+        sync: false
       # Photos du menu et de l'accueil (console Cloudinary > Settings > API Keys)
       - key: CLOUDINARY_CLOUD_NAME
         sync: false

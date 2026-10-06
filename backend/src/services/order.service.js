@@ -18,17 +18,20 @@ export async function createOrder(input) {
   const { lines, itemsTotal } = priceItems(input.items, products);
 
   const { payment } = input;
+  // À emporter : ni position ni repères (le client vient au restaurant)
+  const delivery = input.mode !== 'A_EMPORTER';
 
   const data = {
+    mode: input.mode,
     customerName: input.customer.name,
     customerPhone: input.customer.phone,
     paymentMethod: payment.method,
     paymentPayerPhone: payment.payerPhone,
     // paymentReference n'est plus renseigné : colonne laissée vide, sans migration pour l'instant
-    latitude: input.location?.latitude ?? null,
-    longitude: input.location?.longitude ?? null,
-    locationAccuracy: input.location?.accuracy != null ? Math.round(input.location.accuracy) : null,
-    addressNote: input.addressNote ?? null,
+    latitude: delivery ? input.location?.latitude ?? null : null,
+    longitude: delivery ? input.location?.longitude ?? null : null,
+    locationAccuracy: delivery && input.location?.accuracy != null ? Math.round(input.location.accuracy) : null,
+    addressNote: delivery ? input.addressNote ?? null : null,
     itemsTotal,
     items: { create: lines },
     // Première ligne de l'historique : commande reçue, paiement à vérifier par l'équipe
@@ -75,6 +78,7 @@ export function toPublicOrder(order) {
   return {
     reference: order.reference,
     status: order.status,
+    mode: order.mode,
     createdAt: order.createdAt,
     paymentMethod: order.paymentMethod,
     itemsTotal: order.itemsTotal,
