@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
-import { MERCHANT } from '../components/Layout.jsx';
+import { MERCHANT_BY_METHOD, RESTAURANT } from '../restaurant.js';
 import { TunnelHead } from '../components/PageParts.jsx';
 import { useCart, useCartDetails } from '../context/CartContext.jsx';
 import { useMenu } from '../context/MenuContext.jsx';
@@ -296,7 +296,13 @@ export default function Valider() {
                 <div className="box-h"><span className="n">2</span><h2>Paiement</h2></div>
                 <div className="box-b">
                   <div className="alert info pay-how">
-                    <span>Envoyez le montant de votre commande au <b>{MERCHANT}</b>, puis indiquez le numéro qui a payé. Votre commande est préparée dès que le paiement est vérifié.</span>
+                    <span>
+                      Envoyez le montant de votre commande au numéro marchand
+                      {form.method
+                        ? <> <b>{MERCHANT_BY_METHOD[form.method]}</b> ({form.method === 'ORANGE_MONEY' ? 'Orange Money' : 'Moov Money'})</>
+                        : <> : Orange Money <b>{RESTAURANT.orangeMoney}</b>, Moov Money <b>{RESTAURANT.moovMoney}</b></>}
+                      , puis indiquez le numéro qui a payé. Votre commande est préparée dès que le paiement est vérifié.
+                    </span>
                   </div>
                   <fieldset>
                     <legend>Moyen de paiement utilisé <i style={{ color: 'var(--bad)', fontStyle: 'normal' }}>*</i></legend>
@@ -338,7 +344,7 @@ export default function Valider() {
                   {errors.geo && <p className="err-line">{errors.geo}</p>}
                   <div className="fields" style={{ marginTop: 16 }}>
                     <Field id="c-addr" label="Quartier et points de repère" hint="Obligatoire si vous ne partagez pas votre position" error={errors.addr} full>
-                      <textarea {...input('addr')} placeholder="Secteur 22, portail bleu après la pharmacie" maxLength={300} />
+                      <textarea {...input('addr')} placeholder="Patte d’Oie, portail bleu après la pharmacie" maxLength={300} />
                     </Field>
                   </div>
                 </div>

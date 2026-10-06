@@ -12,10 +12,11 @@ import { formatFcfa } from '../utils/format.js';
 import { clean } from './whatsapp.message.js';
 
 // Phrase des frais de livraison, la même dans les messages et sur la page de suivi. Les frais sont
-// payés au livreur à la réception, en espèces ou par mobile money au numéro marchand.
-const feeLine = (fee, number) =>
-  `Frais de livraison : ${fee}, à payer au livreur à la réception, en espèces ou par Orange Money / Moov Money au ${number}.`;
-export const feeSentence = (o, ctx) => feeLine(formatFcfa(o.deliveryFee), formatPhone(ctx.merchantNumber));
+// payés au livreur à la réception, en espèces ou par mobile money au numéro marchand de l'opérateur.
+const feeLine = (fee, orange, moov) =>
+  `Frais de livraison : ${fee}, à payer au livreur à la réception, en espèces, par Orange Money au ${orange} ou par Moov Money au ${moov}.`;
+const merchants = (ctx) => [formatPhone(ctx.orangeMoneyNumber), formatPhone(ctx.moovMoneyNumber)];
+export const feeSentence = (o, ctx) => feeLine(formatFcfa(o.deliveryFee), ...merchants(ctx));
 
 export const MESSAGES = {
   PAIEMENT_CONFIRME: {
@@ -23,18 +24,18 @@ export const MESSAGES = {
     label: 'Paiement confirmé et frais de livraison',
     body:
       'Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande {{2}}. Merci !\n\n' +
-      feeLine('{{4}}', '{{5}}') + '\n\n' +
-      'Suivez votre commande ici : {{6}}\n\nBelchicken',
-    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), formatFcfa(o.deliveryFee), formatPhone(ctx.merchantNumber), trackingUrl(o, ctx)],
+      feeLine('{{4}}', '{{5}}', '{{6}}') + '\n\n' +
+      'Suivez votre commande ici : {{7}}\n\nBelchicken Burkina',
+    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), formatFcfa(o.deliveryFee), ...merchants(ctx), trackingUrl(o, ctx)],
   },
   EN_PREPARATION: {
     template: 'commande_en_preparation',
     label: 'Commande en préparation',
     body:
       'Bonjour {{1}}, votre commande {{2}} est en préparation.\n\n' +
-      feeLine('{{3}}', '{{4}}') + '\n\n' +
-      'Suivez votre commande ici : {{5}}\n\nBelchicken',
-    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.deliveryFee), formatPhone(ctx.merchantNumber), trackingUrl(o, ctx)],
+      feeLine('{{3}}', '{{4}}', '{{5}}') + '\n\n' +
+      'Suivez votre commande ici : {{6}}\n\nBelchicken Burkina',
+    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.deliveryFee), ...merchants(ctx), trackingUrl(o, ctx)],
   },
   EN_ROUTE: {
     template: 'commande_en_route',
@@ -42,15 +43,15 @@ export const MESSAGES = {
     body:
       'Bonjour {{1}}, votre commande {{2}} est en route ! Le livreur arrive bientôt : gardez votre téléphone près de vous.\n\n' +
       'Donnez ce code au livreur à la réception : {{3}}. Ne le donnez qu’au livreur, quand il vous remet la commande.\n\n' +
-      feeLine('{{4}}', '{{5}}') + '\n\n' +
-      'Suivez votre commande ici : {{6}}\n\nBelchicken',
+      feeLine('{{4}}', '{{5}}', '{{6}}') + '\n\n' +
+      'Suivez votre commande ici : {{7}}\n\nBelchicken Burkina',
     // Code de remise à 4 chiffres (courier.js), créé au passage EN_LIVRAISON
-    params: (o, ctx) => [firstName(o.customerName), o.reference, o.deliveryCode || '-', formatFcfa(o.deliveryFee), formatPhone(ctx.merchantNumber), trackingUrl(o, ctx)],
+    params: (o, ctx) => [firstName(o.customerName), o.reference, o.deliveryCode || '-', formatFcfa(o.deliveryFee), ...merchants(ctx), trackingUrl(o, ctx)],
   },
   LIVREE: {
     template: 'commande_livree',
     label: 'Commande livrée, remerciement',
-    body: 'Bonjour {{1}}, votre commande {{2}} a été livrée. Merci de votre confiance et bon appétit ! À bientôt chez Belchicken.',
+    body: 'Bonjour {{1}}, votre commande {{2}} a été livrée. Merci de votre confiance et bon appétit ! À bientôt chez Belchicken Burkina.',
     params: (o) => [firstName(o.customerName), o.reference],
   },
   ANNULEE: {
@@ -58,7 +59,7 @@ export const MESSAGES = {
     label: 'Commande annulée, avec le motif',
     body:
       'Bonjour {{1}}, votre commande {{2}} a été annulée.\nMotif : {{3}}.\n\n' +
-      'Pour toute question, répondez simplement à ce message.\n\nBelchicken',
+      'Pour toute question, répondez simplement à ce message.\n\nBelchicken Burkina',
     params: (o) => [firstName(o.customerName), o.reference, (o.cancelReason || 'non précisé').trim().replace(/[\s.!]+$/, '')],
   },
 };
@@ -78,7 +79,7 @@ export function firstName(name) {
   return first ? first[0].toLocaleUpperCase('fr') + first.slice(1) : 'cher client';
 }
 
-// +22670000000 -> « +226 70 00 00 00 »
+// +22676123456 -> « +226 76 12 34 56 »
 export function formatPhone(phone) {
   const m = /^\+?226(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(String(phone || '').replace(/\s/g, ''));
   return m ? `+226 ${m[1]} ${m[2]} ${m[3]} ${m[4]}` : String(phone || '');

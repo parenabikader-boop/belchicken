@@ -61,14 +61,14 @@ test('livraison validée par l’agent : motif obligatoire', () => {
 test('le livreur voit seulement les frais à encaisser : ni total des plats, ni code, ni paiement', () => {
   const c = toCourse({
     reference: 'BC-7K2Q9M', status: 'EN_LIVRAISON', courierAssignedAt: new Date(), customerName: 'Awa', customerPhone: '+22676123456',
-    addressNote: 'Secteur 22, portail bleu', latitude: 11.18, longitude: -4.29, locationAccuracy: 12,
-    itemsTotal: 7000, deliveryFee: 1000, paymentMethod: 'ORANGE_MONEY', paymentPayerPhone: '+22670000000',
+    addressNote: 'Patte d’Oie, portail bleu', latitude: 11.18, longitude: -4.29, locationAccuracy: 12,
+    itemsTotal: 7000, deliveryFee: 1000, paymentMethod: 'ORANGE_MONEY', paymentPayerPhone: '+22676543210',
     deliveryCode: '0427', deliveryCodeAttempts: 1,
     items: [{ productName: 'Menu Original', productNumber: 7, variantLabel: 'Menu', choice: null, note: null, quantity: 2, unitPrice: 3500, lineTotal: 7000 }],
     statusChanges: [],
   });
   const text = JSON.stringify(c);
-  for (const hidden of ['7000', '3500', '0427', 'ORANGE', '+22670000000']) assert.ok(!text.includes(hidden), hidden);
+  for (const hidden of ['7000', '3500', '0427', 'ORANGE', '+22676543210']) assert.ok(!text.includes(hidden), hidden);
   assert.equal(c.deliveryFee, 1000);
   assert.equal(c.feePaidBefore, false);
   assert.equal(c.feeMethod, null);
@@ -80,7 +80,7 @@ test('le livreur voit seulement les frais à encaisser : ni total des plats, ni 
 });
 
 test('message « en route » : le code de remise est dedans', () => {
-  const ctx = { siteUrl: 'https://belchicken-six.vercel.app', merchantNumber: '+22670000000' };
+  const ctx = { siteUrl: 'https://belchicken-six.vercel.app', orangeMoneyNumber: '+22601010101', moovMoneyNumber: '+22602020202' };
   const text = renderMessage('EN_ROUTE', { customerName: 'awa', reference: 'BC-7K2Q9M', deliveryCode: '0427', deliveryFee: 1000 }, ctx);
   assert.match(text, /Donnez ce code au livreur à la réception : 0427\./);
   assert.match(text, /suivi\/BC-7K2Q9M/);

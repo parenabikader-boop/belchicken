@@ -5,7 +5,7 @@ import { createOrderSchema } from '../src/validators/order.schema.js';
 const base = {
   customer: { name: 'Awa Ouédraogo', phone: '76 12 34 56' },
   payment: { method: 'ORANGE_MONEY', payerPhone: '76123456' },
-  addressNote: 'Secteur 22, portail bleu',
+  addressNote: 'Patte d’Oie, portail bleu',
   items: [{ productId: 'p1', variantId: 'v1', quantity: 2 }],
 };
 

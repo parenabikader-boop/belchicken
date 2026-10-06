@@ -19,8 +19,16 @@ export const env = {
   },
   // Adresse du site public : lien de suivi envoyé au client (/suivi/BC-XXXXXX)
   siteUrl: process.env.PUBLIC_SITE_URL || 'https://belchicken-six.vercel.app',
-  // Numéro marchand Orange Money / Moov Money, donné au client pour les frais de livraison (provisoire)
-  merchantNumber: process.env.MERCHANT_NUMBER || '+22670000000',
+  // Numéros marchands donnés au client pour les frais de livraison (messages et page de suivi).
+  // Les mêmes que dans frontend/src/restaurant.js. MERCHANT_NUMBER (ancien réglage, un seul numéro) sert
+  // si le numéro d'un opérateur est vide. EN ATTENTE du client : +22670000000 est provisoire.
+  orangeMoneyNumber: process.env.ORANGE_MONEY_NUMBER || process.env.MERCHANT_NUMBER || '+22670000000',
+  moovMoneyNumber: process.env.MOOV_MONEY_NUMBER || process.env.MERCHANT_NUMBER || '+22670000000',
+  // Adresse du restaurant et lien Google Maps (Plus Code 9F2J+V8 Ouagadougou), pour le message
+  // « commande prête » des commandes à emporter. Jamais la boîte postale.
+  restaurantAddress:
+    process.env.RESTAURANT_ADDRESS ||
+    'Kamsonghin, en face de Sonia Hôtel : https://www.google.com/maps/dir/?api=1&destination=12.352187,-1.519188',
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
     apiKey: process.env.CLOUDINARY_API_KEY || '',
@@ -42,8 +50,13 @@ export const whatsappEnabled = () =>
 // Envoi automatique des messages au client : l'API WhatsApp configurée ET l'option activée
 export const customerAutoEnabled = () => Boolean(env.whatsapp.token && env.whatsapp.phoneNumberId && env.whatsapp.customerAuto);
 
-// Ce dont les messages au client ont besoin (lien de suivi, numéro marchand)
-export const messageContext = () => ({ siteUrl: env.siteUrl, merchantNumber: env.merchantNumber });
+// Ce dont les messages au client ont besoin (lien de suivi, numéros marchands, adresse du restaurant)
+export const messageContext = () => ({
+  siteUrl: env.siteUrl,
+  orangeMoneyNumber: env.orangeMoneyNumber,
+  moovMoneyNumber: env.moovMoneyNumber,
+  restaurantAddress: env.restaurantAddress,
+});
 
 export const cloudinaryEnabled = () =>
   Boolean(env.cloudinary.cloudName && env.cloudinary.apiKey && env.cloudinary.apiSecret);

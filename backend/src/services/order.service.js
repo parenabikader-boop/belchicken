@@ -81,8 +81,11 @@ export function toPublicOrder(order) {
     deliveryFee: order.deliveryFee ?? null,
     // Frais payés au livreur à la réception (espèces ou mobile money) : payés une fois la commande remise
     deliveryFeePaid: order.deliveryFeeMethod != null,
-    // Numéro marchand pour payer les frais par mobile money (le même que dans les messages), tant qu'ils sont attendus
-    payTo: order.deliveryFee != null && order.deliveryFeeMethod == null && order.status !== 'ANNULEE' ? formatPhone(env.merchantNumber) : null,
+    // Numéros marchands pour payer les frais par mobile money (les mêmes que dans les messages), tant qu'ils sont attendus
+    payTo:
+      order.deliveryFee != null && order.deliveryFeeMethod == null && order.status !== 'ANNULEE'
+        ? { orangeMoney: formatPhone(env.orangeMoneyNumber), moovMoney: formatPhone(env.moovMoneyNumber) }
+        : null,
     steps: changes.map((h) => ({ status: h.toStatus, at: h.createdAt })),
     cancelReason: changes.findLast((h) => h.toStatus === 'ANNULEE')?.reason || null,
     items: order.items.map((i) => ({

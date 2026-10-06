@@ -6,7 +6,8 @@ import {
 import { deliveryError, feeEditError, feeMethodError, feeVerifyError, paymentConfirmError } from '../src/services/order-status.js';
 import { feeSchema } from '../src/routes/staff-orders.routes.js';
 
-const ctx = { siteUrl: 'https://belchicken-six.vercel.app/', merchantNumber: '+22670000000' };
+// Numéros marchands d'essai, différents pour vérifier que chacun est à sa place
+const ctx = { siteUrl: 'https://belchicken-six.vercel.app/', orangeMoneyNumber: '+22601010101', moovMoneyNumber: '+22602020202' };
 const order = (extra = {}) => ({
   reference: 'BC-7K2Q9M',
   customerName: 'awa Traoré',
@@ -20,7 +21,7 @@ const order = (extra = {}) => ({
   ...extra,
 });
 const VU = new Date('2026-10-06T12:00:00Z');
-const FEES = 'Frais de livraison : 1 000 F, à payer au livreur à la réception, en espèces ou par Orange Money / Moov Money au +226 70 00 00 00.';
+const FEES = 'Frais de livraison : 1 000 F, à payer au livreur à la réception, en espèces, par Orange Money au +226 01 01 01 01 ou par Moov Money au +226 02 02 02 02.';
 
 test('prénom : premier mot du nom, avec une majuscule', () => {
   assert.equal(firstName('awa Traoré'), 'Awa');
@@ -34,7 +35,7 @@ test('paiement confirmé : prénom, référence, montants réels, numéro marcha
     text,
     'Bonjour Awa, nous avons bien reçu votre paiement de 7 000 F pour la commande BC-7K2Q9M. Merci !\n\n' +
       FEES + '\n\n' +
-      'Suivez votre commande ici : https://belchicken-six.vercel.app/suivi/BC-7K2Q9M\n\nBelchicken',
+      'Suivez votre commande ici : https://belchicken-six.vercel.app/suivi/BC-7K2Q9M\n\nBelchicken Burkina',
   );
 });
 
@@ -42,7 +43,7 @@ test('en préparation et en route : les frais à payer au livreur sont rappelés
   assert.equal(
     renderMessage('EN_PREPARATION', order({ status: 'EN_PREPARATION', deliveryFee: 1000 }), ctx),
     'Bonjour Awa, votre commande BC-7K2Q9M est en préparation.\n\n' + FEES + '\n\n' +
-      'Suivez votre commande ici : https://belchicken-six.vercel.app/suivi/BC-7K2Q9M\n\nBelchicken',
+      'Suivez votre commande ici : https://belchicken-six.vercel.app/suivi/BC-7K2Q9M\n\nBelchicken Burkina',
   );
   const route = renderMessage('EN_ROUTE', order({ status: 'EN_LIVRAISON', deliveryFee: 1000, deliveryCode: '0427' }), ctx);
   assert.match(route, /Donnez ce code au livreur à la réception : 0427\./);

@@ -1,4 +1,4 @@
-import { MERCHANT, WHATSAPP } from '../components/Layout.jsx';
+import { DIRECTIONS_URL, HOURS, RESTAURANT, telHref } from '../restaurant.js';
 import { PageHead } from '../components/PageParts.jsx';
 
 export default function Infos() {
@@ -16,15 +16,21 @@ export default function Infos() {
           <div className="info-card">
             <h3>Paiement</h3>
             <p style={{ marginBottom: 10 }}>Le paiement se fait avant la livraison, par Orange Money ou Moov Money. Envoyez le montant de votre commande, puis indiquez le numéro qui a payé.</p>
-            <dl><dt>Orange Money</dt><dd>{MERCHANT}</dd><dt>Moov Money</dt><dd>{MERCHANT}</dd></dl>
+            <dl><dt>Orange Money</dt><dd>{RESTAURANT.orangeMoney}</dd><dt>Moov Money</dt><dd>{RESTAURANT.moovMoney}</dd></dl>
           </div>
           <div className="info-card">
             <h3>Horaires</h3>
-            <dl><dt>Lundi – jeudi</dt><dd>11 h – 23 h</dd><dt>Vendredi – samedi</dt><dd>11 h – minuit</dd><dt>Dimanche</dt><dd>16 h – 23 h</dd></dl>
+            <dl>{HOURS.flatMap((h) => [<dt key={`${h.days}-j`}>{h.days}</dt>, <dd key={`${h.days}-h`}>{h.time}</dd>])}</dl>
           </div>
           <div className="info-card">
             <h3>Contact</h3>
-            <dl><dt>WhatsApp</dt><dd>{WHATSAPP}</dd><dt>Adresse</dt><dd>À compléter</dd></dl>
+            <dl>
+              <dt>Téléphone</dt><dd><a href={telHref(RESTAURANT.phone)}>{RESTAURANT.phone}</a></dd>
+              <dt>WhatsApp</dt><dd>{RESTAURANT.whatsapp}</dd>
+              <dt>Adresse</dt><dd>{RESTAURANT.address}, {RESTAURANT.city}</dd>
+              <dt>Plus Code</dt><dd>{RESTAURANT.plusCode}</dd>
+            </dl>
+            <a className="btn btn-s info-route" href={DIRECTIONS_URL} target="_blank" rel="noreferrer">Itinéraire</a>
           </div>
         </div>
       </div>

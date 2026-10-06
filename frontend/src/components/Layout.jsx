@@ -1,13 +1,21 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
 import InstallBanner from './InstallBanner.jsx';
+import { DIRECTIONS_URL, openStatus, RESTAURANT, telHref } from '../restaurant.js';
 
-// Numéro provisoire, en attente du numéro définitif du client (voir CLAUDE.md)
-export const WHATSAPP = '+226 70 00 00 01';
-// Numéro marchand Orange Money / Moov Money, provisoire lui aussi.
-// À garder identique à MERCHANT_NUMBER du serveur (messages WhatsApp et page de suivi).
-export const MERCHANT = '+226 70 00 00 00';
+// Informations du restaurant : src/restaurant.js
+export const WHATSAPP = RESTAURANT.whatsapp;
+
+// « Commandes ouvertes » ou « Fermé », selon les horaires (mis à jour chaque minute)
+function useOpenStatus() {
+  const [status, setStatus] = useState(() => openStatus());
+  useEffect(() => {
+    const t = setInterval(() => setStatus(openStatus()), 60000);
+    return () => clearInterval(t);
+  }, []);
+  return status;
+}
 
 const TUNNEL = /^\/(commande|valider|confirmation|suivi)(\/|$)/;
 
@@ -32,6 +40,7 @@ function Brand({ subtitle }) {
 export default function Layout() {
   const { count } = useCart();
   const { pathname } = useLocation();
+  const status = useOpenStatus();
 
   // Chaque page s'ouvre en haut, comme dans la maquette
   useEffect(() => {
@@ -46,7 +55,7 @@ export default function Layout() {
       <>
         <header className="top tunnel">
           <div className="wrap">
-            <Link className="brand" to="/" aria-label="Belchicken, accueil" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <Link className="brand" to="/" aria-label="Belchicken Burkina, accueil" style={{ textDecoration: 'none', color: 'inherit' }}>
               <Brand subtitle="Commande en ligne" />
             </Link>
             <Link className="back" to="/menu">‹ Retour au menu</Link>
@@ -62,13 +71,15 @@ export default function Layout() {
   return (
     <>
       <div className="util"><div className="wrap">
-        <span><span className="dot"></span><b>Commandes ouvertes</b> · 11 h – 23 h</span>
+        <span className={status.open ? undefined : 'closed'}>
+          <span className="dot"></span><b>{status.open ? 'Commandes ouvertes' : 'Fermé'}</b> · {status.text}
+        </span>
         <span className="r hide-s">WhatsApp : <b>{WHATSAPP}</b></span>
       </div></div>
 
       <header className="top">
         <div className="wrap">
-          <Link className="brand" to="/" aria-label="Belchicken, accueil" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <Link className="brand" to="/" aria-label="Belchicken Burkina, accueil" style={{ textDecoration: 'none', color: 'inherit' }}>
             <Brand subtitle="Commande en ligne" />
           </Link>
           <nav className="nav" aria-label="Navigation principale">
@@ -94,8 +105,16 @@ export default function Layout() {
           <div><div className="brand"><Brand subtitle="Fresh fried chicken" /></div></div>
           <div><h4>Commander</h4><ul><li><Link to="/menu">Menu</Link></li><li><Link to="/commande">Ma commande</Link></li></ul></div>
           <div><h4>Aide</h4><ul><li><Link to="/infos">Livraison et paiement</Link></li><li><Link to="/infos">Horaires</Link></li></ul></div>
-          <div><h4>Contact</h4><ul><li>WhatsApp : {WHATSAPP}</li><li>Adresse : à compléter</li></ul></div>
-          <div className="legal"><span>© {new Date().getFullYear()} Belchicken</span><span>Prix en francs CFA</span></div>
+          <div>
+            <h4>Contact</h4>
+            <ul>
+              <li>Téléphone : <a href={telHref(RESTAURANT.phone)}>{RESTAURANT.phone}</a></li>
+              <li>WhatsApp : {WHATSAPP}</li>
+              <li>{RESTAURANT.address}, {RESTAURANT.city}</li>
+              <li><a href={DIRECTIONS_URL} target="_blank" rel="noreferrer">Itinéraire Google Maps</a></li>
+            </ul>
+          </div>
+          <div className="legal"><span>© {new Date().getFullYear()} {RESTAURANT.name}</span><span>Prix en francs CFA</span></div>
         </div>
       </footer>
     </>

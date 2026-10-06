@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
-import { MERCHANT, WHATSAPP } from '../components/Layout.jsx';
+import { WHATSAPP } from '../components/Layout.jsx';
+import { RESTAURANT } from '../restaurant.js';
 import { TunnelHead } from '../components/PageParts.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils/format.js';
@@ -199,13 +200,15 @@ function Tracking({ order, offline }) {
 
 // Frais de livraison : payés au livreur à la réception, en espèces ou par mobile money au numéro marchand
 function FeeToPay({ fee, payTo, children }) {
+  // payTo : numéros marchands donnés par le serveur (les mêmes que dans les messages WhatsApp)
   return (
     <div className="trk-fee">
       {children}
       <p>Frais de livraison</p>
       <b>{formatPrice(fee)}</b>
       <p>
-        À payer au livreur à la réception, en espèces ou par <b>Orange Money / Moov Money</b> au <b className="trk-num">{payTo}</b>.
+        À payer au livreur à la réception, en espèces, par Orange Money au <b className="trk-num">{payTo.orangeMoney}</b> ou par Moov Money
+        au <b className="trk-num">{payTo.moovMoney}</b>.
       </p>
     </div>
   );
@@ -213,7 +216,7 @@ function FeeToPay({ fee, payTo, children }) {
 
 function Now({ order }) {
   const fee = order.deliveryFee;
-  const payTo = order.payTo || MERCHANT;
+  const payTo = order.payTo || { orangeMoney: RESTAURANT.orangeMoney, moovMoney: RESTAURANT.moovMoney };
   const feeDue = fee != null && !order.deliveryFeePaid;
 
   switch (order.status) {

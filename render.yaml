@@ -34,11 +34,15 @@ services:
         value: nouvelle_commande
       - key: WHATSAPP_TEMPLATE_LANG
         value: fr
-      # Messages au client : lien de suivi et numéro marchand pour les frais de livraison.
-      # MERCHANT_NUMBER vide = numéro provisoire du code (+22670000000).
+      # Messages au client : lien de suivi, numéros marchands pour les frais de livraison, adresse du
+      # restaurant (message « commande prête »). Vides = valeurs du code (src/config/env.js).
       - key: PUBLIC_SITE_URL
         value: https://belchicken-six.vercel.app
-      - key: MERCHANT_NUMBER
+      - key: ORANGE_MONEY_NUMBER
+        sync: false
+      - key: MOOV_MONEY_NUMBER
+        sync: false
+      - key: RESTAURANT_ADDRESS
         sync: false
       # Photos du menu et de l'accueil (console Cloudinary > Settings > API Keys)
       - key: CLOUDINARY_CLOUD_NAME

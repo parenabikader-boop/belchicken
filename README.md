@@ -106,7 +106,7 @@ Catégories actives dans l'ordre du menu, avec leurs sous-groupes, produits et v
   "customer": { "name": "Awa Ouédraogo", "phone": "76 12 34 56" },
   "payment": { "method": "ORANGE_MONEY", "payerPhone": "76123456" },
   "location": { "latitude": 11.1771, "longitude": -4.2979, "accuracy": 15 },
-  "addressNote": "Secteur 22, portail bleu après la pharmacie",
+  "addressNote": "Patte d’Oie, portail bleu après la pharmacie",
   "items": [
     { "productId": "…", "variantId": "…", "quantity": 2, "note": "Sans oignon" },
     { "productId": "…", "variantId": "…", "quantity": 1, "choice": "Frit" }
@@ -167,7 +167,7 @@ Le paramètre {{5}} indique le moyen de paiement, par exemple « Orange Money de
 À chaque étape, le détail d'une commande (espace équipe) propose le message à envoyer au client :
 paiement confirmé (`PAIEMENT_CONFIRME`) ; commande en préparation (`EN_PREPARATION`) ; en route, avec le code de remise
 (`EN_ROUTE`) ; livrée (`LIVREE`) ; annulée avec le motif (`ANNULEE`). Les trois premiers rappellent les frais :
-« Frais de livraison : X F, à payer au livreur à la réception, en espèces ou par Orange Money / Moov Money au [numéro marchand]. »
+« Frais de livraison : X F, à payer au livreur à la réception, en espèces, par Orange Money au [numéro Orange Money] ou par Moov Money au [numéro Moov Money]. »
 Le bouton ouvre WhatsApp sur le téléphone de l'agent (lien `wa.me`), message déjà écrit avec le prénom, la référence
 et les vrais montants. L'historique de la commande note « WhatsApp ouvert avec le message » (table `OrderEvent`).
 
@@ -189,6 +189,10 @@ message. Confirmation : `POST /api/staff/orders/:reference/notice` `{ key, by: '
 l'historique (`MESSAGE_ENVOYE` ou `CLIENT_APPELE`, avec qui et quand). Règles : `noticeState()` dans
 `src/services/customer-messages.js` (testées). Avec `WHATSAPP_CUSTOMER_AUTO=1`, rien n'est demandé : le message part tout seul.
 
+Numéros marchands : `ORANGE_MONEY_NUMBER` et `MOOV_MONEY_NUMBER` (sinon `MERCHANT_NUMBER`), les mêmes que dans
+`frontend/src/restaurant.js` (adresse, téléphone, WhatsApp, horaires, position du restaurant). Adresse du message
+« commande prête » (à emporter) : `RESTAURANT_ADDRESS`.
+
 Le lien de suivi utilise `PUBLIC_SITE_URL` : l'adresse du site public, `https://belchicken-six.vercel.app`
 (valeur par défaut du code, à changer seulement si le site change d'adresse).
 
@@ -198,38 +202,40 @@ Les textes sont écrits une seule fois, dans `backend/src/services/customer-mess
 1. Créez chez Meta un modèle de catégorie **Utilité**, langue français, pour chaque message : nom = `template`,
    corps = `body` recopié tel quel (`commande_paiement_confirme`, `commande_en_preparation`, `commande_en_route`,
    `commande_livree`, `commande_annulee`). Le modèle `commande_en_route` contient le code de remise (`{{3}}`).
-   Textes à soumettre (version du 6 octobre 2026, frais payés au livreur) :
+   Textes à soumettre (version du 6 octobre 2026 : frais payés au livreur, deux numéros marchands, Belchicken Burkina) :
 
 ```
 commande_paiement_confirme
 Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande {{2}}. Merci !
 
-Frais de livraison : {{4}}, à payer au livreur à la réception, en espèces ou par Orange Money / Moov Money au {{5}}.
+Frais de livraison : {{4}}, à payer au livreur à la réception, en espèces, par Orange Money au {{5}} ou par Moov Money au {{6}}.
 
-Suivez votre commande ici : {{6}}
+Suivez votre commande ici : {{7}}
 
-Belchicken
+Belchicken Burkina
 
 commande_en_preparation
 Bonjour {{1}}, votre commande {{2}} est en préparation.
 
-Frais de livraison : {{3}}, à payer au livreur à la réception, en espèces ou par Orange Money / Moov Money au {{4}}.
+Frais de livraison : {{3}}, à payer au livreur à la réception, en espèces, par Orange Money au {{4}} ou par Moov Money au {{5}}.
 
-Suivez votre commande ici : {{5}}
+Suivez votre commande ici : {{6}}
 
-Belchicken
+Belchicken Burkina
 
 commande_en_route
 Bonjour {{1}}, votre commande {{2}} est en route ! Le livreur arrive bientôt : gardez votre téléphone près de vous.
 
 Donnez ce code au livreur à la réception : {{3}}. Ne le donnez qu’au livreur, quand il vous remet la commande.
 
-Frais de livraison : {{4}}, à payer au livreur à la réception, en espèces ou par Orange Money / Moov Money au {{5}}.
+Frais de livraison : {{4}}, à payer au livreur à la réception, en espèces, par Orange Money au {{5}} ou par Moov Money au {{6}}.
 
-Suivez votre commande ici : {{6}}
+Suivez votre commande ici : {{7}}
 
-Belchicken
+Belchicken Burkina
 ```
+
+`commande_livree` et `commande_annulee` se terminent maintenant par « Belchicken Burkina » : à resoumettre aussi.
 
 2. Une fois les 5 modèles approuvés, mettez `WHATSAPP_CUSTOMER_AUTO=1` sur Render.
 
