@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
 import InstallBanner from './InstallBanner.jsx';
-import { DIRECTIONS_URL, openStatus, RESTAURANT, telHref } from '../restaurant.js';
+import { DIRECTIONS_URL, openStatus, RESTAURANT, telHref, whatsappHref } from '../restaurant.js';
 
 // Informations du restaurant : src/restaurant.js
 export const WHATSAPP = RESTAURANT.whatsapp;
@@ -108,8 +108,8 @@ export default function Layout() {
           <div>
             <h4>Contact</h4>
             <ul>
-              <li>Téléphone : <a href={telHref(RESTAURANT.phone)}>{RESTAURANT.phone}</a></li>
-              <li>WhatsApp : {WHATSAPP}</li>
+              <li>Restaurant : <a href={telHref(RESTAURANT.phone)}>{RESTAURANT.phone}</a></li>
+              <li>WhatsApp (commandes et suivi) : <a href={whatsappHref(WHATSAPP)} target="_blank" rel="noreferrer">{WHATSAPP}</a></li>
               <li>{RESTAURANT.address}, {RESTAURANT.city}</li>
               <li><a href={DIRECTIONS_URL} target="_blank" rel="noreferrer">Itinéraire Google Maps</a></li>
             </ul>

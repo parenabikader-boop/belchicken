@@ -6,9 +6,11 @@ export const RESTAURANT = {
   name: 'Belchicken Burkina',
   city: 'Ouagadougou',
   address: 'Kamsonghin, en face de Sonia Hôtel',
-  phone: '+226 05 23 48 48',
-  // EN ATTENTE du client : numéros provisoires, à remplacer par les vrais
-  whatsapp: '+226 70 00 00 01',
+  // Numéro du restaurant (informations de contact, comme sur les tickets de caisse)
+  phone: '+226 62 88 42 88',
+  // WhatsApp du call center : commandes et suivi (boutons « Nous contacter sur WhatsApp »)
+  whatsapp: '+226 05 23 48 48',
+  // EN ATTENTE du client : numéros marchands provisoires, à remplacer par les vrais
   orangeMoney: '+226 70 00 00 00',
   moovMoney: '+226 70 00 00 00',
   // Plus Code 9F2J+V8 Ouagadougou (= 7C4W9F2J+V8), centre du carré de 14 m
@@ -21,6 +23,8 @@ export const RESTAURANT = {
 export const DIRECTIONS_URL = `https://www.google.com/maps/dir/?api=1&destination=${RESTAURANT.latitude},${RESTAURANT.longitude}`;
 
 export const telHref = (phone) => `tel:${phone.replace(/\s/g, '')}`;
+export const whatsappHref = (phone, text) =>
+  `https://wa.me/${phone.replace(/\D/g, '')}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 export const MERCHANT_BY_METHOD = { ORANGE_MONEY: RESTAURANT.orangeMoney, MOOV_MONEY: RESTAURANT.moovMoney };
 
 // Horaires (heure de Ouagadougou = UTC toute l'année) : dimanche à jeudi 6 h – 23 h,

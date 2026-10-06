@@ -1,4 +1,4 @@
-import { DIRECTIONS_URL, HOURS, RESTAURANT, telHref } from '../restaurant.js';
+import { DIRECTIONS_URL, HOURS, RESTAURANT, telHref, whatsappHref } from '../restaurant.js';
 import { PageHead } from '../components/PageParts.jsx';
 
 export default function Infos() {
@@ -25,8 +25,8 @@ export default function Infos() {
           <div className="info-card">
             <h3>Contact</h3>
             <dl>
-              <dt>Téléphone</dt><dd><a href={telHref(RESTAURANT.phone)}>{RESTAURANT.phone}</a></dd>
-              <dt>WhatsApp</dt><dd>{RESTAURANT.whatsapp}</dd>
+              <dt>Restaurant</dt><dd><a href={telHref(RESTAURANT.phone)}>{RESTAURANT.phone}</a></dd>
+              <dt>WhatsApp</dt><dd><a href={whatsappHref(RESTAURANT.whatsapp)} target="_blank" rel="noreferrer">{RESTAURANT.whatsapp}</a><br /><small className="muted">Commandes et suivi</small></dd>
               <dt>Adresse</dt><dd>{RESTAURANT.address}, {RESTAURANT.city}</dd>
               <dt>Plus Code</dt><dd>{RESTAURANT.plusCode}</dd>
             </dl>

@@ -187,6 +187,7 @@ footer a:hover{color:#fff;text-decoration:underline}
 footer .legal{border-top:1px solid #33333b;grid-column:1/-1;padding-top:18px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:13px;color:#8d8d97}
 footer .brand b{color:#fff}
 footer .brand small{color:#9d9da7}
+footer a[href^="tel:"],footer a[href^="https://wa.me"]{white-space:nowrap}
 
 /* sheet */
 .overlay{position:fixed;inset:0;z-index:80;background:rgba(12,12,16,.6);display:flex;align-items:center;justify-content:center;padding:24px}

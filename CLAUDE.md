@@ -2,7 +2,7 @@
 
 **Toujours répondre au client en français, avec des explications simples, sans jargon.**
 
-Site de commande en ligne du restaurant Belchicken Burkina (Ouagadougou, Burkina Faso). Kamsonghin, en face de Sonia Hôtel ; Plus Code 9F2J+V8 Ouagadougou (12.352187, -1.519188) ; téléphone +226 05 23 48 48 ; ouvert du dimanche au jeudi 6 h – 23 h, vendredi et samedi 24 h/24. Nom affiché « Belchicken Burkina », le logo et « Belchicken » restent tels quels. Jamais de boîte postale (11 BP 4928). Toutes ces informations sont dans `frontend/src/restaurant.js` (site) et `backend/src/config/env.js` (messages).
+Site de commande en ligne du restaurant Belchicken Burkina (Ouagadougou, Burkina Faso). Kamsonghin, en face de Sonia Hôtel ; Plus Code 9F2J+V8 Ouagadougou (12.352187, -1.519188) ; WhatsApp du call center (commandes, suivi, boutons « Nous contacter sur WhatsApp ») +226 05 23 48 48 ; numéro du restaurant (contact, tickets de caisse) +226 62 88 42 88 ; ouvert du dimanche au jeudi 6 h – 23 h, vendredi et samedi 24 h/24. Nom affiché « Belchicken Burkina », le logo et « Belchicken » restent tels quels. Jamais de boîte postale (11 BP 4928). Toutes ces informations sont dans `frontend/src/restaurant.js` (site) et `backend/src/config/env.js` (messages).
 Le client choisit ses plats, indique son paiement et sa position, puis valide.
 La commande est enregistrée et l'équipe reçoit une alerte WhatsApp.
 Le reste (frais de livraison, confirmation, livraison) est géré par le call center, hors de ce projet pour l'instant.
@@ -52,7 +52,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 ## Points en attente du client
 
 - Prix des Fuego Wings 8 pièces à la carte (10 000 F sur le visuel, plus cher que le menu N° 30 à 9 500 F).
-- Vraies descriptions des burgers, numéro WhatsApp du restaurant, numéros marchands Orange Money et Moov Money définitifs (provisoires : +226 70 00 00 01 et +226 70 00 00 00, dans `frontend/src/restaurant.js` et `backend/src/config/env.js`).
+- Vraies descriptions des burgers, numéros marchands Orange Money et Moov Money définitifs (provisoires : +226 70 00 00 00, dans `frontend/src/restaurant.js` et `backend/src/config/env.js`).
 
 ## Prochaines étapes
 
@@ -61,7 +61,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 1. Mise en ligne : backend sur Render, frontend sur Vercel (voir README.md).
 2. Alerte WhatsApp : application Meta, modèle `nouvelle_commande` approuvé, variables WhatsApp sur Render.
 3. Espace équipe (cahier des charges ci-dessous).
-4. Vraies informations du restaurant : adresse, téléphone et horaires faits (6 octobre 2026). Restent : numéros WhatsApp et marchands, descriptions des burgers, prix des Fuego Wings 8 pièces.
+4. Vraies informations du restaurant : adresse, téléphone et horaires faits (6 octobre 2026). Numéros WhatsApp et du restaurant faits. Restent : numéros marchands, descriptions des burgers, prix des Fuego Wings 8 pièces.
 5. Préparation de l'ouverture : commandes de test de la base production vidées le 2 octobre 2026 (9 commandes) ; la commande d'essai depuis le téléphone sera à supprimer aussi. Reste : changer le mot de passe Neon et mettre à jour `DATABASE_URL` sur Render.
 
 ### Espace équipe : cahier des charges

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { WHATSAPP } from '../components/Layout.jsx';
-import { RESTAURANT } from '../restaurant.js';
+import { RESTAURANT, whatsappHref } from '../restaurant.js';
 import { TunnelHead } from '../components/PageParts.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils/format.js';
@@ -28,7 +28,7 @@ const formatDate = (iso) => {
 const formatTime = (iso) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
 const contactHref = (reference) =>
-  `https://wa.me/${WHATSAPP.replace(/\D/g, '')}?text=${encodeURIComponent(`Bonjour, je vous contacte au sujet de ma commande ${reference}.`)}`;
+  whatsappHref(WHATSAPP, `Bonjour, je vous contacte au sujet de ma commande ${reference}.`);
 
 // Page de suivi : /confirmation/:reference (juste après l'envoi) et /suivi/:reference (lien envoyé
 // sur WhatsApp). Elle relit la commande toutes les 20 s. Juste après l'envoi, elle reçoit aussi les
