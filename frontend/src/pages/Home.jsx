@@ -82,7 +82,7 @@ export default function Home() {
             loading="lazy"
           />
           <div className="brand-txt">
-            <span className="brand-script">Fresh fried chicken</span>
+            <span className="brand-script">Finest Fried Chicken & More</span>
             <h2>Le chef Belchicken vous régale</h2>
             <p>Poulet croustillant, burgers et buckets, préparés à la commande.</p>
             <Link className="btn brand-btn" to="/menu">Voir le menu</Link>

@@ -102,7 +102,7 @@ export default function Layout() {
 
       <footer>
         <div className="wrap">
-          <div><div className="brand"><Brand subtitle="Fresh fried chicken" /></div></div>
+          <div><div className="brand"><Brand subtitle="Finest Fried Chicken & More" /></div></div>
           <div><h4>Commander</h4><ul><li><Link to="/menu">Menu</Link></li><li><Link to="/commande">Ma commande</Link></li></ul></div>
           <div><h4>Aide</h4><ul><li><Link to="/infos">Livraison et paiement</Link></li><li><Link to="/infos">Horaires</Link></li></ul></div>
           <div>
