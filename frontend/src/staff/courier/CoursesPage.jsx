@@ -141,7 +141,7 @@ function Course({ course: c, onDelivered, onRefresh }) {
       ) : c.deliveryFee != null && (
         <p className="lv-fee">
           <span>Frais à encaisser : <b>{formatPrice(c.deliveryFee)}</b></span>
-          <small>En espèces, ou par Orange Money / Moov Money au numéro marchand, au choix du client.</small>
+          <small>En espèces, ou par Orange Money / Moov Money / Telecel Money avec le code marchand, au choix du client.</small>
         </p>
       )}
 

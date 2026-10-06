@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { env } from '../config/env.js';
-import { formatPhone } from './customer-messages.js';
+import { paymentCodes } from './payment-codes.js';
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { newOrderReference } from '../utils/reference.js';
@@ -81,10 +81,10 @@ export function toPublicOrder(order) {
     deliveryFee: order.deliveryFee ?? null,
     // Frais payés au livreur à la réception (espèces ou mobile money) : payés une fois la commande remise
     deliveryFeePaid: order.deliveryFeeMethod != null,
-    // Numéros marchands pour payer les frais par mobile money (les mêmes que dans les messages), tant qu'ils sont attendus
-    payTo:
+    // Codes marchands avec le montant des frais (les mêmes que dans les messages), tant qu'ils sont attendus
+    feePayment:
       order.deliveryFee != null && order.deliveryFeeMethod == null && order.status !== 'ANNULEE'
-        ? { orangeMoney: formatPhone(env.orangeMoneyNumber), moovMoney: formatPhone(env.moovMoneyNumber) }
+        ? paymentCodes(env.payment, order.deliveryFee)
         : null,
     steps: changes.map((h) => ({ status: h.toStatus, at: h.createdAt })),
     cancelReason: changes.findLast((h) => h.toStatus === 'ANNULEE')?.reason || null,

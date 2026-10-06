@@ -66,7 +66,7 @@ test('chiffre d\'affaires : seules les commandes payées et au-delà comptent', 
   assert.equal(d.timeline.length, 24);
   assert.equal(d.timeline[12].revenue, 7000);
   assert.equal(d.hours[13], 3);
-  assert.deepEqual(d.payments.map((p) => [p.method, p.paid, p.revenue]), [['ORANGE_MONEY', 2, 9000], ['MOOV_MONEY', 1, 3000]]);
+  assert.deepEqual(d.payments.map((p) => [p.method, p.paid, p.revenue]), [['ORANGE_MONEY', 2, 9000], ['MOOV_MONEY', 1, 3000], ['TELECEL_MONEY', 0, 0]]);
   assert.deepEqual(d.topProducts, [{ name: 'Finest', quantity: 3, revenue: 12000 }]);
   assert.deepEqual(d.topCategories, [{ name: 'Burgers', quantity: 3, revenue: 12000 }]);
   // Motifs regroupés sans tenir compte des majuscules ni des espaces

@@ -18,7 +18,7 @@ test('refuse le paiement en espèces avec un message en français', () => {
   const r = createOrderSchema.safeParse({ ...base, payment: { method: 'ESPECES' } });
   assert.equal(r.success, false);
   assert.equal(r.error.issues[0].path.join('.'), 'payment.method');
-  assert.equal(r.error.issues[0].message, 'Le paiement se fait uniquement par Orange Money ou Moov Money.');
+  assert.equal(r.error.issues[0].message, 'Le paiement se fait uniquement par Orange Money, Moov Money ou Telecel Money.');
 });
 
 test('exige le numéro ayant payé pour le mobile money', () => {
@@ -48,4 +48,9 @@ test('exige une position ou des repères', () => {
 test('refuse une commande vide ou une quantité invalide', () => {
   assert.equal(createOrderSchema.safeParse({ ...base, items: [] }).success, false);
   assert.equal(createOrderSchema.safeParse({ ...base, items: [{ productId: 'p1', variantId: 'v1', quantity: 0 }] }).success, false);
+});
+
+test('accepte Telecel Money, 3e opérateur', () => {
+  const o = createOrderSchema.parse({ ...base, payment: { method: 'TELECEL_MONEY', payerPhone: '58 12 34 56' } });
+  assert.deepEqual(o.payment, { method: 'TELECEL_MONEY', payerPhone: '+22658123456' });
 });

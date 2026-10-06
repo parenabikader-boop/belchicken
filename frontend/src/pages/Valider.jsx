@@ -1,19 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
-import { MERCHANT_BY_METHOD, RESTAURANT } from '../restaurant.js';
 import { TunnelHead } from '../components/PageParts.jsx';
+import PayCode from '../components/PayCode.jsx';
 import { useCart, useCartDetails } from '../context/CartContext.jsx';
 import { useMenu } from '../context/MenuContext.jsx';
 import { formatPrice, plural } from '../utils/format.js';
+import { fillCode, MOBILE_MONEY, usePaymentCodes } from '../utils/payment.js';
 
 const DRAFT_KEY = 'belchicken.infos.v1';
 const EMPTY = { name: '', phone: '', method: null, payer: '', addr: '', geo: null };
 
-const METHODS = [
-  { id: 'ORANGE_MONEY', logo: 'OM', cls: 'logo-om', label: 'Orange Money', sub: 'Paiement effectué' },
-  { id: 'MOOV_MONEY', logo: 'MV', cls: 'logo-mv', label: 'Moov Money', sub: 'Paiement effectué' },
-];
+const METHODS = MOBILE_MONEY;
 
 // Mesure de la position : on écoute le GPS pendant GEO_WINDOW ms et on garde la mesure la plus
 // précise, en s'arrêtant plus tôt si elle descend sous GEO_GOOD mètres.
@@ -74,7 +72,7 @@ function validate(f) {
   };
   if (f.name.trim().length < 2) fail('name', 'Indiquez votre nom complet.');
   if (!isPhone(f.phone)) fail('phone', 'Indiquez un numéro WhatsApp valide.');
-  if (!f.method) fail('method', 'Choisissez le moyen de paiement utilisé.', 'Choisissez le moyen de paiement.');
+  if (!f.method) fail('method', 'Choisissez votre opérateur mobile money.', 'Choisissez le moyen de paiement.');
   {
     if (!isPhone(f.payer)) fail('payer', 'Indiquez le numéro ayant payé.');
   }
@@ -102,11 +100,40 @@ const PinIcon = () => (
   </svg>
 );
 
+// Après le choix de l'opérateur : le code marchand avec le montant des plats déjà rempli
+function PayStep({ method, total, payment }) {
+  if (!method) {
+    return <p className="pay-hint">Choisissez votre opérateur : le code de paiement s’affiche avec le montant déjà rempli.</p>;
+  }
+  if (payment.error) {
+    return (
+      <div className="alert err pay-how" role="alert">
+        <span>Le code de paiement n’a pas pu être chargé. <button type="button" className="lnk" onClick={payment.retry}>Réessayer</button></span>
+      </div>
+    );
+  }
+  if (!payment.data) return <p className="pay-hint">Chargement du code de paiement…</p>;
+  const op = payment.data.operators.find((o) => o.method === method);
+  return (
+    <div className="pay-step">
+      <p className="pay-step-t">Payez <b>{formatPrice(total)}</b> par {op.label} avec ce code&nbsp;:</p>
+      <PayCode code={fillCode(op.code, total)} />
+      <div className="alert info pay-how">
+        <span>
+          Votre confirmation affichera le nom <b>{payment.data.merchantName}</b> : c’est bien le compte de Belchicken. Paiement sans frais.
+          Une fois payé, indiquez ci-dessous le numéro qui a payé : votre commande est préparée dès que le paiement est vérifié.
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function Valider() {
   const navigate = useNavigate();
   const { lines } = useCart();
   const { items, total, ready } = useCartDetails();
   const { status, error: menuError, reload } = useMenu();
+  const payment = usePaymentCodes();
   const [form, setForm] = useState(readDraft);
   const [errors, setErrors] = useState({});
   const [alert, setAlert] = useState('');
@@ -295,17 +322,8 @@ export default function Valider() {
               <section className="box">
                 <div className="box-h"><span className="n">2</span><h2>Paiement</h2></div>
                 <div className="box-b">
-                  <div className="alert info pay-how">
-                    <span>
-                      Envoyez le montant de votre commande au numéro marchand
-                      {form.method
-                        ? <> <b>{MERCHANT_BY_METHOD[form.method]}</b> ({form.method === 'ORANGE_MONEY' ? 'Orange Money' : 'Moov Money'})</>
-                        : <> : Orange Money <b>{RESTAURANT.orangeMoney}</b>, Moov Money <b>{RESTAURANT.moovMoney}</b></>}
-                      , puis indiquez le numéro qui a payé. Votre commande est préparée dès que le paiement est vérifié.
-                    </span>
-                  </div>
                   <fieldset>
-                    <legend>Moyen de paiement utilisé <i style={{ color: 'var(--bad)', fontStyle: 'normal' }}>*</i></legend>
+                    <legend>Votre opérateur <i style={{ color: 'var(--bad)', fontStyle: 'normal' }}>*</i></legend>
                     <div className="methods" role="radiogroup">
                       {METHODS.map((m) => (
                         <button
@@ -317,12 +335,13 @@ export default function Valider() {
                           onClick={() => set('method', m.id)}
                         >
                           <span className={m.cls}>{m.logo}</span>
-                          <span className="l"><b>{m.label}</b><small>{m.sub}</small></span>
+                          <span className="l"><b>{m.label}</b><small>Code marchand</small></span>
                         </button>
                       ))}
                     </div>
                   </fieldset>
                   {errors.method && <p className="err-line">{errors.method}</p>}
+                  <PayStep method={form.method} total={total} payment={payment} />
                   <div className="fields" style={{ marginTop: 16 }}>
                     <Field id="c-payer" label="Numéro ayant payé" required error={errors.payer}>
                       <input {...input('payer')} type="tel" inputMode="tel" placeholder="+226 76 12 34 56" />
@@ -363,7 +382,7 @@ export default function Valider() {
                   ))}
                   <tr className="tot"><td>Total des plats</td><td>{formatPrice(total)}</td></tr>
                 </tbody></table>
-                <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>Frais de livraison selon votre quartier : indiqués après la vérification de votre paiement, sur WhatsApp et sur la page de suivi. Vous les payez au livreur à la réception, en espèces ou par Orange Money / Moov Money.</p>
+                <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>Frais de livraison selon votre quartier : indiqués après la vérification de votre paiement, sur WhatsApp et sur la page de suivi. Vous les payez au livreur à la réception, en espèces ou par mobile money avec le code marchand.</p>
                 {blocked && <p className="err-line" style={{ marginTop: 12 }}>Un plat n'est plus disponible. Retirez-le dans Ma commande pour continuer.</p>}
                 <button type="submit" className="btn btn-p btn-block" style={{ marginTop: 16 }} disabled={sending || blocked}>
                   {sending ? 'Envoi en cours…' : 'Envoyer ma commande'}

@@ -38,6 +38,8 @@ export const api = {
   getHomePhotos: () => request('/api/home').then((d) => d.photos),
   createOrder: (payload) => request('/api/orders', { method: 'POST', body: JSON.stringify(payload) }).then((d) => d.order),
   getOrder: (reference) => request(`/api/orders/${encodeURIComponent(reference)}`).then((d) => d.order),
+  // Codes marchands des 3 opérateurs, avec MONTANT à remplacer : { merchantName, operators: [{ method, label, code }] }
+  getPayment: () => request('/api/payment'),
 };
 
 // Espace équipe : appels sur la même adresse que le site (/api/staff/...), relayés vers l'API

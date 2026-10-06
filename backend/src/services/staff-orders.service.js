@@ -328,7 +328,7 @@ export async function setDeliveryFee(reference, amount, staff) {
   return afterChange(reference);
 }
 
-// Frais payés par mobile money au numéro marchand : l'agent coche après vérification sur le téléphone
+// Frais payés par mobile money (code marchand) : l'agent coche après vérification sur le téléphone
 // marchand (page Caisse, onglet « Frais à vérifier »). Décocher reste possible (erreur de manipulation).
 export async function setFeeVerified(reference, verified, staff) {
   await prisma.$transaction(async (tx) => {

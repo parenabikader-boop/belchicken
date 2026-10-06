@@ -23,7 +23,11 @@ const PERIODS = [
 ];
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const WEEKDAYS_LONG = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
-const METHODS = { ORANGE_MONEY: { label: 'Orange Money', cls: 'om' }, MOOV_MONEY: { label: 'Moov Money', cls: 'moov' } };
+const METHODS = {
+  ORANGE_MONEY: { label: 'Orange Money', cls: 'om' },
+  MOOV_MONEY: { label: 'Moov Money', cls: 'moov' },
+  TELECEL_MONEY: { label: 'Telecel Money', cls: 'telecel' },
+};
 
 function periodTitle(r) {
   const start = new Date(r.start);
@@ -335,7 +339,7 @@ export default function Dashboard() {
                 </Card>
               )}
 
-              <Card title="Orange Money / Moov Money" sub="Commandes payées.">
+              <Card title="Orange Money / Moov Money / Telecel Money" sub="Commandes payées.">
                 {paidTotal ? (
                   <>
                     <div className="db-split" role="img" aria-label={data.payments.map((p, i) => `${METHODS[p.method].label} ${shares[i]} %`).join(', ')}>

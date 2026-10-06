@@ -46,10 +46,10 @@ export const createOrderSchema = z
     }),
     // Paiement obligatoire avant livraison : plus d'espèces (ESPECES reste dans l'enum Prisma,
     // sans migration, mais n'est plus accepté)
-    payment: z.discriminatedUnion('method', [mobileMoney('ORANGE_MONEY'), mobileMoney('MOOV_MONEY')], {
+    payment: z.discriminatedUnion('method', [mobileMoney('ORANGE_MONEY'), mobileMoney('MOOV_MONEY'), mobileMoney('TELECEL_MONEY')], {
       errorMap: (issue, ctx) =>
         issue.code === z.ZodIssueCode.invalid_union_discriminator
-          ? { message: 'Le paiement se fait uniquement par Orange Money ou Moov Money.' }
+          ? { message: 'Le paiement se fait uniquement par Orange Money, Moov Money ou Telecel Money.' }
           : { message: ctx.defaultError },
     }),
     location: z

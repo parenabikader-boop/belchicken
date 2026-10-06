@@ -28,13 +28,14 @@ enum OrderStatus {
 enum PaymentMethod {
   ORANGE_MONEY
   MOOV_MONEY
-  ESPECES
+  ESPECES // refusé par l'API (plus d'espèces pour les plats), gardé pour les anciennes commandes
+  TELECEL_MONEY
 }
 
 // Frais de livraison payés au livreur à la réception : comment le client les a payés
 enum FeePaymentMethod {
   ESPECES // en espèces au livreur (remises ensuite au restaurant : CashRemittance)
-  MOBILE_MONEY // par Orange Money / Moov Money au numéro marchand (vérifiés par l'équipe)
+  MOBILE_MONEY // par Orange Money / Moov Money / Telecel Money, code marchand (vérifiés par l'équipe)
 }
 
 enum NotificationStatus {

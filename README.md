@@ -131,13 +131,22 @@ Erreurs, toujours au format `{ error: { code, message, details } }` avec un mess
 ### `GET /api/orders/:reference`
 
 Récapitulatif public d'une commande, pour la page de suivi : plats, total, statut, étapes datées (`steps`),
-frais de livraison (`deliveryFee`, `deliveryFeePaid`), numéro marchand pour les payer par mobile money (`payTo`, tant qu'ils sont attendus)
+frais de livraison (`deliveryFee`, `deliveryFeePaid`), codes marchands pour les payer par mobile money, montant des frais rempli (`feePayment` : `{ merchantName, operators: [{ method, label, code }] }`, tant qu'ils sont attendus)
 et motif d'annulation. Jamais de nom, de numéro du client, de position ni de nom d'agent.
 
 Page de suivi du client : `/confirmation/:reference` juste après l'envoi, et `/suivi/:reference` (adresse courte
 envoyée sur WhatsApp). Même page (`frontend/src/pages/Confirmation.jsx`) : frise des étapes, frais de livraison
 quand ils sont saisis, bouton « Nous contacter sur WhatsApp ». Elle relit la commande toutes les 20 s
 (et au retour sur la page) tant que la commande n'est ni livrée ni annulée.
+
+### `GET /api/payment`
+
+Codes marchands mobile money (USSD) des 3 opérateurs, avec `MONTANT` à remplacer par le montant :
+`{ merchantName: "ECOFOOD", operators: [{ method: "ORANGE_MONEY", label: "Orange Money", code: "*144*10*66534483*MONTANT#" }, …] }`.
+La page Vos informations remplit le montant des plats ; « Payer maintenant » ouvre le clavier du téléphone
+(`tel:` avec `#` écrit `%23`), « Copier le code » sert sur iPhone. Réglages sur Render : `ORANGE_MONEY_CODE`,
+`MOOV_MONEY_CODE`, `TELECEL_MONEY_CODE` (avec `MONTANT`, terminés par `#`) et `MERCHANT_NAME` ; vides = codes officiels
+du compte ECOFOOD (`src/config/env.js`). Un code mal écrit est signalé au démarrage du serveur.
 
 ## Alerte WhatsApp à l'équipe
 
@@ -167,7 +176,7 @@ Le paramètre {{5}} indique le moyen de paiement, par exemple « Orange Money de
 À chaque étape, le détail d'une commande (espace équipe) propose le message à envoyer au client :
 paiement confirmé (`PAIEMENT_CONFIRME`) ; commande en préparation (`EN_PREPARATION`) ; en route, avec le code de remise
 (`EN_ROUTE`) ; livrée (`LIVREE`) ; annulée avec le motif (`ANNULEE`). Les trois premiers rappellent les frais :
-« Frais de livraison : X F, à payer au livreur à la réception, en espèces, par Orange Money au [numéro Orange Money] ou par Moov Money au [numéro Moov Money]. »
+« Frais de livraison : X F, à payer au livreur à la réception, en espèces ou par mobile money avec le code marchand (sans frais, nom affiché : ECOFOOD) : », puis un code par ligne, entre trois accents graves (affichés tels quels par WhatsApp, sinon les `*` passent en gras et disparaissent) : « Orange Money : \`\`\`*144*10*66534483*X#\`\`\` », Moov Money et Telecel Money de même.
 Le bouton ouvre WhatsApp sur le téléphone de l'agent (lien `wa.me`), message déjà écrit avec le prénom, la référence
 et les vrais montants. L'historique de la commande note « WhatsApp ouvert avec le message » (table `OrderEvent`).
 
@@ -189,8 +198,9 @@ message. Confirmation : `POST /api/staff/orders/:reference/notice` `{ key, by: '
 l'historique (`MESSAGE_ENVOYE` ou `CLIENT_APPELE`, avec qui et quand). Règles : `noticeState()` dans
 `src/services/customer-messages.js` (testées). Avec `WHATSAPP_CUSTOMER_AUTO=1`, rien n'est demandé : le message part tout seul.
 
-Numéros marchands : `ORANGE_MONEY_NUMBER` et `MOOV_MONEY_NUMBER` (sinon `MERCHANT_NUMBER`), les mêmes que dans
-`frontend/src/restaurant.js` (adresse, téléphone, WhatsApp, horaires, position du restaurant). Adresse du message
+Codes marchands : `ORANGE_MONEY_CODE`, `MOOV_MONEY_CODE`, `TELECEL_MONEY_CODE` et `MERCHANT_NAME` (voir `GET /api/payment`),
+les mêmes sur le site et dans les messages. Adresse, téléphone, WhatsApp, horaires et position du restaurant :
+`frontend/src/restaurant.js`. Adresse du message
 « commande prête » (à emporter) : `RESTAURANT_ADDRESS`.
 
 Le lien de suivi utilise `PUBLIC_SITE_URL` : l'adresse du site public, `https://belchicken-six.vercel.app`
@@ -202,24 +212,32 @@ Les textes sont écrits une seule fois, dans `backend/src/services/customer-mess
 1. Créez chez Meta un modèle de catégorie **Utilité**, langue français, pour chaque message : nom = `template`,
    corps = `body` recopié tel quel (`commande_paiement_confirme`, `commande_en_preparation`, `commande_en_route`,
    `commande_livree`, `commande_annulee`). Le modèle `commande_en_route` contient le code de remise (`{{3}}`).
-   Textes à soumettre (version du 6 octobre 2026 : frais payés au livreur, deux numéros marchands, Belchicken Burkina) :
+   Textes à soumettre (version du 6 octobre 2026 : frais payés au livreur, codes marchands des 3 opérateurs avec le montant
+   des frais, nom du compte ECOFOOD, Belchicken Burkina). Les codes et le nom sont des variables : les changer sur Render
+   ne demande pas de nouvelle approbation. Exemple de valeur pour Orange Money : `*144*10*66534483*1000#`.
 
-```
+~~~
 commande_paiement_confirme
 Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande {{2}}. Merci !
 
-Frais de livraison : {{4}}, à payer au livreur à la réception, en espèces, par Orange Money au {{5}} ou par Moov Money au {{6}}.
+Frais de livraison : {{4}}, à payer au livreur à la réception, en espèces ou par mobile money avec le code marchand (sans frais, nom affiché : {{5}}) :
+Orange Money : ```{{6}}```
+Moov Money : ```{{7}}```
+Telecel Money : ```{{8}}```
 
-Suivez votre commande ici : {{7}}
+Suivez votre commande ici : {{9}}
 
 Belchicken Burkina
 
 commande_en_preparation
 Bonjour {{1}}, votre commande {{2}} est en préparation.
 
-Frais de livraison : {{3}}, à payer au livreur à la réception, en espèces, par Orange Money au {{4}} ou par Moov Money au {{5}}.
+Frais de livraison : {{3}}, à payer au livreur à la réception, en espèces ou par mobile money avec le code marchand (sans frais, nom affiché : {{4}}) :
+Orange Money : ```{{5}}```
+Moov Money : ```{{6}}```
+Telecel Money : ```{{7}}```
 
-Suivez votre commande ici : {{6}}
+Suivez votre commande ici : {{8}}
 
 Belchicken Burkina
 
@@ -228,12 +246,15 @@ Bonjour {{1}}, votre commande {{2}} est en route ! Le livreur arrive bientôt : 
 
 Donnez ce code au livreur à la réception : {{3}}. Ne le donnez qu’au livreur, quand il vous remet la commande.
 
-Frais de livraison : {{4}}, à payer au livreur à la réception, en espèces, par Orange Money au {{5}} ou par Moov Money au {{6}}.
+Frais de livraison : {{4}}, à payer au livreur à la réception, en espèces ou par mobile money avec le code marchand (sans frais, nom affiché : {{5}}) :
+Orange Money : ```{{6}}```
+Moov Money : ```{{7}}```
+Telecel Money : ```{{8}}```
 
-Suivez votre commande ici : {{7}}
+Suivez votre commande ici : {{9}}
 
 Belchicken Burkina
-```
+~~~
 
 `commande_livree` et `commande_annulee` se terminent maintenant par « Belchicken Burkina » : à resoumettre aussi.
 
@@ -301,7 +322,7 @@ Connexion par numéro de téléphone et mot de passe ; trois rôles : `PATRON` (
   Historique dans la table `OrderStatusChange`.
 - Frais de livraison (Patron et Opérateur) : donnés en confirmant le paiement (`POST …/status` `{ to: 'PAYEE', deliveryFee }`),
   corrigés avec `PUT /api/staff/orders/:reference/delivery-fee` `{ amount }` (au moins 1 F) jusqu'au départ du livreur.
-  Le client les paie **au livreur, à la réception**, en espèces ou par mobile money au numéro marchand : le départ
+  Le client les paie **au livreur, à la réception**, en espèces ou par mobile money avec le code marchand : le départ
   (`EN_LIVRAISON`) demande seulement que les frais soient saisis. À la remise, le mode de paiement (`feeMethod` :
   `ESPECES` | `MOBILE_MONEY`) est obligatoire, pour le livreur comme pour l'agent qui valide sans code
   (`Order.deliveryFeeMethod`). Mobile money : vérifié par l'équipe, `POST /api/staff/orders/:reference/delivery-fee/verified`

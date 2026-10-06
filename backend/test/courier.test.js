@@ -80,7 +80,7 @@ test('le livreur voit seulement les frais à encaisser : ni total des plats, ni 
 });
 
 test('message « en route » : le code de remise est dedans', () => {
-  const ctx = { siteUrl: 'https://belchicken-six.vercel.app', orangeMoneyNumber: '+22601010101', moovMoneyNumber: '+22602020202' };
+  const ctx = { siteUrl: 'https://belchicken-six.vercel.app', payment: { merchantName: 'ECOFOOD', codes: { ORANGE_MONEY: '*1*MONTANT#', MOOV_MONEY: '*2*MONTANT#', TELECEL_MONEY: '*3*MONTANT#' } } };;
   const text = renderMessage('EN_ROUTE', { customerName: 'awa', reference: 'BC-7K2Q9M', deliveryCode: '0427', deliveryFee: 1000 }, ctx);
   assert.match(text, /Donnez ce code au livreur à la réception : 0427\./);
   assert.match(text, /suivi\/BC-7K2Q9M/);

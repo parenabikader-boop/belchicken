@@ -42,13 +42,13 @@ export function transitionError(from, to, reason) {
 
 // ─────────── Frais de livraison ───────────
 // Saisis par l'équipe selon le quartier (au moins 1 F), avec la confirmation du paiement.
-// Le client les paie AU LIVREUR, à la réception : en espèces, ou par mobile money au numéro marchand.
+// Le client les paie AU LIVREUR, à la réception : en espèces, ou par mobile money avec le code marchand.
 // Le livreur (ou l'agent qui valide sans code) note comment ils ont été payés ; le mobile money est
 // ensuite vérifié par l'équipe sur le téléphone marchand, les espèces remises au restaurant (cash.js).
 export const FEE_MIN = 1;
 export const FEE_MAX = 50000;
 export const FEE_METHODS = ['ESPECES', 'MOBILE_MONEY'];
-export const FEE_METHOD_LABEL = { ESPECES: 'Espèces', MOBILE_MONEY: 'Mobile money au numéro marchand' };
+export const FEE_METHOD_LABEL = { ESPECES: 'Espèces', MOBILE_MONEY: 'Mobile money (code marchand)' };
 // Les frais se modifient tant que le livreur n'est pas parti
 const FEE_EDITABLE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION'];
 

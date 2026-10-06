@@ -1,7 +1,7 @@
 // Caisse : frais de livraison payés au livreur à la réception (règles sans base de données,
 // testées dans test/cash.test.js). Accès à la base dans cash.service.js.
 //
-// - Mobile money au numéro marchand : l'équipe le vérifie sur le téléphone marchand (« Frais à vérifier »).
+// - Mobile money (code marchand) : l'équipe le vérifie sur le téléphone marchand (« Frais à vérifier »).
 // - Espèces : le livreur les garde jusqu'à ce qu'il les remette au restaurant. « Espèces remises »
 //   regroupe toutes les courses payées en espèces qu'il avait encore sur lui (CashRemittance).
 

@@ -250,8 +250,8 @@ legend{font-size:14px;font-weight:700;margin-bottom:8px;padding:0}
 .f.bad input,.f.bad textarea{border-color:var(--bad);border-width:2px}
 .methods{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .methods .opt{padding:14px}
-.logo-om,.logo-mv{width:34px;height:34px;border-radius:var(--r);display:grid;place-items:center;font-size:11px;font-weight:800;flex:none}
-.logo-om{background:#ff7900;color:#111}.logo-mv{background:#0a5fb4;color:#fff}
+.logo-om,.logo-mv,.logo-tm{width:34px;height:34px;border-radius:var(--r);display:grid;place-items:center;font-size:11px;font-weight:800;flex:none}
+.logo-om{background:#ff7900;color:#111}.logo-mv{background:#0a5fb4;color:#fff}.logo-tm{background:#c8102e;color:#fff}
 .alert{display:flex;gap:10px;padding:12px 14px;border-radius:var(--r);font-size:14px;border-left:4px solid}
 .alert.info{background:var(--info-soft);border-color:var(--info)}
 .alert.err{background:var(--bad-soft);border-color:var(--bad);color:var(--bad);font-weight:600}
@@ -490,10 +490,28 @@ header.tunnel .back:hover{text-decoration:underline}
   .progress li.cur{font-size:12px;overflow:visible}
 }
 
-/* Paiement : deux choix seulement (Orange Money, Moov Money), consigne au-dessus */
-.methods{grid-template-columns:repeat(2,1fr)}
-.pay-how{margin-bottom:18px;font-size:15px}
+/* Paiement : trois opérateurs, puis le code marchand avec le montant rempli */
+.methods{grid-template-columns:repeat(3,1fr)}
+.pay-how{font-size:14px}
+.pay-hint{margin:14px 0 0;font-size:14px;color:var(--muted)}
+.pay-step{margin-top:16px;display:grid;gap:12px}
+.pay-step-t{margin:0;font-size:15px}
 @media (max-width:640px){.methods{grid-template-columns:1fr}}
+/* Code marchand : le code en gros, « Payer maintenant » et « Copier le code » */
+.paycode{display:grid;gap:10px;padding:14px;border:1.5px solid var(--line-2);border-radius:var(--r);background:var(--panel)}
+.paycode-l{font-weight:700;font-size:14px}
+.paycode-c{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:22px;font-weight:700;letter-spacing:.02em;overflow-wrap:anywhere;color:var(--text)}
+.paycode-b{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.paycode-b .btn{justify-content:center;text-align:center;padding:11px 10px;font-size:15px}
+.paycode-msg{font-size:13px;color:var(--bad)}
+.paycode-msg:empty{display:none}
+.paycode.compact{padding:10px 12px;gap:8px}
+.paycode.compact .paycode-c{font-size:18px}
+.paycode.compact .paycode-b .btn{padding:9px 8px;font-size:14px}
+.trk-codes{display:grid;gap:8px;margin:10px 0}
+.trk-fee .trk-merchant{font-size:13px}
+.code-ussd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700}
+.info-merchant{font-size:13px;margin:14px 0 0}
 
 /* ===== Charte Belchicken : couleurs et écritures ===== */
 /* Toujours en mode clair, même si l'appareil est en mode sombre */

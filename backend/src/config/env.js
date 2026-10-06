@@ -19,11 +19,18 @@ export const env = {
   },
   // Adresse du site public : lien de suivi envoyé au client (/suivi/BC-XXXXXX)
   siteUrl: process.env.PUBLIC_SITE_URL || 'https://belchicken-six.vercel.app',
-  // Numéros marchands donnés au client pour les frais de livraison (messages et page de suivi).
-  // Les mêmes que dans frontend/src/restaurant.js. MERCHANT_NUMBER (ancien réglage, un seul numéro) sert
-  // si le numéro d'un opérateur est vide. EN ATTENTE du client : +22670000000 est provisoire.
-  orangeMoneyNumber: process.env.ORANGE_MONEY_NUMBER || process.env.MERCHANT_NUMBER || '+22670000000',
-  moovMoneyNumber: process.env.MOOV_MONEY_NUMBER || process.env.MERCHANT_NUMBER || '+22670000000',
+  // Paiement mobile money par code marchand (USSD), sans frais pour le client. MONTANT est remplacé par
+  // le montant à payer (plats sur la page Vos informations, frais de livraison sur la page de suivi et
+  // dans les messages). Modifiables sur Render sans toucher au code. Le site les lit par GET /api/payment.
+  payment: {
+    // Nom affiché sur la confirmation de paiement du client
+    merchantName: process.env.MERCHANT_NAME || 'ECOFOOD',
+    codes: {
+      ORANGE_MONEY: process.env.ORANGE_MONEY_CODE || '*144*10*66534483*MONTANT#',
+      MOOV_MONEY: process.env.MOOV_MONEY_CODE || '*555*4*1*1050194*MONTANT#',
+      TELECEL_MONEY: process.env.TELECEL_MONEY_CODE || '*808*4*1*2331833*MONTANT#',
+    },
+  },
   // Adresse du restaurant et lien Google Maps (Plus Code 9F2J+V8 Ouagadougou), pour le message
   // « commande prête » des commandes à emporter. Jamais la boîte postale.
   restaurantAddress:
@@ -50,11 +57,10 @@ export const whatsappEnabled = () =>
 // Envoi automatique des messages au client : l'API WhatsApp configurée ET l'option activée
 export const customerAutoEnabled = () => Boolean(env.whatsapp.token && env.whatsapp.phoneNumberId && env.whatsapp.customerAuto);
 
-// Ce dont les messages au client ont besoin (lien de suivi, numéros marchands, adresse du restaurant)
+// Ce dont les messages au client ont besoin (lien de suivi, codes marchands, adresse du restaurant)
 export const messageContext = () => ({
   siteUrl: env.siteUrl,
-  orangeMoneyNumber: env.orangeMoneyNumber,
-  moovMoneyNumber: env.moovMoneyNumber,
+  payment: env.payment,
   restaurantAddress: env.restaurantAddress,
 });
 

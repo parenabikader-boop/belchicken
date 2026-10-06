@@ -341,7 +341,7 @@ export function DeliveryFee({ order: o, steps }) {
         <p className="st-note">
           {o.feeAlreadyPaid
             ? 'Déjà payés avant le départ du livreur (ancien fonctionnement) : rien à encaisser.'
-            : 'À payer au livreur à la réception, en espèces ou par mobile money au numéro marchand.'}
+            : 'À payer au livreur à la réception, en espèces ou par mobile money avec le code marchand.'}
         </p>
       )}
 

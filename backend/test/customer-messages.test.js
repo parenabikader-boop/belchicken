@@ -6,8 +6,9 @@ import {
 import { deliveryError, feeEditError, feeMethodError, feeVerifyError, paymentConfirmError } from '../src/services/order-status.js';
 import { feeSchema } from '../src/routes/staff-orders.routes.js';
 
-// Numéros marchands d'essai, différents pour vérifier que chacun est à sa place
-const ctx = { siteUrl: 'https://belchicken-six.vercel.app/', orangeMoneyNumber: '+22601010101', moovMoneyNumber: '+22602020202' };
+// Codes marchands d'essai, différents pour vérifier que chacun est à sa place
+const TEST_PAYMENT = { merchantName: 'ECOFOOD', codes: { ORANGE_MONEY: '*1*11*MONTANT#', MOOV_MONEY: '*2*22*MONTANT#', TELECEL_MONEY: '*3*33*MONTANT#' } };
+const ctx = { siteUrl: 'https://belchicken-six.vercel.app/', payment: TEST_PAYMENT };
 const order = (extra = {}) => ({
   reference: 'BC-7K2Q9M',
   customerName: 'awa Traoré',
@@ -21,7 +22,12 @@ const order = (extra = {}) => ({
   ...extra,
 });
 const VU = new Date('2026-10-06T12:00:00Z');
-const FEES = 'Frais de livraison : 1 000 F, à payer au livreur à la réception, en espèces, par Orange Money au +226 01 01 01 01 ou par Moov Money au +226 02 02 02 02.';
+const FEES =
+  'Frais de livraison : 1 000 F, à payer au livreur à la réception, en espèces ou par mobile money avec le code marchand ' +
+  '(sans frais, nom affiché : ECOFOOD) :\n' +
+  'Orange Money : ```*1*11*1000#```\n' +
+  'Moov Money : ```*2*22*1000#```\n' +
+  'Telecel Money : ```*3*33*1000#```';
 
 test('prénom : premier mot du nom, avec une majuscule', () => {
   assert.equal(firstName('awa Traoré'), 'Awa');
@@ -29,7 +35,7 @@ test('prénom : premier mot du nom, avec une majuscule', () => {
   assert.equal(firstName(''), 'cher client');
 });
 
-test('paiement confirmé : prénom, référence, montants réels, numéro marchand et lien de suivi', () => {
+test('paiement confirmé : prénom, référence, montants réels, codes marchands avec les frais et lien de suivi', () => {
   const text = renderMessage('PAIEMENT_CONFIRME', order({ deliveryFee: 1000 }), ctx);
   assert.equal(
     text,

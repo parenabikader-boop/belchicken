@@ -38,9 +38,14 @@ services:
       # restaurant (message « commande prête »). Vides = valeurs du code (src/config/env.js).
       - key: PUBLIC_SITE_URL
         value: https://belchicken-six.vercel.app
-      - key: ORANGE_MONEY_NUMBER
+      # Codes marchands mobile money (vide = codes officiels ECOFOOD), MONTANT remplacé par le montant
+      - key: ORANGE_MONEY_CODE
         sync: false
-      - key: MOOV_MONEY_NUMBER
+      - key: MOOV_MONEY_CODE
+        sync: false
+      - key: TELECEL_MONEY_CODE
+        sync: false
+      - key: MERCHANT_NAME
         sync: false
       - key: RESTAURANT_ADDRESS
         sync: false

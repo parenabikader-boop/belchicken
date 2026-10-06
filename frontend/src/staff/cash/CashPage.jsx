@@ -7,7 +7,7 @@ import { formatDateTime, formatPhone, formatTime, timeAgo } from '../orders/labe
 const REFRESH_MS = 15000;
 
 // Page Caisse (Patron et Opérateur) : frais de livraison payés au livreur à la réception.
-//   - Frais à vérifier : payés par mobile money au numéro marchand, à cocher après vérification.
+//   - Frais à vérifier : payés par mobile money (code marchand), à cocher après vérification.
 //   - Caisse livreurs : espèces encore chez chaque livreur, bouton « Espèces remises », historique.
 // Adresse : ?onglet=verifier|livreurs
 export default function CashPage() {
@@ -66,7 +66,7 @@ function ToVerify({ data, onChange }) {
   return (
     <>
       <p className="od-hint ca-hint">
-        Frais payés par Orange Money ou Moov Money au numéro marchand, à la réception. Vérifiez sur le téléphone marchand que le montant est
+        Frais payés par Orange Money, Moov Money ou Telecel Money (code marchand), à la réception. Vérifiez sur le téléphone marchand que le montant est
         bien arrivé, puis cochez.
       </p>
       {data.toVerify.length === 0 ? (

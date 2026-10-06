@@ -64,12 +64,12 @@ export const NEXT_ACTION = {
   EN_LIVRAISON: { to: 'LIVREE', label: 'Livrée : remercier le client' },
 };
 
-export const METHOD_LABEL = { ORANGE_MONEY: 'Orange Money', MOOV_MONEY: 'Moov Money', ESPECES: 'Espèces' };
+export const METHOD_LABEL = { ORANGE_MONEY: 'Orange Money', MOOV_MONEY: 'Moov Money', TELECEL_MONEY: 'Telecel Money', ESPECES: 'Espèces' };
 
 // Frais de livraison payés au livreur à la réception : comment le client les a payés
 export const FEE_METHODS = [
   { id: 'ESPECES', label: 'Espèces', hint: 'remis au livreur en main propre' },
-  { id: 'MOBILE_MONEY', label: 'Mobile money au numéro marchand', hint: 'Orange Money ou Moov Money' },
+  { id: 'MOBILE_MONEY', label: 'Mobile money (code marchand)', hint: 'Orange Money, Moov Money ou Telecel Money' },
 ];
 export const FEE_METHOD_LABEL = { ESPECES: 'en espèces', MOBILE_MONEY: 'par mobile money' };
 

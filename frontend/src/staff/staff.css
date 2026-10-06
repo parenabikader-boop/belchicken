@@ -304,7 +304,7 @@
 /* ===== Tableau de bord (Patron) : une colonne sur téléphone, deux sur ordinateur ===== */
 .st-sm{display:none}
 @media (max-width:640px){.st-lg{display:none}.st-sm{display:inline}}
-.db{--om:#e8710a;--moov:#1f5fa8;--bar:var(--brand);--bar-soft:#e9b9bb}
+.db{--om:#e8710a;--moov:#1f5fa8;--telecel:#c8102e;--bar:var(--brand);--bar-soft:#e9b9bb}
 .db-period{display:grid;grid-template-columns:repeat(3,1fr);background:var(--panel);border:1px solid #e3c999;border-radius:999px;padding:4px;max-width:420px}
 .db-period button{border:0;background:transparent;border-radius:999px;font:inherit;font-weight:700;font-size:15px;color:var(--muted);padding:10px 0;cursor:pointer;min-height:44px}
 .db-period button.on{background:var(--ink);color:#fff}
@@ -361,11 +361,12 @@
 .db-track{margin:5px 0 0 28px;height:8px;background:var(--panel-2);border-radius:4px;overflow:hidden}
 .db-track span{display:block;height:100%;background:var(--bar);border-radius:0 4px 4px 0}
 .db-rank small{display:block;margin-left:28px;color:var(--muted);font-size:12px;margin-top:2px}
-/* Orange / Moov */
+/* Orange / Moov / Telecel */
 .db-split{display:flex;gap:2px;height:22px;border-radius:4px;overflow:hidden;margin-top:4px}
 .db-split span{display:block;min-width:4px}
 .db-split .om,.db-legend i.om{background:var(--om)}
 .db-split .moov,.db-legend i.moov{background:var(--moov)}
+.db-split .telecel,.db-legend i.telecel{background:var(--telecel)}
 .db-legend{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:10px}
 .db-legend li{display:grid;grid-template-columns:14px 1fr auto;gap:2px 10px;align-items:center;font-size:15px}
 .db-legend i{width:14px;height:14px;border-radius:4px}

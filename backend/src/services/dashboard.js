@@ -2,6 +2,7 @@
 // Burkina Faso = heure UTC toute l'année (pas d'heure d'été) : les jours se coupent à minuit UTC.
 import { z } from 'zod';
 import { courierStats } from './courier.js';
+import { MOBILE_MONEY_METHODS } from './payment-codes.js';
 
 const DAY = 24 * 3600 * 1000;
 export const PERIODS = ['day', 'week', 'month'];
@@ -60,7 +61,7 @@ export function summarize(orders) {
     revenue,
     deliveryRevenue: feeSum(fees),
     deliveryPaid: fees.length,
-    // Frais séparés par mode : espèces au livreur, mobile money au numéro marchand
+    // Frais séparés par mode : espèces au livreur, mobile money par code marchand
     deliveryCash: feeSum(cash),
     deliveryCashCount: cash.length,
     deliveryMobile: feeSum(mobile),
@@ -112,7 +113,7 @@ export function buildDashboard(orders, range) {
     weekdays[(o.createdAt.getUTCDay() + 6) % 7] += 1;
   }
 
-  const payments = ['ORANGE_MONEY', 'MOOV_MONEY'].map((method) => {
+  const payments = MOBILE_MONEY_METHODS.map((method) => {
     const list = paid.filter((o) => o.paymentMethod === method);
     return { method, paid: list.length, revenue: list.reduce((s, o) => s + o.itemsTotal, 0) };
   });
