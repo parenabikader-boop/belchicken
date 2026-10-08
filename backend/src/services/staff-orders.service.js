@@ -2,8 +2,9 @@ import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { customerAutoEnabled, messageContext } from '../config/env.js';
 import {
-  ACTIVE, deliveryError, feeAlreadyPaid, feeEditError, feeMethodError, feeVerifyError, isPickup, paymentConfirmError, STATUSES, transitionError,
+  ACTIVE, deliveryError, feeAlreadyPaid, feeMethodError, feeToCollect, feeVerifyError, isPickup, paymentConfirmError, STATUSES, transitionError,
 } from './order-status.js';
+import { feeCorrectionError, feeEditRight } from './delivery-fees.js';
 import { customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticeState, THANKS_KEYS, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
 import { pushCourierAssigned, pushCourseCancelled, pushTeamDelivered } from './push.service.js';
@@ -71,6 +72,8 @@ export async function listOrders({ status, q }) {
       itemsTotal: o.itemsTotal,
       deliveryFee: o.deliveryFee,
       deliveryFeeMethod: o.deliveryFeeMethod,
+      deliveryFeeSource: o.deliveryFeeSource,
+      deliveryZoneName: o.deliveryZoneName,
       courierName: o.courierName,
       itemCount: o.items.reduce((n, i) => n + i.quantity, 0),
       hasLocation: o.latitude != null,
@@ -112,6 +115,12 @@ export function toStaffOrder(order) {
     deliveryFeeVerifiedAt: o.deliveryFeeVerifiedAt,
     cashRemitted: o.cashRemittanceId != null,
     feeAlreadyPaid: o.status !== 'LIVREE' && feeAlreadyPaid(o),
+    // Grille des frais : d'où viennent les frais (QUARTIER, DISTANCE, A_CONFIRMER, AGENT), quartier et distance
+    // copiés à la commande. feeEdit : qui peut encore les corriger ('TOUS', 'PATRON' ou null).
+    deliveryFeeSource: o.deliveryFeeSource,
+    deliveryZoneName: o.deliveryZoneName,
+    deliveryDistanceM: o.deliveryDistanceM,
+    feeEdit: feeEditRight(o).who,
     // Livreur et code de remise (ou de retrait, à emporter). Le code est montré à l'équipe (il est dans
     // le message « en route » ou « prête », et peut être dicté au client par appel), jamais au livreur.
     courier: o.courierName ? { id: o.courierId, name: o.courierName, assignedAt: o.courierAssignedAt } : null,
@@ -144,6 +153,8 @@ export function toStaffOrder(order) {
     events: o.events.map((e) => ({
       type: e.type,
       amount: e.amount,
+      previousAmount: e.previousAmount,
+      reason: e.reason,
       messageKey: e.messageKey,
       courierName: e.courierName,
       messageLabel: e.messageKey ? messageLabel(e.messageKey) : null,
@@ -171,6 +182,12 @@ async function afterChange(reference) {
 const event = (orderId, type, staff, extra = {}) => ({ orderId, type, staffUserId: staff.id, staffName: staff.name, ...extra });
 const CHANGED = "Quelqu'un vient de modifier cette commande. La page est mise à jour.";
 
+// Frais saisis pour la première fois (FRAIS_SAISIS) ou corrigés, avec le motif et l'ancien montant (FRAIS_CORRIGES)
+const feeEvent = (order, amount, staff, reason) =>
+  order.deliveryFee == null
+    ? event(order.id, 'FRAIS_SAISIS', staff, { amount })
+    : event(order.id, 'FRAIS_CORRIGES', staff, { amount, previousAmount: order.deliveryFee, reason: reason?.trim() || null });
+
 export async function getOrder(reference) {
   const order = await prisma.order.findUnique({ where: { reference }, include: DETAIL_INCLUDE });
   if (!order) throw new AppError(404, 'Commande introuvable.', 'COMMANDE_INTROUVABLE');
@@ -183,6 +200,7 @@ async function findForRules(tx, reference) {
     where: { reference },
     select: {
       id: true, status: true, mode: true, deliveryFee: true, deliveryFeeMethod: true, deliveryFeeVerifiedAt: true, courierId: true,
+      cashRemittanceId: true,
       deliveryCode: true, deliveryCodeAttempts: true,
       statusChanges: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
       events: { select: { type: true, messageKey: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
@@ -201,6 +219,7 @@ async function guardedUpdate(tx, order, data) {
       deliveryFee: order.deliveryFee,
       deliveryFeeMethod: order.deliveryFeeMethod,
       deliveryFeeVerifiedAt: order.deliveryFeeVerifiedAt,
+      cashRemittanceId: order.cashRemittanceId,
       courierId: order.courierId,
     },
     data,
@@ -233,7 +252,7 @@ export const statusChange = (order, to, staff, reason = null) => ({
 // quand l'agent remet la commande au comptoir : il tape le code donné par le client (code), ou, client
 // sans son code, valide avec un motif (reason, événement RETRAIT_SANS_CODE). Jamais de frais.
 // Chaque étape, sauf l'annulation, demande que le client ait été prévenu de l'étape en cours.
-export async function changeStatus(reference, { from, to, reason, deliveryFee, courierId, feeMethod, code }, staff) {
+export async function changeStatus(reference, { from, to, reason, deliveryFee, feeReason, courierId, feeMethod, code }, staff) {
   let courier = null;
   let cancelledCourierId = null;
   let wrongCode = null;
@@ -251,7 +270,11 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, c
     const error =
       transitionError(order.status, to, reason, order.mode) ||
       (to !== 'ANNULEE' ? noticeError(notice(order)) : null) ||
-      (to === 'PAYEE' ? paymentConfirmError(fee, order.mode) : null) ||
+      (to === 'PAYEE' ? paymentConfirmError(fee, order.mode, order.deliveryFee) : null) ||
+      // Frais de la grille changés par l'agent en confirmant le paiement : c'est une correction, avec un motif
+      (to === 'PAYEE' && !pickup && order.deliveryFee != null && fee !== order.deliveryFee && (!feeReason || feeReason.trim().length < 3)
+        ? 'Vous changez les frais calculés pour ce quartier : indiquez le motif.'
+        : null) ||
       (to === 'EN_LIVRAISON' ? deliveryError(order) : null) ||
       (to === 'LIVREE' && !pickup ? handoverReasonError(reason) || feeMethodError(order, feeMethod) : null) ||
       (withCode && !code ? 'Tapez le code de retrait du client, ou validez sans code avec un motif.' : null) ||
@@ -278,16 +301,14 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, c
 
     await guardedUpdate(tx, order, {
       status: to,
-      ...(to === 'PAYEE' && !pickup ? { deliveryFee: fee } : {}),
+      ...(to === 'PAYEE' && !pickup ? { deliveryFee: fee, ...(fee !== order.deliveryFee ? { deliveryFeeSource: 'AGENT' } : {}) } : {}),
       ...(courier ? { ...assignment(courier), deliveryCode: generateDeliveryCode(), deliveryCodeAttempts: 0 } : {}),
       ...(to === 'PRETE' ? { deliveryCode: generateDeliveryCode(), deliveryCodeAttempts: 0 } : {}),
-      ...(to === 'LIVREE' && !pickup && !feeAlreadyPaid(order) ? { deliveryFeeMethod: feeMethod } : {}),
+      ...(to === 'LIVREE' && feeToCollect(order) ? { deliveryFeeMethod: feeMethod } : {}),
     });
     const withReason = to === 'ANNULEE' || (to === 'LIVREE' && !withCode);
     await tx.orderStatusChange.create({ data: statusChange(order, to, staff, withReason ? reason.trim() : null) });
-    if (to === 'PAYEE' && !pickup && fee !== order.deliveryFee) {
-      await tx.orderEvent.create({ data: event(order.id, 'FRAIS_SAISIS', staff, { amount: fee }) });
-    }
+    if (to === 'PAYEE' && !pickup && fee !== order.deliveryFee) await tx.orderEvent.create({ data: feeEvent(order, fee, staff, feeReason) });
     if (courier) await tx.orderEvent.create({ data: event(order.id, 'LIVREUR_ASSIGNE', staff, { courierName: courier.name }) });
     if (to === 'LIVREE' && !pickup) await tx.orderEvent.create({ data: event(order.id, 'LIVRAISON_SANS_CODE', staff) });
     if (counter && !withCode) await tx.orderEvent.create({ data: event(order.id, 'RETRAIT_SANS_CODE', staff) });
@@ -351,14 +372,15 @@ function notifyCourier(reference, courierId, send = pushCourierAssigned) {
 
 // Modification du montant des frais (Patron et Opérateur), tant que le livreur n'est pas parti.
 // Après la confirmation du paiement, un nouveau montant demande un nouveau message au client.
-export async function setDeliveryFee(reference, amount, staff) {
+// Première saisie (frais à confirmer, grille vide) ou correction, avec un motif (feeCorrectionError :
+// Patron et Opérateur avant le départ du livreur, Patron seulement ensuite)
+export async function setDeliveryFee(reference, amount, staff, reason = null) {
   await prisma.$transaction(async (tx) => {
     const order = await findForRules(tx, reference);
-    const error = feeEditError(order);
-    if (error) throw new AppError(400, error, 'FRAIS_IMPOSSIBLES');
-    if (order.deliveryFee === amount) return;
-    await guardedUpdate(tx, order, { deliveryFee: amount });
-    await tx.orderEvent.create({ data: event(order.id, 'FRAIS_SAISIS', staff, { amount }) });
+    const error = feeCorrectionError(order, staff.role, amount, reason);
+    if (error) throw new AppError(order.deliveryFee === amount ? 409 : 400, error, 'FRAIS_IMPOSSIBLES');
+    await guardedUpdate(tx, order, { deliveryFee: amount, deliveryFeeSource: 'AGENT' });
+    await tx.orderEvent.create({ data: feeEvent(order, amount, staff, reason) });
   });
   return afterChange(reference);
 }

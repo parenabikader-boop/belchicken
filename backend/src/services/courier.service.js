@@ -2,7 +2,7 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { checkHandover, startOfToday, toCourse } from './courier.js';
-import { feeAlreadyPaid, feeMethodError } from './order-status.js';
+import { feeMethodError, feeToCollect } from './order-status.js';
 import { notifyDelivered, statusChange } from './staff-orders.service.js';
 
 // Courses en cours, plus celles livrées ou annulées aujourd'hui
@@ -31,7 +31,7 @@ export async function listCourses(courier, now = new Date()) {
 export async function deliverWithCode(reference, code, feeMethod, courier) {
   const order = await prisma.order.findUnique({
     where: { reference },
-    select: { id: true, status: true, courierId: true, deliveryCode: true, deliveryCodeAttempts: true, deliveryFeeMethod: true },
+    select: { id: true, status: true, courierId: true, deliveryCode: true, deliveryCodeAttempts: true, deliveryFee: true, deliveryFeeMethod: true, mode: true },
   });
   if (!order || order.courierId !== courier.id) throw new AppError(404, 'Course introuvable.', 'COURSE_INTROUVABLE');
   // Mode de paiement des frais vérifié avant le code : un oubli ne compte pas comme un code faux
@@ -56,7 +56,7 @@ export async function deliverWithCode(reference, code, feeMethod, courier) {
   await prisma.$transaction(async (tx) => {
     const updated = await tx.order.updateMany({
       where: { id: order.id, status: 'EN_LIVRAISON', courierId: courier.id },
-      data: { status: 'LIVREE', ...(feeAlreadyPaid(order) ? {} : { deliveryFeeMethod: feeMethod }) },
+      data: { status: 'LIVREE', ...(feeToCollect(order) ? { deliveryFeeMethod: feeMethod } : {}) },
     });
     if (updated.count !== 1) throw new AppError(409, 'Cette course vient de changer. La page est mise à jour.', 'COURSE_CHANGEE');
     await tx.orderStatusChange.create({ data: statusChange(order, 'LIVREE', courier) });

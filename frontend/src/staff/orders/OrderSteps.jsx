@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { staffApi } from '../../api/client.js';
 import { formatPrice } from '../../utils/format.js';
-import { ACTIVE, deliveryBlock, FEE_EDITABLE, FEE_METHODS, formatPhone, formatTime, isPickup, METHOD_LABEL, nextAction } from './labels.js';
+import { useStaff } from '../StaffContext.jsx';
+import { ACTIVE, canEditFee, deliveryBlock, feeOrigin, feeText, FEE_METHODS, formatPhone, formatTime, isPickup, METHOD_LABEL, nextAction } from './labels.js';
+
+// « 1 500 » -> 1500 ; champ vide -> NaN (jamais 0 par erreur : 0 F = livraison offerte)
+const toAmount = (v) => (v.trim() === '' ? NaN : Number(v.replace(/\s/g, '')));
 
 // Étapes d'une commande : un seul bouton par étape, qui enregistre l'étape ET ouvre WhatsApp avec le
 // message du client. L'étape suivante reste bloquée (ici et par l'API) tant que l'agent n'a pas
@@ -158,6 +162,7 @@ export function Actions({ order: o, steps }) {
   const [mode, setMode] = useState(null); // null | 'confirm' | 'depart' | 'handover' | 'counter' | 'cancel'
   const [reason, setReason] = useState('');
   const [fee, setFee] = useState('');
+  const [feeReason, setFeeReason] = useState('');
   const [courierId, setCourierId] = useState('');
   const [feeMethod, setFeeMethod] = useState('');
   const [code, setCode] = useState('');
@@ -174,11 +179,15 @@ export function Actions({ order: o, steps }) {
     ? 'Prévenez d’abord le client : confirmez l’envoi du message ci-dessus.'
     : o.status === 'EN_PREPARATION' && !pickup ? deliveryBlock(o) : null;
   const go = (call) => steps.run(call);
-  const amount = Number(fee.replace(/\s/g, ''));
+  const amount = toAmount(fee);
+  // Frais calculés par la grille et changés par l'agent : c'est une correction, avec un motif
+  const gridFee = o.deliveryFee;
+  const changed = !pickup && gridFee != null && amount !== gridFee;
+  const feeOk = pickup || (Number.isInteger(amount) && (amount === gridFee || amount >= 1)) && (!changed || feeReason.trim().length >= 3);
 
   if (mode === 'confirm' && o.status === 'PAIEMENT_A_VERIFIER') {
     return (
-      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'PAYEE', ...(pickup ? {} : { deliveryFee: amount }) })); }}>
+      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'PAYEE', ...(pickup ? {} : { deliveryFee: amount, ...(changed ? { feeReason } : {}) }) })); }}>
         <b>Avez-vous vérifié le paiement sur le téléphone marchand ?</b>
         <p>
           <strong>{formatPrice(o.itemsTotal)}</strong> reçus par {METHOD_LABEL[o.paymentMethod]}
@@ -188,16 +197,29 @@ export function Actions({ order: o, steps }) {
           <p className="st-muted">Commande à emporter : pas de frais de livraison.</p>
         ) : (
           <>
-            <label htmlFor="st-fee" className="st-fee-label">Frais de livraison pour le quartier du client (annoncés dans le message)</label>
+            <label htmlFor="st-fee" className="st-fee-label">
+              {gridFee != null
+                ? `Frais de livraison calculés par le site : ${feeText(gridFee)} (annoncés dans le message)`
+                : o.deliveryFeeSource === 'A_CONFIRMER'
+                  ? 'Frais à confirmer : appelez le client, puis tapez le montant convenu (annoncé dans le message)'
+                  : 'Frais de livraison pour le quartier du client (annoncés dans le message)'}
+            </label>
+            {feeOrigin(o) && <p className="st-muted">{feeOrigin(o)}.</p>}
             <span className="of-amount">
-              <input id="st-fee" type="text" inputMode="numeric" autoComplete="off" placeholder="ex. 1000" value={fee} onChange={(e) => setFee(e.target.value.replace(/[^\d\s]/g, ''))} autoFocus />
+              <input id="st-fee" type="text" inputMode="numeric" autoComplete="off" placeholder="ex. 1000" value={fee} onChange={(e) => setFee(e.target.value.replace(/[^\d\s]/g, ''))} autoFocus={gridFee == null} />
               <span>F</span>
             </span>
+            {changed && (
+              <>
+                <label htmlFor="st-fee-reason" className="st-fee-label">Pourquoi changer les frais calculés ?</label>
+                <textarea id="st-fee-reason" value={feeReason} onChange={(e) => setFeeReason(e.target.value)} maxLength={300} placeholder="Ex. : client en dehors du quartier choisi…" />
+              </>
+            )}
           </>
         )}
         {steps.error && <p className="st-err">{steps.error}</p>}
         <div className="st-action-row">
-          <button type="submit" className="btn btn-p" disabled={steps.busy || (!pickup && !(amount >= 1))}>{steps.busy ? 'Enregistrement…' : 'Oui, paiement reçu : prévenir le client'}</button>
+          <button type="submit" className="btn btn-p" disabled={steps.busy || !feeOk}>{steps.busy ? 'Enregistrement…' : 'Oui, paiement reçu : prévenir le client'}</button>
           <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
         </div>
       </form>
@@ -223,7 +245,7 @@ export function Actions({ order: o, steps }) {
   // Client sans son code : l'agent valide à la place du livreur, avec un motif et la façon dont
   // les frais ont été payés au livreur (comme le livreur le fait avec le code)
   if (mode === 'handover' && o.status === 'EN_LIVRAISON') {
-    const needMethod = !o.feeAlreadyPaid;
+    const needMethod = !o.feeAlreadyPaid && o.deliveryFee !== 0; // rien à encaisser pour une livraison offerte
     return (
       <form className="st-action cancel" onSubmit={async (e) => { e.preventDefault(); if (await go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'LIVREE', reason, feeMethod: needMethod ? feeMethod : undefined }))) setReason(''); }}>
         <label htmlFor="st-handover"><b>Pourquoi valider la livraison sans le code ?</b></label>
@@ -231,7 +253,7 @@ export function Actions({ order: o, steps }) {
         {needMethod ? (
           <FeeMethodPicker fee={o.deliveryFee} value={feeMethod} onChange={setFeeMethod} />
         ) : (
-          <p className="st-muted">Frais de livraison déjà payés avant le départ du livreur.</p>
+          <p className="st-muted">{o.deliveryFee === 0 ? 'Livraison offerte : rien à encaisser.' : 'Frais de livraison déjà payés avant le départ du livreur.'}</p>
         )}
         <p className="st-muted">À faire seulement si la commande a bien été remise. Le motif est noté dans l’historique.</p>
         {steps.error && <p className="st-err">{steps.error}</p>}
@@ -300,6 +322,7 @@ export function Actions({ order: o, steps }) {
   const onNext = () => {
     if (o.status === 'PAIEMENT_A_VERIFIER') {
       setFee(o.deliveryFee != null ? String(o.deliveryFee) : '');
+      setFeeReason('');
       setMode('confirm');
     } else if (o.status === 'EN_PREPARATION' && !pickup) {
       setCourierId('');
@@ -350,14 +373,18 @@ export function Actions({ order: o, steps }) {
   );
 }
 
-// Frais de livraison : saisis en confirmant le paiement, modifiables jusqu'au départ du livreur
+// Frais de livraison : calculés par la grille du Patron à la commande, ou saisis en confirmant le paiement.
+// Corrigeables avec un motif : par toute l'équipe jusqu'au départ du livreur, par le Patron seulement ensuite
 // (le client reçoit alors le nouveau montant). Payés au livreur à la réception : une fois la commande
 // livrée, on voit comment, et l'agent coche le mobile money après vérification sur le téléphone marchand.
 export function DeliveryFee({ order: o, steps }) {
-  const editable = FEE_EDITABLE.includes(o.status) && o.status !== 'PAIEMENT_A_VERIFIER' && !o.feeAlreadyPaid;
+  const { user } = useStaff();
+  const editable = o.deliveryFee != null && canEditFee(o, user.role);
+  const patronOnly = o.feeEdit === 'PATRON';
   const method = o.deliveryFeeMethod;
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState('');
+  const [reason, setReason] = useState('');
 
   useEffect(() => {
     setEditing(false);
@@ -365,9 +392,9 @@ export function DeliveryFee({ order: o, steps }) {
 
   const save = async (e) => {
     e.preventDefault();
-    const amount = Number(value.replace(/\s/g, ''));
-    if (await steps.run(() => staffApi.setDeliveryFee(o.reference, amount))) setEditing(false);
+    if (await steps.run(() => staffApi.setDeliveryFee(o.reference, toAmount(value), reason.trim()))) setEditing(false);
   };
+  const newAmount = toAmount(value);
   const paid = o.status === 'LIVREE' && method;
   const ok = paid && (method === 'ESPECES' ? o.cashRemitted : Boolean(o.deliveryFeeVerifiedAt));
 
@@ -377,29 +404,41 @@ export function DeliveryFee({ order: o, steps }) {
       {editing ? (
         <form className="of-fee-form" onSubmit={save}>
           <label htmlFor="of-fee" className="st-muted">Nouveau montant (le client reçoit un nouveau message)</label>
+          <span className="of-amount">
+            <input id="of-fee" type="text" inputMode="numeric" autoComplete="off" value={value} onChange={(e) => setValue(e.target.value.replace(/[^\d\s]/g, ''))} autoFocus />
+            <span>F</span>
+          </span>
+          <label htmlFor="of-fee-reason" className="st-muted">Motif de la correction (noté dans l’historique)</label>
+          <textarea id="of-fee-reason" className="of-fee-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder="Ex. : client plus loin que le quartier choisi…" />
+          {patronOnly && <p className="st-note">Le livreur est déjà parti : prévenez-le aussi du nouveau montant.</p>}
+          {steps.error && <p className="st-err">{steps.error}</p>}
           <div className="of-fee-row">
-            <span className="of-amount">
-              <input id="of-fee" type="text" inputMode="numeric" autoComplete="off" value={value} onChange={(e) => setValue(e.target.value.replace(/[^\d\s]/g, ''))} autoFocus />
-              <span>F</span>
-            </span>
-            <button type="submit" className="btn btn-p" disabled={steps.busy || !(Number(value.replace(/\s/g, '')) >= 1)}>Enregistrer et prévenir</button>
+            <button type="submit" className="btn btn-p" disabled={steps.busy || !(newAmount >= 1) || newAmount === o.deliveryFee || reason.trim().length < 3}>Corriger et prévenir</button>
             <button type="button" className="st-text-btn" onClick={() => setEditing(false)}>Annuler</button>
           </div>
         </form>
       ) : (
         <p className="of-fee-value">
-          {o.deliveryFee == null ? <span className="st-muted">À saisir en confirmant le paiement.</span> : <b>{formatPrice(o.deliveryFee)}</b>}
-          {editable && o.deliveryFee != null && (
-            <button type="button" className="st-text-btn" onClick={() => { setValue(String(o.deliveryFee)); setEditing(true); }}>Modifier</button>
+          {o.deliveryFee == null
+            ? <span className="st-muted">{o.deliveryFeeSource === 'A_CONFIRMER' ? 'À confirmer avec le client au téléphone, puis à saisir en confirmant le paiement.' : 'À saisir en confirmant le paiement.'}</span>
+            : <b className={o.deliveryFee === 0 ? 'of-free' : undefined}>{feeText(o.deliveryFee)}</b>}
+          {editable && (
+            <button type="button" className="st-text-btn" onClick={() => { setValue(String(o.deliveryFee)); setReason(''); setEditing(true); }}>Corriger</button>
           )}
         </p>
+      )}
+      {!editing && feeOrigin(o) && <p className="st-muted of-origin">{feeOrigin(o)}</p>}
+      {!editing && patronOnly && user.role !== 'PATRON' && o.deliveryFee != null && (
+        <p className="st-muted of-origin">Le livreur est parti : seul le Patron peut encore corriger les frais.</p>
       )}
 
       {o.deliveryFee != null && !paid && o.status !== 'ANNULEE' && (
         <p className="st-note">
           {o.feeAlreadyPaid
             ? 'Déjà payés avant le départ du livreur (ancien fonctionnement) : rien à encaisser.'
-            : 'À payer au livreur à la réception, en espèces ou par mobile money avec le code marchand.'}
+            : o.deliveryFee === 0
+              ? 'Livraison offerte : le livreur n’encaisse rien.'
+              : 'À payer au livreur à la réception, en espèces ou par mobile money avec le code marchand.'}
         </p>
       )}
 

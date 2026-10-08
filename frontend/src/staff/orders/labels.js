@@ -116,8 +116,29 @@ export function formatDateTime(iso) {
   return `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })} à ${formatTime(iso)}`;
 }
 
-// Frais de livraison : modifiables jusqu'au départ du livreur (mêmes règles que l'API, order-status.js)
-export const FEE_EDITABLE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION'];
+// Frais de livraison : 0 F = livraison offerte (grille du Patron)
+export const feeText = (fee) => (fee === 0 ? 'Livraison offerte' : formatPrice(fee));
+const km = (m) => `${String(Math.round(m / 100) / 10).replace('.', ',')} km`;
+
+// D'où viennent les frais (grille du Patron, copiés à la commande), en une phrase pour l'équipe
+export function feeOrigin(o) {
+  const distance = o.deliveryDistanceM != null ? `environ ${km(o.deliveryDistanceM)} du restaurant, à vol d’oiseau` : null;
+  switch (o.deliveryFeeSource) {
+    case 'QUARTIER':
+      return `Prix du quartier choisi par le client : ${o.deliveryZoneName}`;
+    case 'DISTANCE':
+      return `Tranche de distance (position GPS) : ${distance}`;
+    case 'A_CONFIRMER':
+      return `Autre quartier ou trop loin${distance ? ` (${distance})` : ''} : à confirmer avec le client au téléphone`;
+    case 'AGENT':
+      return `Fixés par l’équipe${o.deliveryZoneName ? ` · quartier choisi : ${o.deliveryZoneName}` : ''}${distance ? ` · ${distance}` : ''}`;
+    default:
+      return null; // anciennes commandes, grille vide
+  }
+}
+
+// Qui peut corriger les frais (même règle que l'API, delivery-fees.js : o.feeEdit = 'TOUS' | 'PATRON' | null)
+export const canEditFee = (o, role) => o.feeEdit === 'TOUS' || (o.feeEdit === 'PATRON' && role === 'PATRON');
 // Ce qui empêche le livreur de partir, ou null
 export function deliveryBlock(o) {
   if (o.deliveryFee == null) return 'Saisissez d’abord les frais de livraison ci-dessous.';
@@ -136,7 +157,8 @@ export function timelineOf(o) {
   const events = (o.events || []).map((e) => ({
     kind: `e-${e.type}`,
     title: {
-      FRAIS_SAISIS: `Frais de livraison : ${formatPrice(e.amount)}`,
+      FRAIS_SAISIS: `Frais de livraison : ${feeText(e.amount)}`,
+      FRAIS_CORRIGES: `Frais corrigés : ${feeText(e.previousAmount)} → ${feeText(e.amount)}`,
       FRAIS_RECUS: 'Frais de livraison reçus avant le départ',
       FRAIS_NON_RECUS: '« Frais reçus » décoché',
       FRAIS_VERIFIES: `Frais vérifiés sur le téléphone marchand : ${formatPrice(e.amount)}`,
@@ -149,7 +171,7 @@ export function timelineOf(o) {
       LIVRAISON_SANS_CODE: 'Livraison validée sans code',
       RETRAIT_SANS_CODE: 'Remise au comptoir validée sans code',
     }[e.type],
-    note: e.messageLabel || null,
+    note: e.messageLabel || (e.reason ? `Motif : ${e.reason}` : null),
     by: e.by,
     at: e.at,
   }));

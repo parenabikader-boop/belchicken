@@ -137,12 +137,18 @@ function Course({ course: c, onDelivered, onRefresh }) {
       </header>
 
       {/* Frais de livraison : le seul montant que le livreur voit */}
-      {c.feePaidBefore ? (
-        <p className="lv-fee paid"><span>Frais déjà payés</span><small>Rien à encaisser pour cette course.</small></p>
+      {c.feePaidBefore || c.deliveryFee === 0 ? (
+        <p className="lv-fee paid">
+          <span>{c.deliveryFee === 0 ? 'Livraison offerte' : 'Frais déjà payés'}</span>
+          <small>Rien à encaisser pour cette course{c.deliveryZoneName && ` · ${c.deliveryZoneName}`}.</small>
+        </p>
       ) : c.deliveryFee != null && (
         <p className="lv-fee">
           <span>Frais à encaisser : <b>{formatPrice(c.deliveryFee)}</b></span>
-          <small>En espèces, ou par Orange Money / Moov Money / Telecel Money avec le code marchand, au choix du client.</small>
+          <small>
+            {c.deliveryZoneName && <>Quartier : {c.deliveryZoneName}. </>}
+            En espèces, ou par Orange Money / Moov Money / Telecel Money avec le code marchand, au choix du client.
+          </small>
         </p>
       )}
 
@@ -198,7 +204,7 @@ function Course({ course: c, onDelivered, onRefresh }) {
 function Handover({ course: c, onDelivered, onRefresh }) {
   const [code, setCode] = useState('');
   const [feeMethod, setFeeMethod] = useState('');
-  const needMethod = !c.feePaidBefore;
+  const needMethod = !c.feePaidBefore && c.deliveryFee !== 0; // livraison offerte : rien à encaisser
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 

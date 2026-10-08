@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { normalizePhone } from '../utils/phone.js';
+import { deliveryChoiceSchema } from '../services/delivery-fees.js';
 
 const phone = (label) =>
   z
@@ -21,6 +22,13 @@ const optionalText = (max) =>
     .max(max)
     .optional()
     .transform((v) => (v ? v : undefined));
+
+// Position GPS partagée par le client
+export const locationSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracy: z.number().nonnegative().max(100000).optional(),
+});
 
 const item = z.object({
   productId: z.string().min(1),
@@ -57,13 +65,10 @@ export const createOrderSchema = z
           ? { message: 'Le paiement se fait uniquement par Orange Money, Moov Money ou Telecel Money.' }
           : { message: ctx.defaultError },
     }),
-    location: z
-      .object({
-        latitude: z.number().min(-90).max(90),
-        longitude: z.number().min(-180).max(180),
-        accuracy: z.number().nonnegative().max(100000).optional(),
-      })
-      .optional(),
+    location: locationSchema.optional(),
+    // Livraison : quartier choisi, « Autre quartier », et les frais affichés au client (comparés, jamais
+    // utilisés comme prix). Absent = ancienne version du site.
+    delivery: deliveryChoiceSchema.optional(),
     addressNote: optionalText(300),
     // Livraison (par défaut, anciennes versions du site) ou à emporter (retrait au restaurant)
     mode: z.enum(['LIVRAISON', 'A_EMPORTER'], { errorMap: () => ({ message: 'Choisissez livraison ou à emporter.' }) }).default('LIVRAISON'),

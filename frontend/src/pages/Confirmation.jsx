@@ -9,6 +9,7 @@ import { METHOD_LABEL } from '../utils/payment.js';
 import { TunnelHead } from '../components/PageParts.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils/format.js';
+import { feeLabel } from '../utils/deliveryFee.js';
 
 // Rafraîchissement de la page de suivi, tant que la commande n'est ni livrée ni annulée
 const REFRESH_MS = 20000;
@@ -97,7 +98,9 @@ export default function Confirmation() {
 
   const recap = fresh?.recap;
   const pickup = isPickup(order);
-  const delivery = !pickup && recap && [recap.geo && 'Position partagée', recap.addr].filter(Boolean).join(' · ');
+  // Quartier choisi (copié dans la commande, visible aussi sans le récapitulatif), position, repères
+  const delivery = !pickup && [order.deliveryZoneName, recap?.geo && 'Position partagée', recap?.addr].filter(Boolean).join(' · ');
+  const toConfirm = order.deliveryFeeSource === 'A_CONFIRMER';
   const fee = order.deliveryFee;
 
   return (
@@ -134,7 +137,7 @@ export default function Confirmation() {
               <tr className={fee != null ? 'sub' : 'tot'}><td>Total des plats</td><td></td><td className="r">{formatPrice(order.itemsTotal)}</td></tr>
               {fee != null && (
                 <>
-                  <tr className="sub"><td>Frais de livraison</td><td></td><td className="r">{formatPrice(fee)}</td></tr>
+                  <tr className="sub"><td>Frais de livraison</td><td></td><td className="r">{feeLabel(fee)}</td></tr>
                   <tr className="tot"><td>Total</td><td></td><td className="r">{formatPrice(order.itemsTotal + fee)}</td></tr>
                 </>
               )}
@@ -151,8 +154,12 @@ export default function Confirmation() {
                 <dt>Frais de livraison</dt>
                 <dd>
                   {fee == null
-                    ? 'Selon votre quartier : affichés ici après la vérification de votre paiement'
-                    : `${formatPrice(fee)} · ${order.deliveryFeePaid ? 'payés, merci' : 'à payer au livreur à la réception'}`}
+                    ? toConfirm
+                      ? 'À confirmer par notre équipe au téléphone, puis affichés ici'
+                      : 'Selon votre quartier : affichés ici après la vérification de votre paiement'
+                    : fee === 0
+                      ? 'Livraison offerte : rien à payer au livreur'
+                      : `${formatPrice(fee)} · ${order.deliveryFeePaid ? 'payés, merci' : 'à payer au livreur à la réception'}`}
                 </dd>
               </>
             )}
@@ -258,7 +265,10 @@ function PickupNow({ order }) {
 
 function Now({ order }) {
   const fee = order.deliveryFee;
-  const feeDue = fee != null && !order.deliveryFeePaid;
+  const feeDue = fee > 0 && !order.deliveryFeePaid; // 0 F : livraison offerte
+  const toConfirm = order.deliveryFeeSource === 'A_CONFIRMER';
+  // Frais déjà connus à la commande (grille du Patron) : annoncés dès la vérification du paiement
+  const known = fee == null ? null : fee === 0 ? <> Livraison offerte : rien à payer au livreur.</> : <> Frais de livraison : <b>{formatPrice(fee)}</b>, à payer au livreur à la réception.</>;
   if (isPickup(order) && order.status !== 'ANNULEE') return <PickupNow order={order} />;
 
   switch (order.status) {
@@ -270,10 +280,14 @@ function Now({ order }) {
         </p>
       );
     case 'PAIEMENT_A_VERIFIER':
+      if (known) return <p className="trk-now">Nous vérifions votre paiement de <b>{formatPrice(order.itemsTotal)}</b> sur notre téléphone marchand.{known}</p>;
+      if (toConfirm) return <p className="trk-now">Nous vérifions votre paiement de <b>{formatPrice(order.itemsTotal)}</b> sur notre téléphone marchand. Notre équipe vous appelle pour confirmer les frais de livraison.</p>;
       return <p className="trk-now">Nous vérifions votre paiement de <b>{formatPrice(order.itemsTotal)}</b> sur notre téléphone marchand. Ensuite, nous vous indiquons ici et sur WhatsApp les frais de livraison pour votre quartier.</p>;
     case 'PAYEE':
     case 'EN_PREPARATION':
+      if (fee == null && toConfirm) return <p className="trk-now">Paiement vérifié, merci ! Notre équipe vous appelle pour confirmer les frais de livraison : ils s’affichent ensuite ici.</p>;
       if (fee == null) return <p className="trk-now">Paiement vérifié, merci ! Nous calculons les frais de livraison pour votre quartier : ils s’affichent ici dans un instant et vous sont envoyés sur WhatsApp.</p>;
+      if (fee === 0) return <p className="trk-now ok">{order.status === 'EN_PREPARATION' ? 'Votre commande est en préparation.' : 'Paiement vérifié, merci ! Votre commande va être préparée.'} Livraison offerte : rien à payer au livreur.</p>;
       if (feeDue) {
         return (
           <FeeToPay fee={fee} feePayment={order.feePayment}>
@@ -290,7 +304,7 @@ function Now({ order }) {
           </FeeToPay>
         );
       }
-      return <p className="trk-now ok">Votre commande est en route ! Gardez votre téléphone près de vous : le livreur peut vous appeler.</p>;
+      return <p className="trk-now ok">Votre commande est en route ! Gardez votre téléphone près de vous : le livreur peut vous appeler.{fee === 0 && ' Livraison offerte : rien à payer au livreur. Donnez-lui le code reçu sur WhatsApp.'}</p>;
     case 'LIVREE':
       return <p className="trk-now ok">Commande livrée. Merci de votre confiance et bon appétit !</p>;
     default:

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canCancel, feeEditError, feeMethodError, nextStatus, paymentConfirmError, transitionError } from '../src/services/order-status.js';
+import { canCancel, feeMethodError, nextStatus, paymentConfirmError, transitionError } from '../src/services/order-status.js';
+import { feeEditRight } from '../src/services/delivery-fees.js';
 import { searchWhere, statusWhere } from '../src/services/staff-orders.service.js';
 import { thanksWhere } from '../src/services/customer-messages.js';
 
@@ -70,6 +71,6 @@ test('à emporter : préparation, prête, puis retirée (jamais en livraison)', 
 test('à emporter : pas de frais de livraison', () => {
   assert.equal(paymentConfirmError(undefined, 'A_EMPORTER'), null);
   assert.match(paymentConfirmError(1000, 'A_EMPORTER'), /pas de frais/);
-  assert.match(feeEditError({ mode: 'A_EMPORTER', status: 'PAYEE' }), /pas de frais/);
+  assert.match(feeEditRight({ mode: 'A_EMPORTER', status: 'PAYEE' }).error, /pas de frais/);
   assert.equal(feeMethodError({ mode: 'A_EMPORTER', deliveryFeeMethod: null }, undefined), null);
 });

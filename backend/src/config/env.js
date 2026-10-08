@@ -36,6 +36,11 @@ export const env = {
   // Jamais la boîte postale.
   restaurantAddress: process.env.RESTAURANT_ADDRESS || 'Kamsonghin, en face de Sonia Hôtel',
   restaurantMapsUrl: process.env.RESTAURANT_MAPS_URL || 'https://www.google.com/maps/dir/?api=1&destination=12.352187,-1.519188',
+  // Position du restaurant : point de départ des tranches de distance des frais de livraison
+  restaurantPosition: {
+    latitude: Number(process.env.RESTAURANT_LATITUDE) || 12.352187,
+    longitude: Number(process.env.RESTAURANT_LONGITUDE) || -1.519188,
+  },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
     apiKey: process.env.CLOUDINARY_API_KEY || '',

@@ -40,6 +40,10 @@ export const api = {
   getOrder: (reference) => request(`/api/orders/${encodeURIComponent(reference)}`).then((d) => d.order),
   // Codes marchands des 3 opérateurs, avec MONTANT à remplacer : { merchantName, operators: [{ method, label, code }] }
   getPayment: () => request('/api/payment'),
+  // Grille des frais de livraison : { active, zones: [{ id, name, fee }], gps, allowOther }
+  getDelivery: () => request('/api/delivery'),
+  // Frais pour un choix ({ zoneId } | { other: true } | { location }) : { source, fee, zoneName, distanceKm }
+  quoteDelivery: (choice) => request('/api/delivery/quote', { method: 'POST', body: JSON.stringify(choice) }).then((d) => d.quote),
 };
 
 // Espace équipe : appels sur la même adresse que le site (/api/staff/...), relayés vers l'API
@@ -60,12 +64,22 @@ export const staffApi = {
   order: (reference) => staffRequest(`/orders/${encodeURIComponent(reference)}`).then((d) => d.order),
   setStatus: (reference, body) =>
     staffRequest(`/orders/${encodeURIComponent(reference)}/status`, { method: 'POST', body: JSON.stringify(body) }).then((d) => d.order),
-  // Frais de livraison (montant en F), modifiables jusqu'au départ du livreur
-  setDeliveryFee: (reference, amount) =>
-    staffRequest(`/orders/${encodeURIComponent(reference)}/delivery-fee`, { method: 'PUT', body: JSON.stringify({ amount }) }).then((d) => d.order),
+  // Frais de livraison (montant en F) : saisie, ou correction avec un motif (Patron seul après le départ du livreur)
+  setDeliveryFee: (reference, amount, reason) =>
+    staffRequest(`/orders/${encodeURIComponent(reference)}/delivery-fee`, { method: 'PUT', body: JSON.stringify({ amount, reason }) }).then((d) => d.order),
   // Frais payés par mobile money : vérifiés (ou non) sur le téléphone marchand
   setFeeVerified: (reference, verified) =>
     staffRequest(`/orders/${encodeURIComponent(reference)}/delivery-fee/verified`, { method: 'POST', body: JSON.stringify({ verified }) }).then((d) => d.order),
+
+  // Grille des frais de livraison (Patron) : chaque appel renvoie la grille à jour
+  deliveryFees: () => staffRequest('/frais-livraison'),
+  createDeliveryZone: (body) => staffRequest('/frais-livraison/zones', { method: 'POST', body: JSON.stringify(body) }),
+  updateDeliveryZone: (id, body) => staffRequest(`/frais-livraison/zones/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  reorderDeliveryZones: (ids) => staffRequest('/frais-livraison/zones/order', { method: 'PUT', body: JSON.stringify({ ids }) }),
+  createDeliveryBand: (body) => staffRequest('/frais-livraison/bands', { method: 'POST', body: JSON.stringify(body) }),
+  updateDeliveryBand: (id, body) => staffRequest(`/frais-livraison/bands/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteDeliveryBand: (id) => staffRequest(`/frais-livraison/bands/${id}`, { method: 'DELETE' }),
+  setDeliverySettings: (body) => staffRequest('/frais-livraison/settings', { method: 'PUT', body: JSON.stringify(body) }),
 
   // Caisse : frais à vérifier, espèces chez les livreurs, remises
   cash: () => staffRequest('/caisse'),

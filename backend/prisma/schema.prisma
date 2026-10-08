@@ -39,6 +39,14 @@ enum PaymentMethod {
   TELECEL_MONEY
 }
 
+// D'où viennent les frais de livraison d'une commande
+enum DeliveryFeeSource {
+  QUARTIER // prix du quartier choisi par le client (grille du Patron)
+  DISTANCE // tranche de distance depuis le restaurant (position GPS du client)
+  A_CONFIRMER // autre quartier, au-delà de la dernière tranche ou position imprécise : l'agent fixe les frais au téléphone
+  AGENT // saisis ou corrigés par l'équipe
+}
+
 // Frais de livraison payés au livreur à la réception : comment le client les a payés
 enum FeePaymentMethod {
   ESPECES // en espèces au livreur (remises ensuite au restaurant : CashRemittance)
@@ -135,6 +143,43 @@ model ProductVariant {
   @@unique([productId, code])
 }
 
+// ─── Grille des frais de livraison, gérée par le Patron (src/services/delivery-fees.js) ───
+// Grille vide (aucun quartier ni aucune tranche actifs) : l'équipe saisit les frais comme avant.
+
+// Quartiers et leur prix. Jamais supprimés, seulement désactivés : les commandes gardent le nom copié.
+model DeliveryZone {
+  id        String   @id @default(cuid())
+  name      String   @unique // « Ouaga 2000 », « Kamsonghin »…
+  fee       Int // en F, de 0 (livraison offerte) à 50 000
+  position  Int      @default(0) // ordre dans la liste du client
+  isActive  Boolean  @default(true) // faux = n'apparaît plus pour les clients
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+
+  @@index([position])
+}
+
+// Tranches de distance à vol d'oiseau depuis le restaurant (position GPS du client). Chaque tranche va
+// de la limite de la tranche active précédente jusqu'à upToMeters : ni trou ni chevauchement possible.
+// Au-delà de la dernière : frais à confirmer par l'agent.
+model DeliveryDistanceBand {
+  id         String   @id @default(cuid())
+  upToMeters Int      @unique // 3000 = jusqu'à 3 km
+  fee        Int // en F, de 0 (livraison offerte) à 50 000
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// Réglages de la grille : une seule ligne (id = 1), créée la première fois que le Patron enregistre.
+// Pas de ligne = réglages par défaut : la migration n'écrit rien.
+model DeliverySettings {
+  id             Int      @id @default(1)
+  allowOtherZone Boolean  @default(true) // option « Autre quartier » : frais confirmés par l'agent au téléphone
+  updatedAt      DateTime @updatedAt
+}
+
 // Les 3 photos de la mosaïque de l'accueil (case 1 : grande à gauche, 2 et 3 : petites à droite)
 model HomePhoto {
   slot          Int      @id // 1, 2 ou 3
@@ -168,17 +213,25 @@ model Order {
 
   itemsTotal Int // total des plats, calculé côté serveur
 
-  // Frais de livraison selon le quartier, saisis par l'équipe (au moins 1 F). Vide = pas encore saisis.
+  // Frais de livraison : calculés par le serveur avec la grille du Patron (quartier ou distance), ou saisis
+  // par l'équipe (au moins 1 F). 0 = livraison offerte (grille seulement). Vide = pas encore saisis.
   // Le livreur part une fois les frais saisis ; le client les paie au livreur à la réception,
   // en espèces ou par mobile money au numéro marchand (choix noté à la remise).
   deliveryFee           Int?
+  // Grille des frais (src/services/delivery-fees.js) : copies figées à la commande. Un prix changé
+  // ensuite par le Patron ne modifie pas les commandes déjà passées.
+  deliveryFeeSource     DeliveryFeeSource? // vide = anciennes commandes, ou grille vide (saisis par l'équipe)
+  deliveryZoneId        String?
+  deliveryZone          DeliveryZone?      @relation(fields: [deliveryZoneId], references: [id], onDelete: SetNull)
+  deliveryZoneName      String? // nom du quartier choisi par le client
+  deliveryDistanceM     Int? // distance à vol d'oiseau depuis le restaurant (position GPS), en mètres
   deliveryFeeMethod     FeePaymentMethod? // vide = pas encore payés
   // Mobile money : vérifiés par l'équipe sur le téléphone marchand (vide = à vérifier).
   // Anciennes commandes (avant le 6 octobre 2026) : frais reçus avant le départ du livreur.
   deliveryFeeVerifiedAt DateTime?
   // Espèces : remise de l'argent par le livreur au restaurant (vide = encore chez le livreur)
   cashRemittanceId      String?
-  cashRemittance        CashRemittance?   @relation(fields: [cashRemittanceId], references: [id], onDelete: SetNull)
+  cashRemittance        CashRemittance?    @relation(fields: [cashRemittanceId], references: [id], onDelete: SetNull)
 
   // Livreur assigné au passage EN_LIVRAISON (remplaçable tant que la commande n'est pas livrée).
   // courierName est une copie figée, comme staffName dans l'historique.
@@ -277,21 +330,24 @@ enum OrderEventType {
   LIVREUR_ASSIGNE // livreur choisi ou remplacé (nom dans courierName)
   CODE_INCORRECT // le livreur a tapé un mauvais code de remise
   LIVRAISON_SANS_CODE // livraison validée par l'agent, client sans son code (motif dans OrderStatusChange.reason)
+  FRAIS_CORRIGES // frais d'une commande corrigés par l'équipe, avec un motif (après le départ du livreur : Patron seulement)
   RETRAIT_SANS_CODE // à emporter : remise au comptoir validée par l'agent, client sans son code de retrait (motif dans OrderStatusChange.reason)
 }
 
 model OrderEvent {
-  id          String         @id @default(cuid())
-  orderId     String
-  order       Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  type        OrderEventType
-  amount      Int? // montant des frais pour FRAIS_SAISIS
-  courierName String? // livreur, pour LIVREUR_ASSIGNE
-  messageKey  String? // PAIEMENT_CONFIRME, FRAIS_RECUS, EN_ROUTE, LIVREE, ANNULEE (src/services/customer-messages.js)
-  staffUserId String?
-  staffUser   StaffUser?     @relation(fields: [staffUserId], references: [id], onDelete: SetNull)
-  staffName   String? // copie figée, comme dans OrderStatusChange
-  createdAt   DateTime       @default(now())
+  id             String         @id @default(cuid())
+  orderId        String
+  order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type           OrderEventType
+  amount         Int? // montant des frais pour FRAIS_SAISIS et FRAIS_CORRIGES (nouveau montant)
+  previousAmount Int? // FRAIS_CORRIGES : montant avant la correction
+  reason         String? // FRAIS_CORRIGES : motif de la correction
+  courierName    String? // livreur, pour LIVREUR_ASSIGNE
+  messageKey     String? // PAIEMENT_CONFIRME, FRAIS_RECUS, EN_ROUTE, LIVREE, ANNULEE (src/services/customer-messages.js)
+  staffUserId    String?
+  staffUser      StaffUser?     @relation(fields: [staffUserId], references: [id], onDelete: SetNull)
+  staffName      String? // copie figée, comme dans OrderStatusChange
+  createdAt      DateTime       @default(now())
 
   @@index([orderId, createdAt])
 }

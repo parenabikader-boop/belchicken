@@ -49,6 +49,8 @@ const statusSchema = z.object({
   courierId: z.string().max(40).optional(),
   // Frais de livraison donnés avec la confirmation du paiement (to = PAYEE)
   deliveryFee: z.number({ invalid_type_error: 'Indiquez les frais de livraison en F.' }).int('Montant en F, sans centimes.').optional(),
+  // Motif quand l'agent change les frais calculés par la grille (to = PAYEE)
+  feeReason: z.string().max(300, 'Motif trop long (300 caractères au plus).').optional(),
   // À emporter, remise au comptoir (to = LIVREE) : code de retrait donné par le client
   code: z.string().max(20).optional(),
   // Livraison validée sans code (to = LIVREE) : comment le client a payé les frais au livreur
@@ -66,19 +68,22 @@ staffOrdersRouter.post('/:reference/status', async (req, res, next) => {
   }
 });
 
-// Frais de livraison (Patron et Opérateur) : montant selon le quartier, avant le départ du livreur
+// Frais de livraison : saisie ou correction avec un motif. Patron et Opérateur avant le départ du livreur,
+// Patron seulement ensuite (vérifié dans feeCorrectionError)
 export const feeSchema = z.object({
   amount: z
     .number({ required_error: 'Indiquez le montant des frais.', invalid_type_error: 'Indiquez le montant des frais en F.' })
     .int('Montant en F, sans centimes.')
     .min(FEE_MIN, 'Les frais de livraison doivent être d’au moins 1 F.')
     .max(FEE_MAX, 'Montant trop élevé (50 000 F au plus).'),
+  // Motif de la correction : obligatoire dès que des frais existent déjà (delivery-fees.js)
+  reason: z.string().max(300, 'Motif trop long (300 caractères au plus).').optional(),
 });
 
 staffOrdersRouter.put('/:reference/delivery-fee', async (req, res, next) => {
   try {
-    const { amount } = feeSchema.parse(req.body);
-    res.json({ order: await setDeliveryFee(reference(req), amount, req.staff) });
+    const { amount, reason } = feeSchema.parse(req.body);
+    res.json({ order: await setDeliveryFee(reference(req), amount, req.staff, reason) });
   } catch (e) {
     next(e);
   }

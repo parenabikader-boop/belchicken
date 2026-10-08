@@ -6,6 +6,7 @@ import { menuRouter } from './routes/menu.routes.js';
 import { homeRouter } from './routes/home.routes.js';
 import { orderRouter } from './routes/order.routes.js';
 import { paymentRouter } from './routes/payment.routes.js';
+import { deliveryRouter } from './routes/delivery.routes.js';
 import { staffRouter } from './routes/staff.routes.js';
 import { errorHandler, notFound } from './middlewares/errors.js';
 
@@ -21,6 +22,7 @@ app.use('/api/menu', menuRouter);
 app.use('/api/home', homeRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/payment', paymentRouter);
+app.use('/api/delivery', deliveryRouter); // grille des frais de livraison et aperçu
 app.use('/api/staff', staffRouter); // espace équipe, protégé par connexion
 
 app.use(notFound);

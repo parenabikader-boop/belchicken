@@ -1,7 +1,7 @@
 import { customerAutoEnabled, env, messageContext, whatsappEnabled } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
 import { buildNewOrderParams } from './whatsapp.message.js';
-import { currentMessageKey, MESSAGES, messageParams } from './customer-messages.js';
+import { currentMessageKey, messageModel, messageParams } from './customer-messages.js';
 
 async function sendTemplate(to, templateName, params) {
   const { apiVersion, phoneNumberId, token, templateLang } = env.whatsapp;
@@ -65,7 +65,7 @@ export async function autoNotifyCustomer(order) {
   if (!customerAutoEnabled()) return;
   const current = currentMessageKey(order);
   if (!current || current.missing) return;
-  const { template } = MESSAGES[current.key];
+  const { template } = messageModel(current.key, order);
   try {
     const already = await prisma.notificationLog.findFirst({ where: { orderId: order.id, template, status: 'ENVOYEE' } });
     if (already) return;

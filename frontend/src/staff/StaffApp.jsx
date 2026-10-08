@@ -16,6 +16,7 @@ import PasswordPage, { ForcedPassword } from './account/PasswordPage.jsx';
 import TeamPage from './team/TeamPage.jsx';
 import CoursesPage from './courier/CoursesPage.jsx';
 import CashPage from './cash/CashPage.jsx';
+import DeliveryFeesPage from './fees/DeliveryFeesPage.jsx';
 import InstallBanner from '../components/InstallBanner.jsx';
 import './staff.css';
 
@@ -86,6 +87,7 @@ function TeamRoutes() {
           <Route path="accueil" element={<HomeAdmin />} />
           <Route path="tableau-de-bord" element={<Dashboard />} />
           <Route path="equipe" element={<TeamPage />} />
+          <Route path="frais-livraison" element={<DeliveryFeesPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/equipe" replace />} />
@@ -186,6 +188,7 @@ function StaffShell() {
             </NavLink>
             <NavLink to="/equipe/menu">Menu</NavLink>
             <NavLink to="/equipe/caisse">Caisse</NavLink>
+            {user.role === 'PATRON' && <NavLink to="/equipe/frais-livraison"><span className="st-lg">Frais de livraison</span><span className="st-sm">Frais</span></NavLink>}
             {user.role === 'PATRON' && <NavLink to="/equipe/accueil">Accueil</NavLink>}
             {user.role === 'PATRON' && <NavLink to="/equipe/tableau-de-bord"><span className="st-lg">Tableau de bord</span><span className="st-sm">Chiffres</span></NavLink>}
             {user.role === 'PATRON' && <NavLink to="/equipe/equipe">Équipe</NavLink>}

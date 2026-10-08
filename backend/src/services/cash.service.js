@@ -35,6 +35,7 @@ export async function getCash(now = new Date()) {
     customerName: o.customerName,
     customerPhone: o.customerPhone,
     deliveryFee: o.deliveryFee,
+    deliveryZoneName: o.deliveryZoneName,
     courierName: o.courierName,
     deliveredAt: deliveredAt(o),
     verifiedAt: o.deliveryFeeVerifiedAt,

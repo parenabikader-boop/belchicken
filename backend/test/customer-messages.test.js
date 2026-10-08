@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {
   currentMessageKey, customerMessage, firstName, MESSAGES, messageParams, noticeError, noticeState, renderMessage,
 } from '../src/services/customer-messages.js';
-import { deliveryError, feeEditError, feeMethodError, feeVerifyError, paymentConfirmError } from '../src/services/order-status.js';
+import { deliveryError, feeMethodError, feeVerifyError, paymentConfirmError } from '../src/services/order-status.js';
+import { feeEditRight } from '../src/services/delivery-fees.js';
 import { feeSchema } from '../src/routes/staff-orders.routes.js';
 
 // Codes marchands d'essai, différents pour vérifier que chacun est à sa place
@@ -101,13 +102,13 @@ test('le livreur part dès que les frais sont saisis : ils sont payés à la ré
   assert.equal(deliveryError(order({ status: 'EN_PREPARATION', deliveryFee: 1000 })), null);
 });
 
-test('frais : modifiables jusqu’au départ du livreur', () => {
-  assert.equal(feeEditError(order({ status: 'PAIEMENT_A_VERIFIER' })), null);
-  assert.equal(feeEditError(order({ deliveryFee: 1000 })), null);
-  assert.equal(feeEditError(order({ status: 'EN_PREPARATION', deliveryFee: 1000 })), null);
-  assert.match(feeEditError(order({ status: 'EN_LIVRAISON', deliveryFee: 1000 })), /plus/);
+test('frais : toute l’équipe jusqu’au départ du livreur, le Patron seulement ensuite', () => {
+  assert.equal(feeEditRight(order({ status: 'PAIEMENT_A_VERIFIER' })).who, 'TOUS');
+  assert.equal(feeEditRight(order({ deliveryFee: 1000 })).who, 'TOUS');
+  assert.equal(feeEditRight(order({ status: 'EN_PREPARATION', deliveryFee: 1000 })).who, 'TOUS');
+  assert.equal(feeEditRight(order({ status: 'EN_LIVRAISON', deliveryFee: 1000 })).who, 'PATRON');
   // Ancienne commande, frais déjà payés avant le départ
-  assert.match(feeEditError(order({ status: 'EN_PREPARATION', deliveryFee: 1000, deliveryFeeMethod: 'MOBILE_MONEY' })), /déjà payés/);
+  assert.match(feeEditRight(order({ status: 'EN_PREPARATION', deliveryFee: 1000, deliveryFeeMethod: 'MOBILE_MONEY' })).error, /déjà payés/);
 });
 
 test('à la remise : espèces ou mobile money obligatoire', () => {
@@ -212,6 +213,9 @@ test('confirmer le paiement demande les frais', () => {
   assert.match(paymentConfirmError(null), /frais de livraison/);
   assert.match(paymentConfirmError(0), /invalides/);
   assert.equal(paymentConfirmError(1000), null);
+  // Frais de la grille gardés tels quels, même la livraison offerte
+  assert.equal(paymentConfirmError(0, 'LIVRAISON', 0), null);
+  assert.match(paymentConfirmError(0, 'LIVRAISON', 1000), /invalides/);
 });
 
 // ─── À emporter ───

@@ -358,7 +358,8 @@ Connexion par numéro de téléphone et mot de passe ; trois rôles : `PATRON` (
 - Statuts : `PAIEMENT_A_VERIFIER` → `PAYEE` → `EN_PREPARATION` → `EN_LIVRAISON` → `LIVREE`, ou `ANNULEE` avec un motif.
   Historique dans la table `OrderStatusChange`.
 - Frais de livraison (Patron et Opérateur) : donnés en confirmant le paiement (`POST …/status` `{ to: 'PAYEE', deliveryFee }`),
-  corrigés avec `PUT /api/staff/orders/:reference/delivery-fee` `{ amount }` (au moins 1 F) jusqu'au départ du livreur.
+  corrigés avec `PUT /api/staff/orders/:reference/delivery-fee` `{ amount, reason }` (au moins 1 F, motif obligatoire dès que
+  des frais existent) : Patron et Opérateur jusqu'au départ du livreur, Patron seulement ensuite. Voir « Grille des frais de livraison ».
   Le client les paie **au livreur, à la réception**, en espèces ou par mobile money avec le code marchand : le départ
   (`EN_LIVRAISON`) demande seulement que les frais soient saisis. À la remise, le mode de paiement (`feeMethod` :
   `ESPECES` | `MOBILE_MONEY`) est obligatoire, pour le livreur comme pour l'agent qui valide sans code
@@ -456,6 +457,35 @@ qui est effacé à chaque déploiement. Les photos d'origine restent servies dep
   nombre de boissons des formules d'origine, BelKids Box comprise).
 
 Point à confirmer : Fuego Wings 8 pièces à la carte, affiché à 10 000 F, plus cher que le menu N° 30 à 9 500 F.
+
+## Grille des frais de livraison
+
+Page Patron `/equipe/frais-livraison` (`frontend/src/staff/fees/`), API `/api/staff/frais-livraison` (Patron seulement).
+Règles et calculs : `backend/src/services/delivery-fees.js` (testés dans `test/delivery-fees.test.js`).
+Migration `20261008100017_grille_frais` : structure seulement, **aucune donnée écrite** (grille vide en production).
+
+- **Quartiers** (`DeliveryZone`) : nom, prix (0 F = livraison offerte), ordre, actif / désactivé. Jamais supprimés.
+- **Tranches de distance** (`DeliveryDistanceBand`) : « jusqu'à X km », chaque tranche commençant là où finit la précédente.
+  Distance **à vol d'oiseau** depuis le restaurant (`RESTAURANT_LATITUDE` / `RESTAURANT_LONGITUDE`, par défaut le Plus Code).
+  Au-delà de la dernière tranche, ou position moins précise que 1 km : frais à confirmer par l'agent.
+- **Autre quartier** (`DeliverySettings.allowOtherZone`) : frais à confirmer par l'agent au téléphone.
+- **Grille vide** (aucun quartier ni tranche actifs) : fonctionnement d'avant, l'équipe saisit les frais en confirmant le paiement.
+
+Site public : `GET /api/delivery` (quartiers actifs, `gps`, `allowOther`) et `POST /api/delivery/quote`
+`{ zoneId } | { other: true } | { location }` (60 demandes / 10 min par adresse IP). La commande envoie
+`delivery: { zoneId?, other?, expectedFee }` : le serveur recalcule les frais (le montant du site est seulement comparé ;
+s'il a changé, réponse 409 `FRAIS_CHANGES` avec le nouveau montant) et les copie dans la commande : `deliveryFee`,
+`deliveryFeeSource` (`QUARTIER`, `DISTANCE`, `A_CONFIRMER`, `AGENT`), `deliveryZoneName`, `deliveryDistanceM`.
+Un prix changé ensuite par le Patron ne modifie pas les commandes déjà passées.
+
+Correction par l'équipe : événement `FRAIS_CORRIGES` (ancien et nouveau montant, motif, qui), affiché dans l'historique.
+Changer les frais de la grille en confirmant le paiement est aussi une correction (`feeReason`). Après le départ du livreur :
+Patron seulement, et plus du tout une fois les frais vérifiés (mobile money) ou remis au restaurant (espèces).
+
+Livraison offerte (0 F) : rien à encaisser par le livreur (pas de mode de paiement demandé), pas de codes marchands.
+Les messages `PAIEMENT_CONFIRME`, `EN_PREPARATION` et `EN_ROUTE` ont une version sans frais (même étape) : avant
+d'activer `WHATSAPP_CUSTOMER_AUTO`, faire aussi approuver chez Meta `commande_paiement_confirme_offerte`,
+`commande_en_preparation_offerte` et `commande_en_route_offerte` (textes dans `customer-messages.js`, champ `free`).
 
 ## À emporter
 

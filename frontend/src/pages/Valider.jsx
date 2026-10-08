@@ -8,9 +8,11 @@ import { useCart, useCartDetails } from '../context/CartContext.jsx';
 import { useMenu } from '../context/MenuContext.jsx';
 import { formatPrice, plural } from '../utils/format.js';
 import { fillCode, MOBILE_MONEY, usePaymentCodes } from '../utils/payment.js';
+import { FEE_PAID_TO_COURIER, FEE_TO_CONFIRM, feeLabel, normalize } from '../utils/deliveryFee.js';
 
 const DRAFT_KEY = 'belchicken.infos.v1';
-const EMPTY = { name: '', phone: '', method: null, payer: '', mode: 'LIVRAISON', addr: '', geo: null };
+// zone : quartier choisi dans la grille des frais ({ id, name }) ; other : « Autre quartier »
+const EMPTY = { name: '', phone: '', method: null, payer: '', mode: 'LIVRAISON', addr: '', geo: null, zone: null, other: false };
 
 // Livraison à domicile, ou à emporter (retrait au restaurant, sans frais de livraison)
 const MODES = [
@@ -31,6 +33,7 @@ const API_FIELDS = {
   'customer.phone': 'phone',
   'payment.payerPhone': 'payer',
   addressNote: 'addr',
+  delivery: 'zone',
 };
 
 // Brouillon gardé le temps de la visite, pour ne pas tout retaper après un retour à Ma commande
@@ -71,7 +74,7 @@ function isPhone(value) {
   return intl && !digits.startsWith('226') && digits.length >= 10 && digits.length <= 15;
 }
 
-function validate(f) {
+function validate(f, grid) {
   const fields = {};
   const summary = [];
   const fail = (key, msg, short) => {
@@ -83,6 +86,10 @@ function validate(f) {
   if (!f.method) fail('method', 'Choisissez votre opérateur mobile money.', 'Choisissez le moyen de paiement.');
   {
     if (!isPhone(f.payer)) fail('payer', 'Indiquez le numéro ayant payé.');
+  }
+  // Grille des frais remplie : le client choisit son quartier (ou « Autre quartier »), ou partage sa position
+  if (f.mode === 'LIVRAISON' && grid?.active && !f.zone && !f.other && !(f.geo && grid.gps)) {
+    fail('zone', grid.gps ? 'Choisissez votre quartier ou partagez votre position.' : 'Choisissez votre quartier.', 'Choisissez votre quartier.');
   }
   if (f.mode === 'LIVRAISON' && !f.geo && f.addr.trim().length < 5) {
     fields.geo = 'Partagez votre position ou indiquez votre quartier et un repère.';
@@ -107,6 +114,65 @@ const PinIcon = () => (
     <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" />
   </svg>
 );
+
+// Liste des quartiers de la grille, avec recherche, et « Autre quartier » si le Patron le propose
+function ZonePicker({ grid, form, onPick, error }) {
+  const [q, setQ] = useState('');
+  const search = normalize(q);
+  const zones = grid.zones.filter((z) => normalize(z.name).includes(search));
+  return (
+    <div className={`zone${error ? ' bad' : ''}`}>
+      <label htmlFor="c-zone-q" className="zone-l">Votre quartier {!grid.gps && <i>*</i>}</label>
+      <span className="hint">{grid.gps ? 'Choisissez votre quartier, ou partagez votre position ci-dessous : les frais suivent alors la distance.' : 'Les frais de livraison dépendent du quartier.'}</span>
+      <input id="c-zone-q" type="search" className="zone-q" placeholder="Rechercher votre quartier" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" aria-controls="c-zone-list" />
+      <div className="zone-list" id="c-zone-list" role="radiogroup" aria-label="Quartier" aria-describedby={error ? 'c-zone-err' : undefined}>
+        {zones.map((z) => {
+          const on = form.zone?.id === z.id;
+          return (
+            <button key={z.id} type="button" role="radio" aria-checked={on} className={`zone-opt${on ? ' on' : ''}`} onClick={() => onPick(on ? null : { id: z.id, name: z.name }, false)}>
+              <span className="rd" aria-hidden="true" />
+              <span className="zone-n">{z.name}</span>
+              <b className={z.fee === 0 ? 'free' : undefined}>{feeLabel(z.fee)}</b>
+            </button>
+          );
+        })}
+        {!zones.length && <p className="zone-none">Aucun quartier ne correspond à « {q.trim()} ».{grid.allowOther ? ' Choisissez « Autre quartier ».' : ''}</p>}
+        {grid.allowOther && (
+          <button type="button" role="radio" aria-checked={form.other} className={`zone-opt other${form.other ? ' on' : ''}`} onClick={() => onPick(null, !form.other)}>
+            <span className="rd" aria-hidden="true" />
+            <span className="zone-n">Autre quartier<small>Vous ne trouvez pas le vôtre dans la liste</small></span>
+            <b>À confirmer</b>
+          </button>
+        )}
+      </div>
+      <span className="err" id="c-zone-err">{error}</span>
+    </div>
+  );
+}
+
+const km = (d) => `environ ${String(d).replace('.', ',')} km du restaurant`;
+
+// Frais de livraison dans le récapitulatif, avant la validation
+function FeeSummary({ grid, quote }) {
+  let value = grid.gps ? 'Choisissez votre quartier ou partagez votre position' : 'Choisissez votre quartier';
+  let note = FEE_PAID_TO_COURIER;
+  if (quote?.loading) value = 'Calcul…';
+  else if (quote?.error) [value, note] = ['Indisponibles', quote.error];
+  else if (quote?.source === 'A_CONFIRMER') {
+    value = 'À confirmer';
+    note = `${FEE_TO_CONFIRM}${quote.distanceKm != null ? ` (${km(quote.distanceKm)})` : ''}. ${FEE_PAID_TO_COURIER}`;
+  } else if (quote && quote.fee != null) {
+    value = feeLabel(quote.fee);
+    const where = quote.zoneName || (quote.distanceKm != null ? km(quote.distanceKm) : '');
+    note = quote.fee === 0 ? `${where ? `${where} : ` : ''}rien à payer au livreur.` : `${where ? `${where}. ` : ''}${FEE_PAID_TO_COURIER}`;
+  }
+  return (
+    <div className="sum-fee" aria-live="polite">
+      <div><span>Frais de livraison</span><b className={quote?.fee === 0 ? 'free' : undefined}>{value}</b></div>
+      <p>{note}</p>
+    </div>
+  );
+}
 
 // Après le choix de l'opérateur : le code marchand avec le montant des plats déjà rempli
 function PayStep({ method, total, payment }) {
@@ -148,6 +214,13 @@ export default function Valider() {
   const [geoState, setGeoState] = useState(null); // null | 'searching' | 'denied' | 'unsupported'
   const watchRef = useRef(null);
   const [sending, setSending] = useState(false);
+  // Grille des frais de livraison (null = pas encore chargée ou indisponible : fonctionnement d'avant)
+  const [grid, setGrid] = useState(null);
+  const [quote, setQuote] = useState(null); // aperçu des frais, calculé par le serveur
+  const loadGrid = () => api.getDelivery().then(setGrid, () => setGrid(null));
+  useEffect(() => {
+    loadGrid();
+  }, []);
   // Envoi long (base qui se réveille, réseau lent) : on rassure le client au lieu de le laisser douter
   const [slow, setSlow] = useState(false);
   useEffect(() => {
@@ -226,10 +299,48 @@ export default function Valider() {
 
   const blocked = items.some((i) => i.problem);
   const delivery = form.mode === 'LIVRAISON';
+  const gridOn = delivery && Boolean(grid?.active);
+
+  // Quartier gardé dans le brouillon mais retiré de la grille entre-temps : à choisir à nouveau
+  useEffect(() => {
+    if (grid?.active && form.zone && !grid.zones.some((z) => z.id === form.zone.id)) set('zone', null);
+    if (grid?.active && form.other && !grid.allowOther) set('other', false);
+  }, [grid]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Aperçu des frais : demandé au serveur à chaque changement de quartier ou de position
+  const geoKey = form.geo ? `${form.geo.latitude},${form.geo.longitude},${form.geo.accuracy}` : '';
+  useEffect(() => {
+    if (!gridOn) return setQuote(null);
+    const choice = form.zone ? { zoneId: form.zone.id } : form.other ? { other: true } : form.geo && grid.gps ? {} : null;
+    if (!choice) return setQuote(null);
+    if (form.geo) choice.location = form.geo;
+    let alive = true;
+    setQuote({ loading: true });
+    api.quoteDelivery(choice).then(
+      (q) => alive && setQuote(q),
+      (e) => {
+        if (!alive) return;
+        setQuote({ error: e.message });
+        if (e.code === 'FRAIS_LIVRAISON') loadGrid(); // quartier retiré entre-temps
+      },
+    );
+    return () => {
+      alive = false;
+    };
+  }, [gridOn, form.zone?.id, form.other, geoKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pickZone = (zone, other) => {
+    setForm((f) => ({ ...f, zone, other }));
+    setErrors(({ zone: _, ...rest }) => rest);
+  };
 
   const submit = async () => {
     if (sending) return;
-    const { fields, summary } = validate(form);
+    const { fields, summary } = validate(form, gridOn ? grid : null);
+    if (gridOn && quote?.error && !fields.zone) {
+      fields.zone = quote.error;
+      summary.push(quote.error);
+    }
     setErrors(fields);
     if (summary.length) {
       setAlert(`${plural(summary.length, 'information')} à compléter : ${summary.join(' ')}`);
@@ -243,6 +354,14 @@ export default function Valider() {
         location: { latitude: form.geo.latitude, longitude: form.geo.longitude, accuracy: form.geo.accuracy },
       }),
       ...(delivery && form.addr.trim() && { addressNote: form.addr.trim() }),
+      // Grille des frais : le choix du client et le montant qu'il a vu (comparé par le serveur, jamais un prix)
+      ...(gridOn && {
+        delivery: {
+          ...(form.zone && { zoneId: form.zone.id }),
+          ...(form.other && !form.zone && { other: true }),
+          ...(quote && !quote.loading && !quote.error && { expectedFee: quote.fee }),
+        },
+      }),
       // Jamais de prix : le serveur les recalcule
       items: lines.map((l) => ({
         productId: l.productId,
@@ -268,6 +387,7 @@ export default function Valider() {
         mode: form.mode,
         geo: delivery && !!form.geo,
         addr: payload.addressNote || '',
+        zone: gridOn ? form.zone?.name || (form.other ? 'Autre quartier' : '') : '',
       };
       // Le panier est vidé par la page de confirmation : le vider ici ferait d'abord revenir
       // cette page, panier vide, sur Ma commande
@@ -276,12 +396,15 @@ export default function Valider() {
     } catch (err) {
       setSending(false);
       const fieldErrors = {};
-      for (const d of err.details || []) {
+      for (const d of Array.isArray(err.details) ? err.details : []) {
         const key = API_FIELDS[d.path] || (d.path?.startsWith('location') ? 'geo' : null);
         if (key && !fieldErrors[key]) fieldErrors[key] = d.message;
       }
       // Un plat est passé indisponible entre-temps : on recharge le menu pour le griser
       if (err.code === 'PRODUIT_INDISPONIBLE') reload();
+      // Prix changé par le Patron entre l'aperçu et l'envoi : le nouveau montant s'affiche, le client revalide
+      if (err.code === 'FRAIS_CHANGES' && err.details?.quote) setQuote(err.details.quote);
+      if (err.code === 'FRAIS_LIVRAISON') loadGrid();
       setErrors(fieldErrors);
       setAlert(err.message);
     }
@@ -376,6 +499,7 @@ export default function Valider() {
                   </div>
                   {delivery ? (
                     <>
+                      {gridOn && <ZonePicker grid={grid} form={form} onPick={pickZone} error={errors.zone} />}
                       <div className={`geo${form.geo && !geoState ? ' ok' : ''}`} style={{ marginTop: 16 }}>
                         <div className="ic"><PinIcon /></div>
                         <div style={{ flex: 1 }} aria-live="polite"><b>{geoTitle}</b><span>{geoSub}</span></div>
@@ -385,8 +509,8 @@ export default function Valider() {
                       </div>
                       {errors.geo && <p className="err-line">{errors.geo}</p>}
                       <div className="fields" style={{ marginTop: 16 }}>
-                        <Field id="c-addr" label="Quartier et points de repère" hint="Obligatoire si vous ne partagez pas votre position" error={errors.addr} full>
-                          <textarea {...input('addr')} placeholder="Patte d’Oie, portail bleu après la pharmacie" maxLength={300} />
+                        <Field id="c-addr" label={gridOn ? 'Points de repère' : 'Quartier et points de repère'} hint="Obligatoire si vous ne partagez pas votre position" error={errors.addr} full>
+                          <textarea {...input('addr')} placeholder={gridOn ? 'Portail bleu après la pharmacie' : 'Patte d’Oie, portail bleu après la pharmacie'} maxLength={300} />
                         </Field>
                       </div>
                     </>
@@ -418,7 +542,9 @@ export default function Valider() {
                   ))}
                   <tr className="tot"><td>Total des plats</td><td>{formatPrice(total)}</td></tr>
                 </tbody></table>
-                {delivery ? (
+                {gridOn ? (
+                  <FeeSummary grid={grid} quote={quote} />
+                ) : delivery ? (
                   <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>Frais de livraison selon votre quartier : indiqués après la vérification de votre paiement, sur WhatsApp et sur la page de suivi. Vous les payez au livreur à la réception, en espèces ou par mobile money avec le code marchand.</p>
                 ) : (
                   <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>À emporter : pas de frais de livraison. Vous retirez votre commande au restaurant, {RESTAURANT.address}.</p>

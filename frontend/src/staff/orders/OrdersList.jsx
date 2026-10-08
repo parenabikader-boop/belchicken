@@ -4,7 +4,7 @@ import { staffApi } from '../../api/client.js';
 import { formatPrice, plural } from '../../utils/format.js';
 import { useOrdersFeed } from './OrdersFeed.jsx';
 import AlertsPrompt from '../alerts/AlertsPrompt.jsx';
-import { FEE_METHOD_LABEL, formatTime, HISTORY, HISTORY_FILTERS, isPickup, METHOD_LABEL, STAGES, statusLabel, timeAgo } from './labels.js';
+import { FEE_METHOD_LABEL, feeText, formatTime, HISTORY, HISTORY_FILTERS, isPickup, METHOD_LABEL, STAGES, statusLabel, timeAgo } from './labels.js';
 
 const REFRESH_MS = 5000;
 // Au-delà : les 6 étapes en colonnes côte à côte ; en dessous : un onglet par étape
@@ -242,7 +242,16 @@ function stageDetail(o) {
     if (o.status === 'LIVREE') return 'Retirée au comptoir';
     return 'À emporter · sans frais';
   }
-  if (o.status === 'PAYEE') return o.deliveryFee != null ? `Frais : ${formatPrice(o.deliveryFee)}, payés au livreur` : 'Frais à saisir';
+  // Quartier choisi par le client (grille des frais) : utile dès l'arrivée de la commande
+  if (o.status === 'PAIEMENT_A_VERIFIER') {
+    if (o.deliveryFeeSource === 'A_CONFIRMER') return 'Frais à confirmer au téléphone';
+    if (o.deliveryFee != null) return `${o.deliveryZoneName ? `${o.deliveryZoneName} · ` : ''}frais : ${feeText(o.deliveryFee)}`;
+    return null;
+  }
+  if (o.status === 'PAYEE') {
+    if (o.deliveryFee == null) return 'Frais à saisir';
+    return o.deliveryFee === 0 ? 'Livraison offerte' : `Frais : ${formatPrice(o.deliveryFee)}, payés au livreur`;
+  }
   if (o.status === 'EN_LIVRAISON') return o.courierName ? `Livreur : ${o.courierName}` : 'Livreur non indiqué';
   if (o.status === 'LIVREE') return [o.courierName ? `Livrée par ${o.courierName}` : 'Livrée', o.deliveryFeeMethod && `frais ${FEE_METHOD_LABEL[o.deliveryFeeMethod]}`].filter(Boolean).join(' · ');
   return null;

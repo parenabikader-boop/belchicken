@@ -110,6 +110,7 @@ function FeeRow({ row: o, onChange }) {
         <span>{o.customerName} · {formatPhone(o.customerPhone)}</span>
         <small className="st-muted">
           Livrée{o.courierName && ` par ${o.courierName}`}{o.deliveredAt && ` ${timeAgo(o.deliveredAt)}`}
+          {o.deliveryZoneName && ` · ${o.deliveryZoneName}`}
           {verified && ` · vérifiés à ${formatTime(o.verifiedAt)}`}
         </small>
       </div>
@@ -202,7 +203,7 @@ function CourierCash({ cash: c, onChange }) {
               <li key={o.reference}>
                 <Link to={`/equipe/commandes/${o.reference}`}>{o.reference}</Link>
                 <span>{o.customerName}</span>
-                <small className="st-muted">{o.deliveredAt && formatDateTime(o.deliveredAt)}</small>
+                <small className="st-muted">{o.deliveredAt && formatDateTime(o.deliveredAt)}{o.deliveryZoneName && ` · ${o.deliveryZoneName}`}</small>
                 <b>{formatPrice(o.deliveryFee)}</b>
               </li>
             ))}

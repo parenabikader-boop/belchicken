@@ -29,7 +29,10 @@ const feeCodes = (o, ctx) => {
   const { merchantName, operators } = paymentCodes(ctx.payment, o.deliveryFee ?? 0);
   return [merchantName, ...operators.map((op) => op.code)];
 };
-export const feeSentence = (o, ctx) => feeLine(formatFcfa(o.deliveryFee), ...feeCodes(o, ctx));
+// Livraison offerte (0 F, grille du Patron) : rien à payer au livreur, pas de codes marchands.
+// Chaque message avec des frais a sa version « offerte » (modèle Meta à part, même étape).
+const FREE_LINE = 'Livraison offerte : vous n’avez rien à payer au livreur.';
+export const feeSentence = (o, ctx) => (o.deliveryFee === 0 ? FREE_LINE : feeLine(formatFcfa(o.deliveryFee), ...feeCodes(o, ctx)));
 
 export const MESSAGES = {
   PAIEMENT_CONFIRME: {
@@ -40,6 +43,13 @@ export const MESSAGES = {
       feeLine('{{4}}', '{{5}}', '{{6}}', '{{7}}', '{{8}}') + '\n\n' +
       'Suivez votre commande ici : {{9}}\n\nBelchicken Burkina',
     params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), formatFcfa(o.deliveryFee), ...feeCodes(o, ctx), trackingUrl(o, ctx)],
+    free: {
+      template: 'commande_paiement_confirme_offerte',
+      body:
+        'Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande {{2}}. Merci !\n\n' +
+        FREE_LINE + '\n\nSuivez votre commande ici : {{4}}\n\nBelchicken Burkina',
+      params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), trackingUrl(o, ctx)],
+    },
   },
   EN_PREPARATION: {
     template: 'commande_en_preparation',
@@ -49,6 +59,13 @@ export const MESSAGES = {
       feeLine('{{3}}', '{{4}}', '{{5}}', '{{6}}', '{{7}}') + '\n\n' +
       'Suivez votre commande ici : {{8}}\n\nBelchicken Burkina',
     params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.deliveryFee), ...feeCodes(o, ctx), trackingUrl(o, ctx)],
+    free: {
+      template: 'commande_en_preparation_offerte',
+      body:
+        'Bonjour {{1}}, votre commande {{2}} est en préparation.\n\n' +
+        FREE_LINE + '\n\nSuivez votre commande ici : {{3}}\n\nBelchicken Burkina',
+      params: (o, ctx) => [firstName(o.customerName), o.reference, trackingUrl(o, ctx)],
+    },
   },
   EN_ROUTE: {
     template: 'commande_en_route',
@@ -60,6 +77,14 @@ export const MESSAGES = {
       'Suivez votre commande ici : {{9}}\n\nBelchicken Burkina',
     // Code de remise à 4 chiffres (courier.js), créé au passage EN_LIVRAISON
     params: (o, ctx) => [firstName(o.customerName), o.reference, o.deliveryCode || '-', formatFcfa(o.deliveryFee), ...feeCodes(o, ctx), trackingUrl(o, ctx)],
+    free: {
+      template: 'commande_en_route_offerte',
+      body:
+        'Bonjour {{1}}, votre commande {{2}} est en route ! Le livreur arrive bientôt : gardez votre téléphone près de vous.\n\n' +
+        'Donnez ce code au livreur à la réception : {{3}}. Ne le donnez qu’au livreur, quand il vous remet la commande.\n\n' +
+        FREE_LINE + '\n\nSuivez votre commande ici : {{4}}\n\nBelchicken Burkina',
+      params: (o, ctx) => [firstName(o.customerName), o.reference, o.deliveryCode || '-', trackingUrl(o, ctx)],
+    },
   },
   LIVREE: {
     template: 'commande_livree',
@@ -174,13 +199,16 @@ function pickupMessageKey(o) {
 // Messages de remerciement (après LIVREE) : livraison ou retrait au comptoir
 export const THANKS_KEYS = ['LIVREE', 'RETIREE'];
 
+// Modèle du message pour cette commande : la version « livraison offerte » quand les frais sont de 0 F
+export const messageModel = (key, o) => (o.deliveryFee === 0 && MESSAGES[key].free) || MESSAGES[key];
+
 // Valeurs des variables {{1}}, {{2}}… pour cette commande, nettoyées pour Meta
-export const messageParams = (key, o, ctx) => MESSAGES[key].params(o, ctx).map((p) => clean(p));
+export const messageParams = (key, o, ctx) => messageModel(key, o).params(o, ctx).map((p) => clean(p));
 
 // Texte final : le modèle rempli avec les valeurs
 export const renderMessage = (key, o, ctx) => {
   const params = messageParams(key, o, ctx);
-  return MESSAGES[key].body.replace(/\{\{(\d+)\}\}/g, (_, n) => params[Number(n) - 1]);
+  return messageModel(key, o).body.replace(/\{\{(\d+)\}\}/g, (_, n) => params[Number(n) - 1]);
 };
 
 // Lien qui ouvre WhatsApp sur la conversation avec le client, message déjà écrit
@@ -212,12 +240,13 @@ const lastEventAt = (o, type) => time((o.events || []).findLast((e) => e.type ==
 // Début de l'étape dont le message est `key` (millisecondes)
 export function stepStart(o, key) {
   switch (key) {
+    // Frais saisis ou corrigés : nouveau montant, nouveau message
     case 'PAIEMENT_CONFIRME':
-      return Math.max(lastStatusAt(o, 'PAYEE'), lastEventAt(o, 'FRAIS_SAISIS'));
+      return Math.max(lastStatusAt(o, 'PAYEE'), lastEventAt(o, 'FRAIS_SAISIS'), lastEventAt(o, 'FRAIS_CORRIGES'));
     case 'EN_PREPARATION':
-      return Math.max(lastStatusAt(o, 'EN_PREPARATION'), lastEventAt(o, 'FRAIS_SAISIS'));
+      return Math.max(lastStatusAt(o, 'EN_PREPARATION'), lastEventAt(o, 'FRAIS_SAISIS'), lastEventAt(o, 'FRAIS_CORRIGES'));
     case 'EN_ROUTE':
-      return lastStatusAt(o, 'EN_LIVRAISON');
+      return Math.max(lastStatusAt(o, 'EN_LIVRAISON'), lastEventAt(o, 'FRAIS_CORRIGES'));
     case 'PAIEMENT_CONFIRME_EMPORTER':
       return lastStatusAt(o, 'PAYEE');
     case 'EN_PREPARATION_EMPORTER':

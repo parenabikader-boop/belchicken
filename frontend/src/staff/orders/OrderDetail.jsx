@@ -103,8 +103,11 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
           <p className="st-note">
             Plats seulement. Frais de livraison :{' '}
             {o.deliveryFee == null
-              ? 'pas encore saisis'
-              : `${formatPrice(o.deliveryFee)}, ${o.deliveryFeeMethod ? `payés ${FEE_METHOD_LABEL[o.deliveryFeeMethod]}` : 'payés au livreur à la réception'}`}.
+              ? o.deliveryFeeSource === 'A_CONFIRMER' ? 'à confirmer avec le client' : 'pas encore saisis'
+              : o.deliveryFee === 0
+                ? 'livraison offerte'
+                : `${formatPrice(o.deliveryFee)}, ${o.deliveryFeeMethod ? `payés ${FEE_METHOD_LABEL[o.deliveryFeeMethod]}` : 'payés au livreur à la réception'}`}
+            {o.deliveryZoneName && <> · quartier : {o.deliveryZoneName}</>}.
           </p>
           )}
         </section>

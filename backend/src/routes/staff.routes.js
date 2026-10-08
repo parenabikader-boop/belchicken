@@ -12,6 +12,7 @@ import { staffPushRouter } from './staff-push.routes.js';
 import { staffTeamRouter } from './staff-team.routes.js';
 import { staffCoursesRouter } from './staff-courses.routes.js';
 import { staffCashRouter } from './staff-cash.routes.js';
+import { staffDeliveryFeesRouter } from './staff-delivery-fees.routes.js';
 import { ownPasswordSchema } from '../services/team.js';
 import { changeOwnPassword } from '../services/team.service.js';
 
@@ -101,3 +102,4 @@ staffRouter.use('/push', staffPushRouter);
 staffRouter.use('/team', staffTeamRouter);
 staffRouter.use('/courses', staffCoursesRouter); // espace livreur
 staffRouter.use('/caisse', staffCashRouter);
+staffRouter.use('/frais-livraison', staffDeliveryFeesRouter); // grille des frais (Patron)

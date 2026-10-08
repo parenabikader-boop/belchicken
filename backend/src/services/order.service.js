@@ -5,6 +5,8 @@ import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { newOrderReference } from '../utils/reference.js';
 import { priceItems } from './pricing.js';
+import { orderFeeFields } from './delivery-fees.js';
+import { quoteForOrder } from './delivery-fees.service.js';
 import { INITIAL_STATUS } from './order-status.js';
 import { notifyTeamNewOrder } from './whatsapp.service.js';
 import { pushTeamNewOrder } from './push.service.js';
@@ -21,6 +23,9 @@ export async function createOrder(input) {
   const { payment } = input;
   // À emporter : ni position ni repères (le client vient au restaurant)
   const delivery = input.mode !== 'A_EMPORTER';
+  // Frais de livraison : calculés ici avec la grille du Patron et copiés dans la commande
+  // (grille vide : rien, l'équipe les saisit comme avant)
+  const fee = delivery ? orderFeeFields(await quoteForOrder(input.delivery, input.location)) : {};
 
   const data = {
     mode: input.mode,
@@ -34,6 +39,7 @@ export async function createOrder(input) {
     locationAccuracy: delivery && input.location?.accuracy != null ? Math.round(input.location.accuracy) : null,
     addressNote: delivery ? input.addressNote ?? null : null,
     itemsTotal,
+    ...fee,
     items: { create: lines.map(({ drinks, ...l }) => ({ ...l, drinks: { create: drinks } })) },
     // Première ligne de l'historique : commande reçue, paiement à vérifier par l'équipe
     statusChanges: { create: { toStatus: INITIAL_STATUS } },
@@ -84,11 +90,14 @@ export function toPublicOrder(order) {
     paymentMethod: order.paymentMethod,
     itemsTotal: order.itemsTotal,
     deliveryFee: order.deliveryFee ?? null,
+    // Quartier choisi (copié à la commande) ; A_CONFIRMER = frais confirmés par l'équipe au téléphone
+    deliveryZoneName: order.deliveryZoneName ?? null,
+    deliveryFeeSource: order.deliveryFeeSource ?? null,
     // Frais payés au livreur à la réception (espèces ou mobile money) : payés une fois la commande remise
     deliveryFeePaid: order.deliveryFeeMethod != null,
     // Codes marchands avec le montant des frais (les mêmes que dans les messages), tant qu'ils sont attendus
     feePayment:
-      order.deliveryFee != null && order.deliveryFeeMethod == null && order.status !== 'ANNULEE'
+      order.deliveryFee > 0 && order.deliveryFeeMethod == null && order.status !== 'ANNULEE' // 0 F : livraison offerte
         ? paymentCodes(env.payment, order.deliveryFee)
         : null,
     steps: changes.map((h) => ({ status: h.toStatus, at: h.createdAt })),
