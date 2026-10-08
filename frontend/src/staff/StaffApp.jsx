@@ -17,6 +17,8 @@ import TeamPage from './team/TeamPage.jsx';
 import CoursesPage from './courier/CoursesPage.jsx';
 import CashPage from './cash/CashPage.jsx';
 import DeliveryFeesPage from './fees/DeliveryFeesPage.jsx';
+import SettingsPage from './settings/SettingsPage.jsx';
+import OrderSlip from './orders/OrderSlip.jsx';
 import InstallBanner from '../components/InstallBanner.jsx';
 import './staff.css';
 
@@ -88,8 +90,11 @@ function TeamRoutes() {
           <Route path="tableau-de-bord" element={<Dashboard />} />
           <Route path="equipe" element={<TeamPage />} />
           <Route path="frais-livraison" element={<DeliveryFeesPage />} />
+          <Route path="reglages" element={<SettingsPage />} />
         </Route>
       </Route>
+      {/* Bon de commande à imprimer : page seule, sans l'en-tête de l'espace équipe */}
+      <Route path="commandes/:reference/bon" element={<OrderSlip />} />
       <Route path="*" element={<Navigate to="/equipe" replace />} />
     </Routes>
   );
@@ -192,6 +197,7 @@ function StaffShell() {
             {user.role === 'PATRON' && <NavLink to="/equipe/accueil">Accueil</NavLink>}
             {user.role === 'PATRON' && <NavLink to="/equipe/tableau-de-bord"><span className="st-lg">Tableau de bord</span><span className="st-sm">Chiffres</span></NavLink>}
             {user.role === 'PATRON' && <NavLink to="/equipe/equipe">Équipe</NavLink>}
+            {user.role === 'PATRON' && <NavLink to="/equipe/reglages">Réglages</NavLink>}
           </nav>
           <div className="st-user">
             <NavLink to="/equipe/mot-de-passe" className="st-name" title="Mon mot de passe">{user.name}<small>{ROLE_LABEL[user.role]}</small></NavLink>

@@ -487,6 +487,21 @@ Les messages `PAIEMENT_CONFIRME`, `EN_PREPARATION` et `EN_ROUTE` ont une version
 d'activer `WHATSAPP_CUSTOMER_AUTO`, faire aussi approuver chez Meta `commande_paiement_confirme_offerte`,
 `commande_en_preparation_offerte` et `commande_en_route_offerte` (textes dans `customer-messages.js`, champ `free`).
 
+## Parcours court et bon de commande (lot 1)
+
+- Réglages du logiciel : table `AppSettings` (une ligne, id = 1 ; pas de ligne = tout éteint), `GET /api/staff/reglages`
+  (Patron et Opérateur), `PUT /api/staff/reglages` `{ shortFlow }` (Patron), page `/equipe/reglages`.
+- **Parcours court** (`shortFlow`, éteint par défaut) : `POST /api/staff/orders/:reference/status`
+  `{ from: 'PAIEMENT_A_VERIFIER', to: 'EN_PREPARATION', deliveryFee, feeReason }`, refusé si le réglage est éteint.
+  Mêmes règles que la confirmation du paiement (frais, motif). Historique : « Payée » puis « En préparation ».
+  La commande est notée `Order.shortFlow` et garde son message même si le réglage change.
+- Message unique : `PAIEMENT_PREPARATION` (modèle Meta `commande_paiement_preparation`, version offerte
+  `commande_paiement_preparation_offerte`) et `PAIEMENT_PREPARATION_EMPORTER` (`emporter_paiement_preparation`).
+  À faire approuver chez Meta seulement avant d'activer `WHATSAPP_CUSTOMER_AUTO`.
+- **Bon de commande** : `/equipe/commandes/:reference/bon?format=80` (ticket 80 mm) ou `?format=a4`, imprimé par le navigateur.
+  Prix des lignes, total des plats, « PAYÉ – opérateur » et numéro qui a payé, frais de livraison à part. Jamais le code de
+  remise ni le code de retrait.
+
 ## À emporter
 
 Le client choisit « Livraison » ou « À emporter » sur la page Vos informations (`Order.mode` : `LIVRAISON` par défaut,

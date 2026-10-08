@@ -68,6 +68,11 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
           {isPickup(o) && <span className="st-pill p-EMPORTER">À emporter</span>}
           <span className={`st-pill p-${o.status}`}>{statusLabel(o)}</span>
         </span>
+        {/* Bon de commande à imprimer (caisse, puis cuisine), dans les deux parcours */}
+        <span className="st-slip-links">
+          <Link className="btn btn-s" to={`/equipe/commandes/${o.reference}/bon?format=80`} target="_blank" rel="noopener">Bon 80 mm</Link>
+          <Link className="btn btn-s" to={`/equipe/commandes/${o.reference}/bon?format=a4`} target="_blank" rel="noopener">Bon A4</Link>
+        </span>
       </div>
 
       {error && <div className="alert err" role="alert" style={{ marginBottom: 12 }}><span>{error.message}</span></div>}

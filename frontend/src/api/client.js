@@ -71,6 +71,9 @@ export const staffApi = {
   setFeeVerified: (reference, verified) =>
     staffRequest(`/orders/${encodeURIComponent(reference)}/delivery-fee/verified`, { method: 'POST', body: JSON.stringify({ verified }) }).then((d) => d.order),
 
+  // Réglages du logiciel (parcours court…) : lus par l'équipe, changés par le Patron
+  settings: () => staffRequest('/reglages').then((d) => d.settings),
+  setSettings: (body) => staffRequest('/reglages', { method: 'PUT', body: JSON.stringify(body) }).then((d) => d.settings),
   // Grille des frais de livraison (Patron) : chaque appel renvoie la grille à jour
   deliveryFees: () => staffRequest('/frais-livraison'),
   createDeliveryZone: (body) => staffRequest('/frais-livraison/zones', { method: 'POST', body: JSON.stringify(body) }),

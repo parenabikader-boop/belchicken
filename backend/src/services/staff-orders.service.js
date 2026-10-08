@@ -2,9 +2,10 @@ import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { customerAutoEnabled, messageContext } from '../config/env.js';
 import {
-  ACTIVE, deliveryError, feeAlreadyPaid, feeMethodError, feeToCollect, feeVerifyError, isPickup, paymentConfirmError, STATUSES, transitionError,
+  ACTIVE, deliveryError, feeAlreadyPaid, isShortcut, SHORTCUT_OFF, feeMethodError, feeToCollect, feeVerifyError, isPickup, paymentConfirmError, STATUSES, transitionError,
 } from './order-status.js';
 import { feeCorrectionError, feeEditRight } from './delivery-fees.js';
+import { getAppSettings } from './app-settings.service.js';
 import { customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticeState, THANKS_KEYS, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
 import { pushCourierAssigned, pushCourseCancelled, pushTeamDelivered } from './push.service.js';
@@ -201,7 +202,7 @@ async function findForRules(tx, reference) {
     select: {
       id: true, status: true, mode: true, deliveryFee: true, deliveryFeeMethod: true, deliveryFeeVerifiedAt: true, courierId: true,
       cashRemittanceId: true,
-      deliveryCode: true, deliveryCodeAttempts: true,
+      deliveryCode: true, deliveryCodeAttempts: true, shortFlow: true,
       statusChanges: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
       events: { select: { type: true, messageKey: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
     },
@@ -263,16 +264,20 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, f
       throw new AppError(409, "Quelqu'un a déjà changé le statut de cette commande. La page est mise à jour.", 'STATUT_DEJA_CHANGE');
     }
     const pickup = isPickup(order);
+    // Parcours court : vérification du paiement et lancement de la préparation en une fois (si le réglage est allumé)
+    const shortcut = isShortcut(order.status, to);
+    if (shortcut && !(await getAppSettings(tx)).shortFlow) throw new AppError(400, SHORTCUT_OFF, 'CHANGEMENT_IMPOSSIBLE');
+    const paying = to === 'PAYEE' || shortcut; // règles de la confirmation du paiement
     // Retrait au comptoir : avec le code du client, ou sans code avec un motif
     const counter = to === 'LIVREE' && pickup;
     const withCode = counter && !reason?.trim();
-    const fee = pickup ? deliveryFee ?? null : to === 'PAYEE' ? deliveryFee ?? order.deliveryFee : order.deliveryFee;
+    const fee = pickup ? deliveryFee ?? null : paying ? deliveryFee ?? order.deliveryFee : order.deliveryFee;
     const error =
-      transitionError(order.status, to, reason, order.mode) ||
+      transitionError(order.status, shortcut ? 'PAYEE' : to, reason, order.mode) ||
       (to !== 'ANNULEE' ? noticeError(notice(order)) : null) ||
-      (to === 'PAYEE' ? paymentConfirmError(fee, order.mode, order.deliveryFee) : null) ||
+      (paying ? paymentConfirmError(fee, order.mode, order.deliveryFee) : null) ||
       // Frais de la grille changés par l'agent en confirmant le paiement : c'est une correction, avec un motif
-      (to === 'PAYEE' && !pickup && order.deliveryFee != null && fee !== order.deliveryFee && (!feeReason || feeReason.trim().length < 3)
+      (paying && !pickup && order.deliveryFee != null && fee !== order.deliveryFee && (!feeReason || feeReason.trim().length < 3)
         ? 'Vous changez les frais calculés pour ce quartier : indiquez le motif.'
         : null) ||
       (to === 'EN_LIVRAISON' ? deliveryError(order) : null) ||
@@ -301,14 +306,17 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, f
 
     await guardedUpdate(tx, order, {
       status: to,
-      ...(to === 'PAYEE' && !pickup ? { deliveryFee: fee, ...(fee !== order.deliveryFee ? { deliveryFeeSource: 'AGENT' } : {}) } : {}),
+      ...(shortcut ? { shortFlow: true } : {}),
+      ...(paying && !pickup ? { deliveryFee: fee, ...(fee !== order.deliveryFee ? { deliveryFeeSource: 'AGENT' } : {}) } : {}),
       ...(courier ? { ...assignment(courier), deliveryCode: generateDeliveryCode(), deliveryCodeAttempts: 0 } : {}),
       ...(to === 'PRETE' ? { deliveryCode: generateDeliveryCode(), deliveryCodeAttempts: 0 } : {}),
       ...(to === 'LIVREE' && feeToCollect(order) ? { deliveryFeeMethod: feeMethod } : {}),
     });
     const withReason = to === 'ANNULEE' || (to === 'LIVREE' && !withCode);
-    await tx.orderStatusChange.create({ data: statusChange(order, to, staff, withReason ? reason.trim() : null) });
-    if (to === 'PAYEE' && !pickup && fee !== order.deliveryFee) await tx.orderEvent.create({ data: feeEvent(order, fee, staff, feeReason) });
+    // Parcours court : les deux étapes dans l'historique (« Payée », puis « En préparation »), comme le parcours normal
+    if (shortcut) await tx.orderStatusChange.create({ data: statusChange(order, 'PAYEE', staff) });
+    await tx.orderStatusChange.create({ data: statusChange(shortcut ? { ...order, status: 'PAYEE' } : order, to, staff, withReason ? reason.trim() : null) });
+    if (paying && !pickup && fee !== order.deliveryFee) await tx.orderEvent.create({ data: feeEvent(order, fee, staff, feeReason) });
     if (courier) await tx.orderEvent.create({ data: event(order.id, 'LIVREUR_ASSIGNE', staff, { courierName: courier.name }) });
     if (to === 'LIVREE' && !pickup) await tx.orderEvent.create({ data: event(order.id, 'LIVRAISON_SANS_CODE', staff) });
     if (counter && !withCode) await tx.orderEvent.create({ data: event(order.id, 'RETRAIT_SANS_CODE', staff) });

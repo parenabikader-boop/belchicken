@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { staffApi } from '../../api/client.js';
 import { formatPrice } from '../../utils/format.js';
 import { useStaff } from '../StaffContext.jsx';
+import { useAppSettings } from '../settings/useAppSettings.js';
 import { ACTIVE, canEditFee, deliveryBlock, feeOrigin, feeText, FEE_METHODS, formatPhone, formatTime, isPickup, METHOD_LABEL, nextAction } from './labels.js';
 
 // « 1 500 » -> 1500 ; champ vide -> NaN (jamais 0 par erreur : 0 F = livraison offerte)
@@ -157,7 +158,8 @@ export function Notice({ order: o, steps, onChange }) {
 
 // Bouton de l'étape suivante (avec confirmation pour le paiement et les frais) et annulation
 export function Actions({ order: o, steps }) {
-  const next = nextAction(o);
+  const { shortFlow, loaded } = useAppSettings();
+  const next = nextAction(o, { shortFlow });
   const pickup = isPickup(o);
   const [mode, setMode] = useState(null); // null | 'confirm' | 'depart' | 'handover' | 'counter' | 'cancel'
   const [reason, setReason] = useState('');
@@ -187,7 +189,7 @@ export function Actions({ order: o, steps }) {
 
   if (mode === 'confirm' && o.status === 'PAIEMENT_A_VERIFIER') {
     return (
-      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'PAYEE', ...(pickup ? {} : { deliveryFee: amount, ...(changed ? { feeReason } : {}) }) })); }}>
+      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: next.to, ...(pickup ? {} : { deliveryFee: amount, ...(changed ? { feeReason } : {}) }) })); }}>
         <b>Avez-vous vérifié le paiement sur le téléphone marchand ?</b>
         <p>
           <strong>{formatPrice(o.itemsTotal)}</strong> reçus par {METHOD_LABEL[o.paymentMethod]}
@@ -219,7 +221,7 @@ export function Actions({ order: o, steps }) {
         )}
         {steps.error && <p className="st-err">{steps.error}</p>}
         <div className="st-action-row">
-          <button type="submit" className="btn btn-p" disabled={steps.busy || !feeOk}>{steps.busy ? 'Enregistrement…' : 'Oui, paiement reçu : prévenir le client'}</button>
+          <button type="submit" className="btn btn-p" disabled={steps.busy || !feeOk}>{steps.busy ? 'Enregistrement…' : next.to === 'EN_PREPARATION' ? 'Oui, paiement reçu : lancer la préparation et prévenir le client' : 'Oui, paiement reçu : prévenir le client'}</button>
           <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
         </div>
       </form>
@@ -362,8 +364,8 @@ export function Actions({ order: o, steps }) {
             Le client n’a plus son code : valider la livraison
           </button>
         ) : (
-          <button type="button" className="btn btn-p st-next" disabled={steps.busy || Boolean(blocked)} onClick={onNext}>
-            {steps.busy ? 'Enregistrement…' : next.label}
+          <button type="button" className="btn btn-p st-next" disabled={steps.busy || Boolean(blocked) || (!loaded && o.status === 'PAIEMENT_A_VERIFIER')} onClick={onNext}>
+            {steps.busy ? 'Enregistrement…' : !loaded && o.status === 'PAIEMENT_A_VERIFIER' ? 'Chargement…' : next.label}
           </button>
         )}
         <button type="button" className="st-text-btn danger" onClick={() => setMode('cancel')}>Annuler la commande</button>

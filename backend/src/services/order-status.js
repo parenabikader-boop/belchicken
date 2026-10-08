@@ -36,6 +36,12 @@ export const nextStatus = (status, mode = 'LIVRAISON') => {
 
 export const canCancel = (status) => ACTIVE.includes(status);
 
+// Parcours court (réglage AppSettings.shortFlow, éteint par défaut) : « Paiement vérifié » fait passer la
+// commande de PAIEMENT_A_VERIFIER directement à EN_PREPARATION. Les règles du paiement (frais, motif) sont
+// celles de PAYEE ; l'historique garde les deux étapes. Réglage éteint : refusé, comme avant.
+export const isShortcut = (from, to) => from === 'PAIEMENT_A_VERIFIER' && to === 'EN_PREPARATION';
+export const SHORTCUT_OFF = 'Confirmez d’abord le paiement : le parcours court n’est pas activé.';
+
 // Renvoie null si le changement est permis, sinon le message d'erreur (en français)
 export function transitionError(from, to, reason, mode = 'LIVRAISON') {
   if (!STATUSES.includes(to)) return 'Statut inconnu.';

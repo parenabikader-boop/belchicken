@@ -86,6 +86,32 @@ export const MESSAGES = {
       params: (o, ctx) => [firstName(o.customerName), o.reference, o.deliveryCode || '-', trackingUrl(o, ctx)],
     },
   },
+  // ─── Parcours court (réglage AppSettings.shortFlow) : paiement vérifié et préparation lancée en une fois ───
+  PAIEMENT_PREPARATION: {
+    template: 'commande_paiement_preparation',
+    label: 'Paiement confirmé, commande en préparation',
+    body:
+      'Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande {{2}}. Merci ! Votre commande est en préparation.\n\n' +
+      feeLine('{{4}}', '{{5}}', '{{6}}', '{{7}}', '{{8}}') + '\n\n' +
+      'Suivez votre commande ici : {{9}}\n\nBelchicken Burkina',
+    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), formatFcfa(o.deliveryFee), ...feeCodes(o, ctx), trackingUrl(o, ctx)],
+    free: {
+      template: 'commande_paiement_preparation_offerte',
+      body:
+        'Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande {{2}}. Merci ! Votre commande est en préparation.\n\n' +
+        FREE_LINE + '\n\nSuivez votre commande ici : {{4}}\n\nBelchicken Burkina',
+      params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), trackingUrl(o, ctx)],
+    },
+  },
+  PAIEMENT_PREPARATION_EMPORTER: {
+    template: 'emporter_paiement_preparation',
+    label: 'Paiement confirmé, commande en préparation (à emporter)',
+    body:
+      'Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande à emporter {{2}}. Merci ! Votre commande est en préparation : ' +
+      'nous vous écrivons dès qu’elle est prête à retirer au restaurant.\n\n' +
+      'Suivez votre commande ici : {{4}}\n\nBelchicken Burkina',
+    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), trackingUrl(o, ctx)],
+  },
   LIVREE: {
     template: 'commande_livree',
     label: 'Commande livrée, remerciement',
@@ -169,7 +195,8 @@ export function currentMessageKey(o) {
   switch (o.status) {
     case 'PAYEE':
     case 'EN_PREPARATION': {
-      const key = o.status === 'PAYEE' ? 'PAIEMENT_CONFIRME' : 'EN_PREPARATION';
+      // Parcours court : la commande est passée directement en préparation, un seul message pour les deux étapes
+      const key = o.status === 'PAYEE' ? 'PAIEMENT_CONFIRME' : o.shortFlow ? 'PAIEMENT_PREPARATION' : 'EN_PREPARATION';
       return feeSet ? { key } : { key, missing: 'Saisissez d’abord les frais de livraison.' };
     }
     case 'EN_LIVRAISON':
@@ -192,6 +219,7 @@ const PICKUP_KEYS = {
   ANNULEE: 'ANNULEE',
 };
 function pickupMessageKey(o) {
+  if (o.shortFlow && o.status === 'EN_PREPARATION') return { key: 'PAIEMENT_PREPARATION_EMPORTER' };
   const key = PICKUP_KEYS[o.status];
   return key ? { key } : null;
 }
@@ -244,12 +272,14 @@ export function stepStart(o, key) {
     case 'PAIEMENT_CONFIRME':
       return Math.max(lastStatusAt(o, 'PAYEE'), lastEventAt(o, 'FRAIS_SAISIS'), lastEventAt(o, 'FRAIS_CORRIGES'));
     case 'EN_PREPARATION':
+    case 'PAIEMENT_PREPARATION':
       return Math.max(lastStatusAt(o, 'EN_PREPARATION'), lastEventAt(o, 'FRAIS_SAISIS'), lastEventAt(o, 'FRAIS_CORRIGES'));
     case 'EN_ROUTE':
       return Math.max(lastStatusAt(o, 'EN_LIVRAISON'), lastEventAt(o, 'FRAIS_CORRIGES'));
     case 'PAIEMENT_CONFIRME_EMPORTER':
       return lastStatusAt(o, 'PAYEE');
     case 'EN_PREPARATION_EMPORTER':
+    case 'PAIEMENT_PREPARATION_EMPORTER':
       return lastStatusAt(o, 'EN_PREPARATION');
     case 'COMMANDE_PRETE':
       return lastStatusAt(o, 'PRETE');

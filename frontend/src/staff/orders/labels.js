@@ -80,7 +80,10 @@ const PICKUP_ACTION = {
   EN_PREPARATION: { to: 'PRETE', label: 'Commande prête : prévenir le client' },
   PRETE: { to: 'LIVREE', label: 'Remise au client : le remercier' },
 };
-export const nextAction = (o) => (isPickup(o) && PICKUP_ACTION[o.status]) || NEXT_ACTION[o.status];
+// Parcours court (réglage) : paiement vérifié et préparation lancée en une fois, un seul message
+const SHORT_ACTION = { to: 'EN_PREPARATION', label: 'Paiement vérifié : lancer la préparation et prévenir le client' };
+export const nextAction = (o, { shortFlow = false } = {}) =>
+  (shortFlow && o.status === 'PAIEMENT_A_VERIFIER' && SHORT_ACTION) || (isPickup(o) && PICKUP_ACTION[o.status]) || NEXT_ACTION[o.status];
 
 export const METHOD_LABEL = { ORANGE_MONEY: 'Orange Money', MOOV_MONEY: 'Moov Money', TELECEL_MONEY: 'Telecel Money', ESPECES: 'Espèces' };
 

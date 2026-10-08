@@ -143,6 +143,16 @@ model ProductVariant {
   @@unique([productId, code])
 }
 
+// Réglages du logiciel : une seule ligne (id = 1), créée au premier enregistrement. Pas de ligne = tout
+// éteint (la migration n'écrit rien). Chaque nouveauté de la feuille de route (docs/feuille-de-route.md)
+// y ajoute son interrupteur, éteint par défaut.
+model AppSettings {
+  id            Int      @id @default(1)
+  shortFlow     Boolean  @default(false) // parcours court : « Paiement vérifié » -> En préparation, un seul message
+  updatedByName String? // dernier à avoir changé un réglage (copie figée)
+  updatedAt     DateTime @updatedAt
+}
+
 // ─── Grille des frais de livraison, gérée par le Patron (src/services/delivery-fees.js) ───
 // Grille vide (aucun quartier ni aucune tranche actifs) : l'équipe saisit les frais comme avant.
 
@@ -200,7 +210,11 @@ model Order {
   customerPhone String // normalisé +226XXXXXXXX
 
   // À emporter : ni position, ni frais de livraison, ni livreur. PRETE puis LIVREE (« Retirée »).
-  mode FulfillmentMode @default(LIVRAISON)
+  mode      FulfillmentMode @default(LIVRAISON)
+  // Parcours court (réglage AppSettings.shortFlow) : « Paiement vérifié » a fait passer la commande de
+  // PAIEMENT_A_VERIFIER directement à EN_PREPARATION, avec un seul message au client. Noté sur la commande
+  // pour qu'elle garde son message si le réglage change.
+  shortFlow Boolean         @default(false)
 
   paymentMethod     PaymentMethod
   paymentPayerPhone String?
