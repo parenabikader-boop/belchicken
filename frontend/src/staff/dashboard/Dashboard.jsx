@@ -7,6 +7,7 @@ import { formatPrice, plural } from '../../utils/format.js';
 // une colonne, chiffres clés en haut, graphiques en barres simples (toucher une barre affiche sa valeur).
 // Heure du Burkina = UTC : toutes les dates sont affichées en UTC.
 const TZ = 'UTC';
+const REFRESH_MS = 60 * 1000;
 const fmt = (opts) => new Intl.DateTimeFormat('fr-FR', { timeZone: TZ, ...opts });
 const fDay = fmt({ weekday: 'long', day: 'numeric', month: 'long' });
 const fShort = fmt({ day: 'numeric', month: 'short' });
@@ -198,15 +199,30 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const load = () => {
-    setLoading(true);
-    setError(null);
-    staffApi.getDashboard(period, offset).then(
-      (d) => { setData(d); setLoading(false); },
-      (e) => { setError(e); setLoading(false); },
-    );
-  };
-  useEffect(load, [period, offset]);
+  // Chargement à chaque changement de période, puis rechargement discret toutes les 60 s
+  // (onglet visible) et au retour sur l'onglet : les chiffres suivent les commandes payées ou annulées.
+  useEffect(() => {
+    let alive = true; // ignore une réponse arrivée après un changement de période
+    const load = (quiet) => {
+      if (!quiet) {
+        setLoading(true);
+        setError(null);
+      }
+      staffApi.getDashboard(period, offset).then(
+        (d) => { if (alive) { setData(d); setError(null); setLoading(false); } },
+        (e) => { if (alive) { if (!quiet) setError(e); setLoading(false); } },
+      );
+    };
+    load(false);
+    const timer = setInterval(() => !document.hidden && load(true), REFRESH_MS);
+    const onShow = () => !document.hidden && load(true);
+    document.addEventListener('visibilitychange', onShow);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onShow);
+    };
+  }, [period, offset]);
 
   const choose = (p) => {
     setPeriod(p);
@@ -320,7 +336,7 @@ export default function Dashboard() {
                   : <p className="st-muted db-none">Aucun plat vendu sur cette période.</p>}
               </Card>
 
-              <Card title="Heures de pointe" sub="Commandes reçues par heure, toutes confondues.">
+              <Card title="Heures de pointe" sub="Commandes reçues par heure, sans les annulées.">
                 <Columns
                   key={`h-${r.period}-${r.offset}`}
                   bars={hourBars(data.hours, (v, h) => ({ key: h, label: `${h}h`, name: `${h} h – ${h + 1} h`, value: v, detail: v > 1 ? 'commandes' : 'commande' }))}
@@ -330,7 +346,7 @@ export default function Dashboard() {
               </Card>
 
               {r.period !== 'day' && (
-                <Card title="Jours de pointe" sub="Commandes reçues par jour de la semaine.">
+                <Card title="Jours de pointe" sub="Commandes reçues par jour de la semaine, sans les annulées.">
                   <Columns
                     key={`w-${r.period}-${r.offset}`}
                     bars={data.weekdays.map((v, i) => ({ key: i, label: WEEKDAYS[i], name: cap(WEEKDAYS_LONG[i]), value: v, detail: v > 1 ? 'commandes' : 'commande' }))}

@@ -65,7 +65,7 @@ test('chiffre d\'affaires : seules les commandes payées et au-delà comptent', 
   assert.equal(d.previous.revenue, 6000);
   assert.equal(d.timeline.length, 24);
   assert.equal(d.timeline[12].revenue, 7000);
-  assert.equal(d.hours[13], 3);
+  assert.equal(d.hours[13], 1); // 13 h 00 en attente ; les deux annulées de 13 h 30 et 13 h 45 ne comptent pas
   assert.deepEqual(d.payments.map((p) => [p.method, p.paid, p.revenue]), [['ORANGE_MONEY', 2, 9000], ['MOOV_MONEY', 1, 3000], ['TELECEL_MONEY', 0, 0]]);
   assert.deepEqual(d.topProducts, [{ name: 'Finest', quantity: 3, revenue: 12000 }]);
   assert.deepEqual(d.topCategories, [{ name: 'Burgers', quantity: 3, revenue: 12000 }]);
@@ -86,6 +86,32 @@ test('plats les plus vendus par quantité, catégories par chiffre d\'affaires, 
   assert.deepEqual(d.topCategories.map((c) => c.name), ['Burgers', 'Poulet', 'Plats retirés du menu']);
   assert.equal(d.timeline.length, 31);
   assert.equal(d.weekdays[4], 1); // vendredi
+});
+
+test('commandes annulées : exclues de toutes les statistiques, même annulées après le paiement ou en livraison', () => {
+  const range = periodRange('day', 0, NOW);
+  const courier = { courierId: 'l1', courierName: 'Moussa', startedAt: new Date('2026-10-02T11:10:00Z') };
+  const orders = [
+    // Payée, partie avec le livreur, puis annulée : rien ne doit compter
+    order('2026-10-02T11:00:00Z', 'ANNULEE', 8000, { ...courier, paymentMethod: 'MOOV_MONEY', deliveryFee: 700, deliveryFeeMethod: 'ESPECES', deliveredAt: new Date('2026-10-02T11:40:00Z') }),
+    order('2026-10-02T10:00:00Z', 'LIVREE', 5000, { ...courier, deliveredAt: new Date('2026-10-02T11:30:00Z') }),
+  ];
+  const d = buildDashboard(orders, range);
+  assert.equal(d.summary.revenue, 5000);
+  assert.equal(d.summary.paid, 1);
+  assert.equal(d.summary.avgBasket, 5000);
+  assert.equal(d.summary.deliveryRevenue, 0);
+  assert.equal(d.timeline.reduce((s, t) => s + t.revenue, 0), 5000);
+  assert.deepEqual(d.topProducts, [{ name: 'Finest', quantity: 1, revenue: 5000 }]);
+  assert.deepEqual(d.topCategories, [{ name: 'Burgers', quantity: 1, revenue: 5000 }]);
+  assert.deepEqual(d.payments.map((p) => [p.method, p.paid, p.revenue]), [['ORANGE_MONEY', 1, 5000], ['MOOV_MONEY', 0, 0], ['TELECEL_MONEY', 0, 0]]);
+  assert.equal(d.hours[11], 0);
+  assert.equal(d.hours[10], 1);
+  assert.equal(d.weekdays.reduce((s, v) => s + v, 0), 1);
+  assert.deepEqual(d.couriers.map((c) => [c.name, c.delivered]), [['Moussa', 1]]);
+  // Elle reste visible dans la carte « Commandes annulées »
+  assert.equal(d.summary.cancelled, 1);
+  assert.equal(d.cancellations.count, 1);
 });
 
 test('paramètres : période connue, pas de période future', () => {

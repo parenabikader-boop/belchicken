@@ -105,10 +105,10 @@ export function buildDashboard(orders, range) {
   const paid = current.filter(isPaid);
   const items = paid.flatMap((o) => o.items);
 
-  // Heures et jours de pointe : toutes les commandes reçues (la demande), annulées comprises
+  // Heures et jours de pointe : les commandes reçues (la demande), sans les annulées
   const hours = Array(24).fill(0);
   const weekdays = Array(7).fill(0); // lundi = 0
-  for (const o of current) {
+  for (const o of current.filter((o) => o.status !== 'ANNULEE')) {
     hours[o.createdAt.getUTCHours()] += 1;
     weekdays[(o.createdAt.getUTCDay() + 6) % 7] += 1;
   }
