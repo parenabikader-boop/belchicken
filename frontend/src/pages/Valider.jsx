@@ -224,7 +224,7 @@ export default function Valider() {
     watchRef.current = { id, timer: setTimeout(finish, GEO_WINDOW) };
   };
 
-  const blocked = items.some((i) => !i.product.isAvailable);
+  const blocked = items.some((i) => i.problem);
   const delivery = form.mode === 'LIVRAISON';
 
   const submit = async () => {
@@ -250,6 +250,8 @@ export default function Valider() {
         quantity: l.quantity,
         ...(l.choice && { choice: l.choice }),
         ...(l.note && { note: l.note }),
+        // Boissons choisies dans la formule (le serveur vérifie le nombre et la disponibilité)
+        ...(l.drinks?.length && { drinks: l.drinks.map((d) => ({ productId: d.productId, quantity: d.quantity })) }),
       })),
     };
 

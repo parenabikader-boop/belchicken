@@ -4,6 +4,7 @@ import { api } from '../api/client.js';
 import { WHATSAPP } from '../components/Layout.jsx';
 import { DIRECTIONS_URL, RESTAURANT, whatsappHref } from '../restaurant.js';
 import PayCode from '../components/PayCode.jsx';
+import { drinksLabel } from '../utils/drinks.js';
 import { METHOD_LABEL } from '../utils/payment.js';
 import { TunnelHead } from '../components/PageParts.jsx';
 import { useCart } from '../context/CartContext.jsx';
@@ -118,7 +119,7 @@ export default function Confirmation() {
             <thead><tr><th>Désignation</th><th className="r">Qté</th><th className="r">Montant</th></tr></thead>
             <tbody>
               {order.items.map((i, k) => {
-                const details = [i.variantLabel, i.choice, i.note].filter(Boolean).join(' · ');
+                const details = [i.variantLabel, i.choice, drinksLabel(i.drinks, i.quantity), i.note].filter(Boolean).join(' · ');
                 return (
                   <tr key={k}>
                     <td>
@@ -243,7 +244,8 @@ function PickupNow({ order }) {
         <div className="trk-ready">
           <p className="trk-fee-lead">Votre commande est prête ! Venez la retirer au restaurant.</p>
           <p><b>{RESTAURANT.name}</b><br />{RESTAURANT.address}, {RESTAURANT.city}</p>
-          <p className="muted">Au comptoir, donnez votre nom ou la référence <b>{order.reference}</b>.</p>
+          {/* Le code de retrait n'est jamais affiché ici (la page s'ouvre avec la seule référence) */}
+          <p className="muted">Au comptoir, donnez le <b>code de retrait à 4 chiffres</b> reçu sur WhatsApp dans le message « commande prête ».</p>
           <a className="btn btn-p" href={DIRECTIONS_URL} target="_blank" rel="noreferrer">Itinéraire</a>
         </div>
       );

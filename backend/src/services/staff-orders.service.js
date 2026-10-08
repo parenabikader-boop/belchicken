@@ -7,7 +7,7 @@ import {
 import { customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticeState, THANKS_KEYS, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
 import { pushCourierAssigned, pushCourseCancelled, pushTeamDelivered } from './push.service.js';
-import { codeLocked, courierAssignError, generateDeliveryCode, handoverReasonError, MAX_CODE_ATTEMPTS } from './courier.js';
+import { checkPickupCode, codeLocked, courierAssignError, generateDeliveryCode, handoverReasonError, MAX_CODE_ATTEMPTS } from './courier.js';
 
 const LIST_LIMIT = 100;
 
@@ -81,7 +81,7 @@ export async function listOrders({ status, q }) {
 }
 
 const DETAIL_INCLUDE = {
-  items: { orderBy: { id: 'asc' } },
+  items: { orderBy: { id: 'asc' }, include: { drinks: true } },
   statusChanges: { orderBy: { createdAt: 'asc' } },
   events: { orderBy: { createdAt: 'asc' } },
 };
@@ -112,8 +112,8 @@ export function toStaffOrder(order) {
     deliveryFeeVerifiedAt: o.deliveryFeeVerifiedAt,
     cashRemitted: o.cashRemittanceId != null,
     feeAlreadyPaid: o.status !== 'LIVREE' && feeAlreadyPaid(o),
-    // Livreur et code de remise. Le code est montré à l'équipe (il est dans le message « en route »,
-    // et peut être dicté au client par appel), jamais au livreur.
+    // Livreur et code de remise (ou de retrait, à emporter). Le code est montré à l'équipe (il est dans
+    // le message « en route » ou « prête », et peut être dicté au client par appel), jamais au livreur.
     courier: o.courierName ? { id: o.courierId, name: o.courierName, assignedAt: o.courierAssignedAt } : null,
     deliveryCode: o.deliveryCode,
     codeAttempts: o.deliveryCodeAttempts,
@@ -130,6 +130,8 @@ export function toStaffOrder(order) {
       unitPrice: i.unitPrice,
       quantity: i.quantity,
       lineTotal: i.lineTotal,
+      // Boissons choisies, pour une formule (à multiplier par quantity)
+      drinks: (i.drinks || []).map((d) => ({ name: d.name, quantity: d.quantity })),
     })),
     history: o.statusChanges.map((h) => ({
       fromStatus: h.fromStatus,
@@ -181,6 +183,7 @@ async function findForRules(tx, reference) {
     where: { reference },
     select: {
       id: true, status: true, mode: true, deliveryFee: true, deliveryFeeMethod: true, deliveryFeeVerifiedAt: true, courierId: true,
+      deliveryCode: true, deliveryCodeAttempts: true,
       statusChanges: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
       events: { select: { type: true, messageKey: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
     },
@@ -226,12 +229,14 @@ export const statusChange = (order, to, staff, reason = null) => ({
 // Livrée (LIVREE) depuis l'espace équipe : seulement quand le client n'a plus son code, avec un motif
 // et la façon dont les frais ont été payés au livreur (feeMethod) ; le livreur, lui, valide avec le code
 // (courier.service.js).
-// À emporter : PRETE (« Commande prête », message avec l'adresse du restaurant), puis LIVREE quand
-// l'agent remet la commande au client au comptoir (sans code, sans motif, sans frais).
+// À emporter : PRETE (« Commande prête », message avec l'adresse et le code de retrait), puis LIVREE
+// quand l'agent remet la commande au comptoir : il tape le code donné par le client (code), ou, client
+// sans son code, valide avec un motif (reason, événement RETRAIT_SANS_CODE). Jamais de frais.
 // Chaque étape, sauf l'annulation, demande que le client ait été prévenu de l'étape en cours.
-export async function changeStatus(reference, { from, to, reason, deliveryFee, courierId, feeMethod }, staff) {
+export async function changeStatus(reference, { from, to, reason, deliveryFee, courierId, feeMethod, code }, staff) {
   let courier = null;
   let cancelledCourierId = null;
+  let wrongCode = null;
   await prisma.$transaction(async (tx) => {
     const order = await findForRules(tx, reference);
     if (to === 'ANNULEE' && order.status === 'EN_LIVRAISON') cancelledCourierId = order.courierId;
@@ -239,30 +244,55 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, c
       throw new AppError(409, "Quelqu'un a déjà changé le statut de cette commande. La page est mise à jour.", 'STATUT_DEJA_CHANGE');
     }
     const pickup = isPickup(order);
+    // Retrait au comptoir : avec le code du client, ou sans code avec un motif
+    const counter = to === 'LIVREE' && pickup;
+    const withCode = counter && !reason?.trim();
     const fee = pickup ? deliveryFee ?? null : to === 'PAYEE' ? deliveryFee ?? order.deliveryFee : order.deliveryFee;
     const error =
       transitionError(order.status, to, reason, order.mode) ||
       (to !== 'ANNULEE' ? noticeError(notice(order)) : null) ||
       (to === 'PAYEE' ? paymentConfirmError(fee, order.mode) : null) ||
       (to === 'EN_LIVRAISON' ? deliveryError(order) : null) ||
-      (to === 'LIVREE' && !pickup ? handoverReasonError(reason) || feeMethodError(order, feeMethod) : null);
+      (to === 'LIVREE' && !pickup ? handoverReasonError(reason) || feeMethodError(order, feeMethod) : null) ||
+      (withCode && !code ? 'Tapez le code de retrait du client, ou validez sans code avec un motif.' : null) ||
+      (counter && !withCode ? handoverReasonError(reason, true) : null);
     if (error) throw new AppError(400, error, 'CHANGEMENT_IMPOSSIBLE');
     if (to === 'EN_LIVRAISON') courier = await findCourier(tx, order, courierId);
+    if (withCode) {
+      const result = checkPickupCode(order, code);
+      if (!result.ok) {
+        // Code faux : compté (5 au plus) et noté, puis refusé après l'enregistrement
+        if (result.wrong) {
+          const counted = await tx.order.updateMany({
+            where: { id: order.id, status: 'PRETE', deliveryCodeAttempts: order.deliveryCodeAttempts },
+            data: { deliveryCodeAttempts: { increment: 1 } },
+          });
+          if (counted.count !== 1) throw new AppError(409, CHANGED, 'COMMANDE_DEJA_CHANGEE');
+          await tx.orderEvent.create({ data: event(order.id, 'CODE_INCORRECT', staff) });
+          wrongCode = result.error;
+          return;
+        }
+        throw new AppError(400, result.error, 'REMISE_IMPOSSIBLE');
+      }
+    }
 
     await guardedUpdate(tx, order, {
       status: to,
       ...(to === 'PAYEE' && !pickup ? { deliveryFee: fee } : {}),
       ...(courier ? { ...assignment(courier), deliveryCode: generateDeliveryCode(), deliveryCodeAttempts: 0 } : {}),
+      ...(to === 'PRETE' ? { deliveryCode: generateDeliveryCode(), deliveryCodeAttempts: 0 } : {}),
       ...(to === 'LIVREE' && !pickup && !feeAlreadyPaid(order) ? { deliveryFeeMethod: feeMethod } : {}),
     });
-    const withReason = to === 'ANNULEE' || (to === 'LIVREE' && !pickup);
+    const withReason = to === 'ANNULEE' || (to === 'LIVREE' && !withCode);
     await tx.orderStatusChange.create({ data: statusChange(order, to, staff, withReason ? reason.trim() : null) });
     if (to === 'PAYEE' && !pickup && fee !== order.deliveryFee) {
       await tx.orderEvent.create({ data: event(order.id, 'FRAIS_SAISIS', staff, { amount: fee }) });
     }
     if (courier) await tx.orderEvent.create({ data: event(order.id, 'LIVREUR_ASSIGNE', staff, { courierName: courier.name }) });
     if (to === 'LIVREE' && !pickup) await tx.orderEvent.create({ data: event(order.id, 'LIVRAISON_SANS_CODE', staff) });
+    if (counter && !withCode) await tx.orderEvent.create({ data: event(order.id, 'RETRAIT_SANS_CODE', staff) });
   });
+  if (wrongCode) throw new AppError(400, wrongCode, 'CODE_INCORRECT');
   if (courier) notifyCourier(reference, courier.id);
   if (to === 'LIVREE') notifyDelivered(reference, staff);
   if (cancelledCourierId) notifyCourier(reference, cancelledCourierId, pushCourseCancelled);

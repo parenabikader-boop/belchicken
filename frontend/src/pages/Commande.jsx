@@ -27,7 +27,7 @@ function CartLine({ item }) {
       <div>
         <b>{p.number != null && `N° ${p.number} · `}{p.name}</b>
         {item.options && <div className="v">{item.options}</div>}
-        {!p.isAvailable && <div className="v" style={{ color: 'var(--bad)', fontWeight: 600 }}>Plus disponible pour le moment</div>}
+        {item.problem && <div className="v" style={{ color: 'var(--bad)', fontWeight: 600 }}>{item.problem}</div>}
         <button className="rm" onClick={() => remove(item.key)}>Retirer</button>
       </div>
       <span className="qty">
@@ -67,7 +67,7 @@ export default function Commande() {
     }
     const order = (g) => categories.findIndex((c) => c.id === g.cat.id);
     groups.sort((a, b) => order(a) - order(b));
-    const blocked = items.some((i) => !i.product.isAvailable);
+    const blocked = items.some((i) => i.problem);
 
     body = (
       <div className="cartpage">

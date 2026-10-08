@@ -215,6 +215,21 @@ legend{font-size:14px;font-weight:700;margin-bottom:8px;padding:0}
 .incl-t td{padding:6px 0;border-bottom:1px solid var(--line)}
 .incl-t td:first-child{width:18px;color:var(--brand-ink);font-weight:700}
 .dlg textarea{width:100%;border:1px solid var(--line-2);border-radius:var(--r);padding:10px 12px;min-height:64px;resize:vertical;background:var(--panel)}
+/* Boissons : choix dans la formule et boissons en plus */
+.drk-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.opt:disabled{opacity:.5;cursor:not-allowed}
+.drks{display:flex;flex-direction:column;gap:6px}
+.drk{display:flex;align-items:center;gap:12px;border:1px solid var(--line-2);border-radius:var(--r);padding:6px 6px 6px 14px;background:var(--panel)}
+.drk .l{flex:1;min-width:0}
+.drk small{display:block;color:var(--muted);font-size:12px}
+.drk .pp{font-weight:700;white-space:nowrap;font-size:14px}
+.drk .qty{margin:0}
+.drk .qty button{width:36px;height:36px}
+.drk .qty button:disabled{opacity:.35}
+.drk .qty span{line-height:36px}
+.drk.off{opacity:.55}
+.drk-more{align-self:flex-start;background:none;border:0;padding:0;font-weight:700;font-size:15px}
+.dlg .add-row .btn:disabled{opacity:.6;cursor:not-allowed}
 .dlg .add-row{display:flex;gap:12px;align-items:center;margin-top:auto;padding-top:14px;border-top:1px solid var(--line)}
 .dlg .add-row .qty{margin:0}
 .dlg .add-row .qty button{width:38px;height:44px}

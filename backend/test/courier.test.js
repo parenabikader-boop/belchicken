@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  checkHandover, cleanCode, courierAssignError, courierStats, generateDeliveryCode, handoverReasonError, MAX_CODE_ATTEMPTS, startOfToday, toCourse,
+  checkHandover, checkPickupCode, cleanCode, courierAssignError, courierStats, generateDeliveryCode, handoverReasonError, MAX_CODE_ATTEMPTS, startOfToday, toCourse,
 } from '../src/services/courier.js';
 import { renderMessage } from '../src/services/customer-messages.js';
 import { courseNotification } from '../src/services/push.message.js';
@@ -56,6 +56,34 @@ test('livraison validée par l’agent : motif obligatoire', () => {
   assert.match(handoverReasonError(''), /sans code/);
   assert.match(handoverReasonError('  a '), /sans code/);
   assert.equal(handoverReasonError('Client a effacé le message'), null);
+  assert.match(handoverReasonError('', true), /la remise au comptoir est validée sans code/);
+});
+
+// ─── À emporter : code de retrait tapé au comptoir ───
+const ready = (extra = {}) => ({ mode: 'A_EMPORTER', status: 'PRETE', deliveryCode: '4827', deliveryCodeAttempts: 0, ...extra });
+
+test('retrait au comptoir : le bon code valide, un code faux est compté', () => {
+  assert.deepEqual(checkPickupCode(ready(), '48 27'), { ok: true });
+  const wrong = checkPickupCode(ready(), '1111');
+  assert.equal(wrong.wrong, true);
+  assert.match(wrong.error, /Encore 4 essais/);
+  const last = checkPickupCode(ready({ deliveryCodeAttempts: 4 }), '1111');
+  assert.equal(last.wrong, true);
+  assert.match(last.error, /validez la remise sans code, avec un motif/);
+});
+
+test('retrait au comptoir : bloqué après 5 codes faux, même avec le bon code', () => {
+  const r = checkPickupCode(ready({ deliveryCodeAttempts: MAX_CODE_ATTEMPTS }), '4827');
+  assert.equal(r.ok, false);
+  assert.equal(r.wrong, undefined);
+  assert.match(r.error, /Trop de codes faux/);
+});
+
+test('retrait au comptoir : refusé sans compter d’essai hors de l’étape « prête »', () => {
+  assert.match(checkPickupCode(ready({ mode: 'LIVRAISON' }), '4827').error, /le livreur qui tape le code/);
+  assert.match(checkPickupCode(ready({ status: 'EN_PREPARATION' }), '4827').error, /pas prête/);
+  assert.match(checkPickupCode(ready({ deliveryCode: null }), '4827').error, /pas de code de retrait/);
+  assert.equal(checkPickupCode(ready(), '48').wrong, undefined);
 });
 
 test('le livreur voit seulement les frais à encaisser : ni total des plats, ni code, ni paiement', () => {

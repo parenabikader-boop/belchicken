@@ -6,7 +6,7 @@ const img = (name) => `/menu/${name}.jpg`;
 
 // Menu (avec frites + boisson) ou produit seul au "prix unique"
 const menuOrSeul = (menu, seul, seulLabel = 'Seul', menuSub = 'Avec frites et boisson') => [
-  { code: 'menu', label: 'Menu', subLabel: menuSub, price: menu },
+  { code: 'menu', label: 'Menu', subLabel: menuSub, price: menu, drinkCount: 1 },
   { code: 'seul', label: seulLabel, subLabel: 'Sans accompagnement', price: seul },
 ];
 const sizes = (l, xl) => [
@@ -15,7 +15,8 @@ const sizes = (l, xl) => [
 ];
 const pieces = (list) =>
   list.map(([n, price]) => ({ code: `${n}pc`, label: `${n} pièce${n > 1 ? 's' : ''}`, price }));
-const single = (price) => [{ code: 'standard', label: 'Standard', price }];
+// drinkCount : boissons comprises, au choix du client parmi les boissons disponibles
+const single = (price, drinkCount = 0) => [{ code: 'standard', label: 'Standard', price, drinkCount }];
 
 export const categories = [
   {
@@ -48,6 +49,12 @@ export const categories = [
     description: 'Pour compléter un menu ou composer votre assiette.',
     groups: [{ name: 'Accompagnements' }, { name: 'Poulet à la pièce' }, { name: 'Sauces' }],
   },
+  // Boissons : à choisir dans les formules (sans supplément) ou vendues seules au prix normal
+  {
+    slug: 'boissons', name: 'Boissons', script: 'Bien frais', isDrinks: true,
+    description: 'Fraîches, à ajouter à votre commande ou à choisir dans votre menu.',
+    groups: [{ name: 'Boissons' }],
+  },
 ];
 
 // group = nom du sous-groupe dans la catégorie
@@ -63,26 +70,26 @@ export const products = [
   { slug: 'magnifique', number: 12, category: 'burgers', group: 'Bœuf', name: 'Magnifique', description: 'Double steak de bœuf, cheddar, tomate.', imageUrl: img('magnifique'), variants: menuOrSeul(6500, 5000, 'Burger seul') },
 
   // ── Poulet frit ──
-  { slug: 'wings-4', number: 16, category: 'poulet', group: 'Wings', name: 'Wings 4 pièces', composition: ['4 wings', 'Frites', 'Boisson'], imageUrl: img('wings'), variants: single(5000) },
-  { slug: 'wings-8', number: 17, category: 'poulet', group: 'Wings', name: 'Wings 8 pièces', composition: ['8 wings', 'Frites', 'Boisson'], imageUrl: img('wings12'), variants: single(7500) },
-  { slug: 'wings-12', number: 18, category: 'poulet', group: 'Wings', name: 'Wings 12 pièces', composition: ['12 wings', 'Frites', 'Boisson'], imageUrl: img('wings12'), variants: single(10000) },
-  { slug: 'tenders-4', number: 19, category: 'poulet', group: 'Tenders', name: 'Tenders 4 pièces', composition: ['4 tenders', 'Frites', 'Boisson'], imageUrl: img('tenders'), variants: single(6000) },
-  { slug: 'tenders-8', number: 20, category: 'poulet', group: 'Tenders', name: 'Tenders 8 pièces', composition: ['8 tenders', 'Frites', 'Boisson'], imageUrl: img('tenders'), variants: single(10000) },
-  { slug: 'tenders-12', number: 21, category: 'poulet', group: 'Tenders', name: 'Tenders 12 pièces', composition: ['12 tenders', 'Frites', 'Boisson'], imageUrl: img('tenders'), variants: single(15000) },
-  { slug: 'fuego-wings-4', number: 29, category: 'poulet', group: 'Fuego Wings', name: 'Fuego Wings 4 pièces', composition: ['4 wings épicés', 'Frites', 'Boisson'], imageUrl: img('fuego'), isSpicy: true, variants: single(6500) },
-  { slug: 'fuego-wings-8', number: 30, category: 'poulet', group: 'Fuego Wings', name: 'Fuego Wings 8 pièces', composition: ['8 wings épicés', 'Frites', 'Boisson'], imageUrl: img('fuego'), isSpicy: true, variants: single(9500) },
-  { slug: 'fuego-wings-12', number: 31, category: 'poulet', group: 'Fuego Wings', name: 'Fuego Wings 12 pièces', composition: ['12 wings épicés', 'Frites', 'Boisson'], imageUrl: img('fuego'), isSpicy: true, variants: single(12500) },
-  { slug: 'special-belchicken', number: 22, category: 'poulet', group: 'Spécialités', name: 'Spécial Belchicken', composition: ['1 wing', '1 tender', '1 pilon', '1 haut de cuisse', '1 chicken pop corn', '1 frites', '2 beignets', '1 boisson'], imageUrl: img('special'), variants: single(7500) },
+  { slug: 'wings-4', number: 16, category: 'poulet', group: 'Wings', name: 'Wings 4 pièces', composition: ['4 wings', 'Frites', 'Boisson'], imageUrl: img('wings'), variants: single(5000, 1) },
+  { slug: 'wings-8', number: 17, category: 'poulet', group: 'Wings', name: 'Wings 8 pièces', composition: ['8 wings', 'Frites', 'Boisson'], imageUrl: img('wings12'), variants: single(7500, 1) },
+  { slug: 'wings-12', number: 18, category: 'poulet', group: 'Wings', name: 'Wings 12 pièces', composition: ['12 wings', 'Frites', 'Boisson'], imageUrl: img('wings12'), variants: single(10000, 1) },
+  { slug: 'tenders-4', number: 19, category: 'poulet', group: 'Tenders', name: 'Tenders 4 pièces', composition: ['4 tenders', 'Frites', 'Boisson'], imageUrl: img('tenders'), variants: single(6000, 1) },
+  { slug: 'tenders-8', number: 20, category: 'poulet', group: 'Tenders', name: 'Tenders 8 pièces', composition: ['8 tenders', 'Frites', 'Boisson'], imageUrl: img('tenders'), variants: single(10000, 1) },
+  { slug: 'tenders-12', number: 21, category: 'poulet', group: 'Tenders', name: 'Tenders 12 pièces', composition: ['12 tenders', 'Frites', 'Boisson'], imageUrl: img('tenders'), variants: single(15000, 1) },
+  { slug: 'fuego-wings-4', number: 29, category: 'poulet', group: 'Fuego Wings', name: 'Fuego Wings 4 pièces', composition: ['4 wings épicés', 'Frites', 'Boisson'], imageUrl: img('fuego'), isSpicy: true, variants: single(6500, 1) },
+  { slug: 'fuego-wings-8', number: 30, category: 'poulet', group: 'Fuego Wings', name: 'Fuego Wings 8 pièces', composition: ['8 wings épicés', 'Frites', 'Boisson'], imageUrl: img('fuego'), isSpicy: true, variants: single(9500, 1) },
+  { slug: 'fuego-wings-12', number: 31, category: 'poulet', group: 'Fuego Wings', name: 'Fuego Wings 12 pièces', composition: ['12 wings épicés', 'Frites', 'Boisson'], imageUrl: img('fuego'), isSpicy: true, variants: single(12500, 1) },
+  { slug: 'special-belchicken', number: 22, category: 'poulet', group: 'Spécialités', name: 'Spécial Belchicken', composition: ['1 wing', '1 tender', '1 pilon', '1 haut de cuisse', '1 chicken pop corn', '1 frites', '2 beignets', '1 boisson'], imageUrl: img('special'), variants: single(7500, 1) },
   { slug: 'chicken-pop-corn', number: 23, category: 'poulet', group: 'Spécialités', name: 'Chicken Pop Corn', description: 'Bouchées de poulet croustillantes.', imageUrl: img('popcorn'), variants: sizes(1500, 2000) },
 
   // ── Chef's Combo ──
-  { slug: 'chefs-combo', number: 13, category: 'combos', group: 'Plateaux', name: "Chef's Combo", composition: ['1 Finest burger', '1 tenders', '2 wings', '1 chicken pop corn L', '2 beignets', '1 frites', '1 boisson'], imageUrl: img('chefs'), variants: single(8500) },
-  { slug: 'boneless-combo', number: 14, category: 'combos', group: 'Plateaux', name: 'Boneless Combo', composition: ['1 Finest burger', '1 tenders', '2 chicken pop corn XL', '2 beignets', '1 frites', '1 boisson'], imageUrl: img('boneless'), variants: single(8500) },
-  { slug: 'chefs-choice', number: 15, category: 'combos', group: 'Plateaux', name: "Chef's Choice", composition: ['2 wings', '2 tenders', '2 chicken pop corn XL', '2 beignets', '1 frites', '1 boisson'], imageUrl: img('choice'), variants: single(8500) },
+  { slug: 'chefs-combo', number: 13, category: 'combos', group: 'Plateaux', name: "Chef's Combo", composition: ['1 Finest burger', '1 tenders', '2 wings', '1 chicken pop corn L', '2 beignets', '1 frites', '1 boisson'], imageUrl: img('chefs'), variants: single(8500, 1) },
+  { slug: 'boneless-combo', number: 14, category: 'combos', group: 'Plateaux', name: 'Boneless Combo', composition: ['1 Finest burger', '1 tenders', '2 chicken pop corn XL', '2 beignets', '1 frites', '1 boisson'], imageUrl: img('boneless'), variants: single(8500, 1) },
+  { slug: 'chefs-choice', number: 15, category: 'combos', group: 'Plateaux', name: "Chef's Choice", composition: ['2 wings', '2 tenders', '2 chicken pop corn XL', '2 beignets', '1 frites', '1 boisson'], imageUrl: img('choice'), variants: single(8500, 1) },
 
   // ── Buckets ──
-  { slug: 'family-bucket', number: 26, category: 'buckets', group: 'À partager', name: 'Family Bucket', serves: '4 personnes', composition: ['4 wings', '4 tenders', '4 pilons', '4 hauts de cuisse', '4 frites', '4 boissons', '12 beignets'], imageUrl: img('family'), variants: single(28000) },
-  { slug: 'friends-bucket', number: 27, category: 'buckets', group: 'À partager', name: 'Friends Bucket', serves: '2 à 3 personnes', composition: ['4 wings', '4 tenders', '2 pilons', '2 hauts de cuisse', '6 beignets', '2 frites', '2 boissons'], imageUrl: img('friends'), variants: single(15000) },
+  { slug: 'family-bucket', number: 26, category: 'buckets', group: 'À partager', name: 'Family Bucket', serves: '4 personnes', composition: ['4 wings', '4 tenders', '4 pilons', '4 hauts de cuisse', '4 frites', '4 boissons', '12 beignets'], imageUrl: img('family'), variants: single(28000, 4) },
+  { slug: 'friends-bucket', number: 27, category: 'buckets', group: 'À partager', name: 'Friends Bucket', serves: '2 à 3 personnes', composition: ['4 wings', '4 tenders', '2 pilons', '2 hauts de cuisse', '6 beignets', '2 frites', '2 boissons'], imageUrl: img('friends'), variants: single(15000, 2) },
   { slug: 'bucket-for-2', number: 28, category: 'buckets', group: 'À partager', name: 'Bucket for 2', serves: '2 personnes', composition: ['4 wings', '2 tenders', '2 hauts de cuisse', '2 pilons'], imageUrl: img('bucket2'), variants: single(13000) },
 
   // ── Wraps ──
@@ -91,15 +98,15 @@ export const products = [
   { slug: 'fuego-wrap', number: 5, category: 'wraps', group: 'Wraps', name: 'Fuego Wrap', description: 'Poulet croustillant, sauce piquante.', imageUrl: img('wrap_fuego'), isSpicy: true, variants: menuOrSeul(6500, 5000, 'Wrap seul') },
 
   // ── Rice Box ──
-  { slug: 'belgrill-rice-box', number: 24, category: 'rice-box', group: 'Rice Box', name: 'Belgrill Rice Box', composition: ['Fried rice', 'Poulet grillé', '2 beignets', '1 boisson'], imageUrl: img('rice_belgrill'), variants: single(4500) },
-  { slug: 'belicious-rice-box', number: 25, category: 'rice-box', group: 'Rice Box', name: 'Belicious Rice Box', composition: ['Spicy rice', '1 tender', 'Alloco', '2 beignets', '1 boisson'], imageUrl: img('rice_belicious'), variants: single(6000) },
+  { slug: 'belgrill-rice-box', number: 24, category: 'rice-box', group: 'Rice Box', name: 'Belgrill Rice Box', composition: ['Fried rice', 'Poulet grillé', '2 beignets', '1 boisson'], imageUrl: img('rice_belgrill'), variants: single(4500, 1) },
+  { slug: 'belicious-rice-box', number: 25, category: 'rice-box', group: 'Rice Box', name: 'Belicious Rice Box', composition: ['Spicy rice', '1 tender', 'Alloco', '2 beignets', '1 boisson'], imageUrl: img('rice_belicious'), variants: single(6000, 1) },
 
   // ── Salades ──
   { slug: 'kebab-salad', number: 1, category: 'salades', group: 'Salades', name: 'Kebab Salad', description: 'Salade fraîche et viande kebab.', imageUrl: img('salad_kebab'), variants: menuOrSeul(4500, 4000, 'Salade seule', 'Avec boisson') },
   { slug: 'chicken-salad', number: 2, category: 'salades', group: 'Salades', name: 'Chicken Salad', description: 'Salade fraîche et poulet, grillé ou frit.', imageUrl: img('salad_chicken'), choiceLabel: 'Cuisson du poulet', choices: ['Grillé', 'Frit'], variants: menuOrSeul(4500, 4000, 'Salade seule', 'Avec boisson') },
 
   // ── Bel Kids ──
-  { slug: 'belkids-box', number: 6, category: 'bel-kids', group: 'Bel Kids', name: 'BelKids Box', composition: ['1 chicken burger', '1 chicken pop corn L', '2 beignets', '1 frites', '1 jus', 'Accès salle de jeu'], imageUrl: img('kids'), variants: single(5000) },
+  { slug: 'belkids-box', number: 6, category: 'bel-kids', group: 'Bel Kids', name: 'BelKids Box', composition: ['1 chicken burger', '1 chicken pop corn L', '2 beignets', '1 frites', '1 jus', 'Accès salle de jeu'], imageUrl: img('kids'), variants: single(5000, 1) },
 
   // ── Extras ──
   { slug: 'frites', category: 'extras', group: 'Accompagnements', name: 'Frites', imageUrl: img('fries'), variants: sizes(1000, 1500) },
@@ -113,6 +120,14 @@ export const products = [
   { slug: 'fuego-wings-piece', category: 'extras', group: 'Poulet à la pièce', name: 'Fuego Wings', imageUrl: img('fuego'), isSpicy: true, variants: pieces([[4, 4500], [8, 10000], [16, 15000]]) },
   { slug: 'pilon', category: 'extras', group: 'Poulet à la pièce', name: 'Pilon', imageUrl: img('pieces'), variants: single(1500) },
   { slug: 'haut-de-cuisse', category: 'extras', group: 'Poulet à la pièce', name: 'Haut de cuisse', imageUrl: img('pieces'), variants: single(1500) },
+  // ── Boissons ──
+  { slug: 'schweppes', category: 'boissons', group: 'Boissons', name: 'Schweppes', variants: single(1000) },
+  { slug: 'coca-cola', category: 'boissons', group: 'Boissons', name: 'Coca-Cola', variants: single(1000) },
+  { slug: 'fanta', category: 'boissons', group: 'Boissons', name: 'Fanta', variants: single(1000) },
+  { slug: 'sprite', category: 'boissons', group: 'Boissons', name: 'Sprite', variants: single(1000) },
+  { slug: 'malta-tonic', category: 'boissons', group: 'Boissons', name: 'Malta Tonic', variants: single(1250) },
+  { slug: 'cocktail-de-fruits-b-b', category: 'boissons', group: 'Boissons', name: 'Cocktail de fruits B&B', variants: single(1500) },
+  { slug: 'babali', category: 'boissons', group: 'Boissons', name: 'Babali (eau)', variants: single(500) },
   { slug: 'sauce-supplementaire', category: 'extras', group: 'Sauces', name: 'Sauce supplémentaire', description: 'Au choix, à préciser dans la note.', variants: single(250) },
 ];
 

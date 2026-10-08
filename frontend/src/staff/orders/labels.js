@@ -48,7 +48,7 @@ export const STAGES = [
     // À emporter : prêtes, le client vient au comptoir
     id: 'PRETE',
     label: 'À retirer',
-    hint: 'Commandes à emporter prêtes : au comptoir, vérifiez le nom ou la référence, puis remettez-les au client.',
+    hint: 'Commandes à emporter prêtes : au comptoir, tapez le code de retrait du client, puis remettez-lui la commande.',
     empty: 'Aucune commande à retirer.',
   },
   {
@@ -145,8 +145,9 @@ export function timelineOf(o) {
       MESSAGE_ENVOYE: 'Message envoyé au client (confirmé)',
       CLIENT_APPELE: 'Client prévenu par appel',
       LIVREUR_ASSIGNE: `Livreur : ${e.courierName}`,
-      CODE_INCORRECT: 'Code de remise faux, tapé par le livreur',
+      CODE_INCORRECT: isPickup(o) ? 'Code de retrait faux, tapé au comptoir' : 'Code de remise faux, tapé par le livreur',
       LIVRAISON_SANS_CODE: 'Livraison validée sans code',
+      RETRAIT_SANS_CODE: 'Remise au comptoir validée sans code',
     }[e.type],
     note: e.messageLabel || null,
     by: e.by,

@@ -15,7 +15,7 @@ export async function getPublicMenu() {
         include: {
           variants: {
             orderBy: { position: 'asc' },
-            select: { id: true, code: true, label: true, subLabel: true, price: true },
+            select: { id: true, code: true, label: true, subLabel: true, price: true, drinkCount: true },
           },
         },
       },
@@ -29,6 +29,8 @@ export async function getPublicMenu() {
     description: c.description,
     script: c.script,
     heroImageUrl: c.heroImageUrl,
+    // Boissons : à choisir dans les formules (variants[].drinkCount) et vendues seules
+    isDrinks: c.isDrinks,
     groups: c.groups,
     products: c.products.map((p) => ({
       id: p.id,

@@ -90,9 +90,10 @@ export const MESSAGES = {
     label: 'Commande prête à retirer',
     body:
       'Bonjour {{1}}, votre commande {{2}} est prête ! Vous pouvez venir la retirer au restaurant.\n\n' +
-      'Adresse : {{3}}\nItinéraire : {{4}}\n\n' +
-      'Au comptoir, donnez votre nom ou la référence de la commande.\n\nBelchicken Burkina',
-    params: (o, ctx) => [firstName(o.customerName), o.reference, ctx.restaurantAddress, ctx.restaurantMapsUrl],
+      'Au comptoir, donnez ce code : {{3}}. Ne le donnez qu’au comptoir, quand on vous remet la commande.\n\n' +
+      'Adresse : {{4}}\nItinéraire : {{5}}\n\nBelchicken Burkina',
+    // Code de retrait à 4 chiffres (courier.js), créé au passage PRETE
+    params: (o, ctx) => [firstName(o.customerName), o.reference, o.deliveryCode || '-', ctx.restaurantAddress, ctx.restaurantMapsUrl],
   },
   RETIREE: {
     template: 'emporter_commande_retiree',

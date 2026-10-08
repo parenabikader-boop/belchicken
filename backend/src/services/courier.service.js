@@ -14,7 +14,7 @@ export async function listCourses(courier, now = new Date()) {
     },
     orderBy: { courierAssignedAt: 'asc' },
     include: {
-      items: { orderBy: { id: 'asc' } },
+      items: { orderBy: { id: 'asc' }, include: { drinks: true } },
       statusChanges: { where: { toStatus: 'LIVREE' }, select: { toStatus: true, createdAt: true } },
     },
   });

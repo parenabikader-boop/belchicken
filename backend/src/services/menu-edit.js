@@ -32,7 +32,7 @@ export function planVariants(existing, wanted) {
   const update = [];
   const create = [];
   wanted.forEach((v, position) => {
-    const data = { label: v.label, subLabel: v.subLabel ?? null, price: v.price, position };
+    const data = { label: v.label, subLabel: v.subLabel ?? null, price: v.price, drinkCount: v.drinkCount ?? 0, position };
     if (v.id) {
       if (!byId.has(v.id)) throw new Error(`Formule inconnue : ${v.id}`);
       keep.add(v.id);
@@ -71,6 +71,13 @@ const variantSchema = z.object({
     .int('Le prix doit être un nombre entier de francs.')
     .min(1, 'Le prix doit être supérieur à 0 F.')
     .max(MAX_PRICE, 'Prix trop élevé.'),
+  // Boissons incluses, au choix du client (0 = aucune)
+  drinkCount: z
+    .number({ invalid_type_error: 'Indiquez le nombre de boissons comprises (0 si aucune).' })
+    .int('Nombre de boissons : un nombre entier.')
+    .min(0, 'Nombre de boissons : 0 au moins.')
+    .max(10, 'Nombre de boissons : 10 au plus.')
+    .default(0),
 });
 
 export const productSchema = z

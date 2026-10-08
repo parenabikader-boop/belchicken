@@ -109,7 +109,8 @@ Catégories actives dans l'ordre du menu, avec leurs sous-groupes, produits et v
   "addressNote": "Patte d’Oie, portail bleu après la pharmacie",
   "items": [
     { "productId": "…", "variantId": "…", "quantity": 2, "note": "Sans oignon" },
-    { "productId": "…", "variantId": "…", "quantity": 1, "choice": "Frit" }
+    { "productId": "…", "variantId": "…", "quantity": 1, "choice": "Frit" },
+    { "productId": "…", "variantId": "…", "quantity": 1, "drinks": [{ "productId": "…", "quantity": 2 }, { "productId": "…", "quantity": 2 }] }
   ]
 }
 ```
@@ -118,6 +119,7 @@ Catégories actives dans l'ordre du menu, avec leurs sous-groupes, produits et v
 - `payment.payerPhone` (le numéro qui a payé) est obligatoire. Il n'y a pas de numéro de transaction : l'équipe vérifie le paiement avec ce numéro et le montant.
 - Il faut `location` ou `addressNote` (5 caractères minimum), ou les deux.
 - Les prix sont recalculés côté serveur à partir de la base. Le client n'envoie jamais de prix.
+- `drinks` : boissons choisies dans la formule, pour **une** formule (voir « Boissons »). Il en faut exactement `variant.drinkCount`.
 - Réponse `201` : `{ order: { reference: "BC-7K2Q9M", status, createdAt, itemsTotal, items } }`.
 
 Erreurs, toujours au format `{ error: { code, message, details } }` avec un message en français affichable tel quel :
@@ -126,6 +128,10 @@ Erreurs, toujours au format `{ error: { code, message, details } }` avec un mess
 |-----------|-------------------------------|---------------------------------------|
 | 400       | `DONNEES_INVALIDES`           | Champ manquant ou invalide            |
 | 409       | `PRODUIT_INDISPONIBLE`        | Plat passé en indisponible entre-temps |
+| 400       | `BOISSONS_A_CHOISIR`          | Pas autant de boissons que dans la formule |
+| 400       | `BOISSON_EN_TROP`             | Boisson choisie pour une formule qui n'en comprend pas |
+| 400       | `BOISSON_INCONNUE`            | Boisson inexistante, ou plat qui n'est pas une boisson |
+| 409       | `BOISSON_INDISPONIBLE`        | Boisson passée en indisponible entre-temps |
 | 429       | `TROP_DE_COMMANDES`           | Plus de 8 commandes en 10 min par IP  |
 
 ### `GET /api/orders/:reference`
@@ -275,10 +281,10 @@ Belchicken Burkina
 emporter_commande_prete
 Bonjour {{1}}, votre commande {{2}} est prête ! Vous pouvez venir la retirer au restaurant.
 
-Adresse : {{3}}
-Itinéraire : {{4}}
+Au comptoir, donnez ce code : {{3}}. Ne le donnez qu’au comptoir, quand on vous remet la commande.
 
-Au comptoir, donnez votre nom ou la référence de la commande.
+Adresse : {{4}}
+Itinéraire : {{5}}
 
 Belchicken Burkina
 
@@ -435,6 +441,20 @@ Le menu se gère depuis l'espace équipe (`/equipe`) : c'est la base qui fait fo
 Photos : envoyées par l'API à Cloudinary (dossier `CLOUDINARY_FOLDER`, `belchicken` par défaut), jamais sur le disque de Render
 qui est effacé à chaque déploiement. Les photos d'origine restent servies depuis `frontend/public/` tant qu'elles ne sont pas remplacées.
 
+### Boissons
+
+- Catégorie « Boissons » (`Category.isDrinks`, une seule) : ses plats sont les boissons. Le Patron les gère comme les autres plats
+  (nom, prix, disponibilité, ordre). Elles se vendent seules au prix normal, depuis la catégorie ou depuis la fiche d'un plat
+  (« + Ajouter une boisson », lignes séparées dans le panier).
+- Chaque formule indique ses boissons comprises (`ProductVariant.drinkCount` : Menu 1, Friends Bucket 2, Family Bucket 4, Seul 0),
+  réglées par le Patron dans la fiche du plat (« Boissons comprises »). Le client choisit exactement ce nombre parmi les boissons
+  disponibles, sans supplément. Le serveur vérifie le nombre et la disponibilité (`pickDrinks()` dans `src/services/pricing.js`).
+- Boissons choisies enregistrées par ligne de commande (`OrderItemDrink`, pour une formule, nom figé), affichées dans le panier,
+  le récapitulatif, la page de suivi, l'alerte WhatsApp équipe, le détail de la commande et la page du livreur
+  (« Boissons : 2 Coca-Cola, 1 Fanta », total de la ligne).
+- Migration `20261007224347_boissons` : colonnes et table, puis données pour la base en ligne (catégorie et 7 boissons si absentes,
+  nombre de boissons des formules d'origine, BelKids Box comprise).
+
 Point à confirmer : Fuego Wings 8 pièces à la carte, affiché à 10 000 F, plus cher que le menu N° 30 à 9 500 F.
 
 ## À emporter
@@ -450,11 +470,22 @@ comme pour la livraison ; ni position, ni frais de livraison, ni livreur.
 |---|---|---|
 | Paiement à vérifier | Confirmer le paiement et prévenir le client (sans frais) | `PAIEMENT_CONFIRME_EMPORTER` |
 | Payée | Lancer la préparation et prévenir le client | `EN_PREPARATION_EMPORTER` |
-| En préparation | Commande prête : prévenir le client | `COMMANDE_PRETE` (adresse + lien Itinéraire) |
-| Prête à retirer | Remise au client : le remercier (au comptoir, après avoir vérifié le nom ou la référence) | `RETIREE` |
+| En préparation | Commande prête : prévenir le client | `COMMANDE_PRETE` (code de retrait + adresse + lien Itinéraire) |
+| Prête à retirer | Remise au client : le remercier (au comptoir, avec le code de retrait) | `RETIREE` |
 
 La page Commandes a une étape « À retirer » (colonne sur ordinateur). Une commande retirée passe dans
 « Livrées · à remercier » jusqu'à la confirmation du remerciement, comme une livraison. Alertes : « Nouvelle commande …
 · à emporter », « Commande … retirée au comptoir à … ». Page de suivi : frise « Prête à retirer », « Retirée », adresse
 et bouton Itinéraire quand la commande est prête. Migration `20261006150000_a_emporter` (enum `FulfillmentMode`,
 colonne `Order.mode`, statut `PRETE`).
+
+### Code de retrait
+
+Au passage `PRETE`, un code à 4 chiffres est créé (mêmes colonnes que le code de remise du livreur :
+`Order.deliveryCode`, `deliveryCodeAttempts`) et envoyé dans le message « commande prête » (« Au comptoir, donnez
+ce code : 4827 »). Au comptoir, l'agent tape le code donné par le client (`POST /api/staff/orders/:reference/status`
+avec `{ to: "LIVREE", code }`) : 5 codes faux au plus (événement `CODE_INCORRECT`), ensuite la saisie est bloquée.
+Client sans son code (ou bloqué) : l'agent valide avec un motif obligatoire (`{ to: "LIVREE", reason }`, événement
+`RETRAIT_SANS_CODE`, motif dans l'historique). Le code n'apparaît jamais sur la page de suivi publique. Règles :
+`checkPickupCode()` dans `src/services/courier.js`. Migration `20261007120000_code_retrait` (valeur
+`RETRAIT_SANS_CODE` de l'enum `OrderEventType`). Modèle Meta `emporter_commande_prete` à resoumettre (5 variables).

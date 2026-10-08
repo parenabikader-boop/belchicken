@@ -1,3 +1,4 @@
+import { drinksText } from '../utils/drinks.js';
 import { formatFcfa, PAYMENT_LABELS } from '../utils/format.js';
 
 // Meta refuse les paramètres de modèle contenant des retours à la ligne,
@@ -12,7 +13,7 @@ export const clean = (s, max = 900) =>
 export function buildNewOrderParams(order) {
   const items = order.items
     .map((i) => {
-      const extra = [i.variantLabel, i.choice].filter(Boolean).join(', ');
+      const extra = [i.variantLabel, i.choice, drinksText(i.drinks, i.quantity)].filter(Boolean).join(', ');
       return `${i.quantity}× ${i.productNumber ? `N°${i.productNumber} ` : ''}${i.productName}${extra ? ` (${extra})` : ''}`;
     })
     .join(', ');

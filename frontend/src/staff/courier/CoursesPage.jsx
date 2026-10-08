@@ -5,6 +5,7 @@ import { useChime } from '../orders/OrdersFeed.jsx';
 import AlertsPrompt from '../alerts/AlertsPrompt.jsx';
 import { FEE_METHOD_LABEL, formatPhone, formatTime, telHref, whatsappHref } from '../orders/labels.js';
 import { FeeMethodPicker } from '../orders/OrderSteps.jsx';
+import { drinksLabel } from '../../utils/drinks.js';
 import { formatPrice } from '../../utils/format.js';
 
 // /equipe/courses : le livreur ne voit que ses courses du jour (l'API ne lui donne rien d'autre).
@@ -178,6 +179,7 @@ function Course({ course: c, onDelivered, onRefresh }) {
                 <span>
                   <b>{i.productNumber != null && `N° ${i.productNumber} · `}{i.productName}</b>
                   {details && <small>{details}</small>}
+                  {i.drinks?.length > 0 && <small className="st-drinks">{drinksLabel(i.drinks, i.quantity)}</small>}
                   {i.note && <em>Note : {i.note}</em>}
                 </span>
               </li>

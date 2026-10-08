@@ -229,13 +229,13 @@ test('à emporter : messages sans frais, à chaque étape', () => {
   assert.doesNotMatch(paid, /Frais de livraison/);
 });
 
-test('commande prête : adresse du restaurant et lien Itinéraire, jamais la boîte postale', () => {
+test('commande prête : code de retrait, adresse du restaurant et lien Itinéraire, jamais la boîte postale', () => {
   assert.equal(
-    renderMessage('COMMANDE_PRETE', pickup({ status: 'PRETE' }), ctx),
+    renderMessage('COMMANDE_PRETE', pickup({ status: 'PRETE', deliveryCode: '4827' }), ctx),
     'Bonjour Awa, votre commande BC-7K2Q9M est prête ! Vous pouvez venir la retirer au restaurant.\n\n' +
+      'Au comptoir, donnez ce code : 4827. Ne le donnez qu’au comptoir, quand on vous remet la commande.\n\n' +
       'Adresse : Kamsonghin, en face de Sonia Hôtel\n' +
-      'Itinéraire : https://www.google.com/maps/dir/?api=1&destination=12.352187,-1.519188\n\n' +
-      'Au comptoir, donnez votre nom ou la référence de la commande.\n\nBelchicken Burkina',
+      'Itinéraire : https://www.google.com/maps/dir/?api=1&destination=12.352187,-1.519188\n\nBelchicken Burkina',
   );
   assert.doesNotMatch(MESSAGES.COMMANDE_PRETE.body, /BP/);
 });

@@ -8,6 +8,8 @@
 // - Le livreur tape le code donné par le client pour passer la commande à LIVREE. Il ne reçoit
 //   jamais le code : l'API le vérifie. Après 5 codes faux, la saisie est bloquée sur cette commande.
 // - Client sans son code : l'agent valide à sa place, avec un motif noté dans l'historique.
+// - À emporter : même code (mêmes colonnes deliveryCode / deliveryCodeAttempts), créé au passage PRETE
+//   et envoyé dans le message « commande prête ». L'agent le tape au comptoir (checkPickupCode).
 import { randomInt, timingSafeEqual } from 'node:crypto';
 
 export const MAX_CODE_ATTEMPTS = 5;
@@ -41,23 +43,44 @@ export function checkHandover(order, courierId, code) {
   if (order.status === 'LIVREE') return { ok: false, error: 'Cette commande est déjà livrée.' };
   if (order.status === 'ANNULEE') return { ok: false, error: 'Cette commande a été annulée : ne la livrez pas. Appelez l’équipe.' };
   if (order.status !== 'EN_LIVRAISON') return { ok: false, error: 'Cette commande n’est pas en livraison.' };
-  if (!order.deliveryCode) return { ok: false, error: 'Cette commande n’a pas de code. Appelez l’équipe pour valider la livraison.' };
-  if (codeLocked(order)) return { ok: false, error: 'Trop de codes faux. Appelez l’équipe : elle validera la livraison.' };
+  return checkCode(order, code, {
+    noCode: 'Cette commande n’a pas de code. Appelez l’équipe pour valider la livraison.',
+    locked: 'Trop de codes faux. Appelez l’équipe : elle validera la livraison.',
+    lastWrong: 'Code incorrect. Trop de codes faux : appelez l’équipe, elle validera la livraison.',
+  });
+}
+
+// Vérification du code, la même pour le livreur et pour le comptoir (à emporter) ; texts : les
+// messages propres à chacun (pas de code, saisie bloquée, dernier code faux).
+function checkCode(order, code, texts) {
+  if (!order.deliveryCode) return { ok: false, error: texts.noCode };
+  if (codeLocked(order)) return { ok: false, error: texts.locked };
   const typed = cleanCode(code);
   if (typed.length !== CODE_LENGTH) return { ok: false, error: `Le code a ${CODE_LENGTH} chiffres.` };
   if (!timingSafeEqual(Buffer.from(typed), Buffer.from(order.deliveryCode))) {
     const left = attemptsLeft(order) - 1;
-    const error = left > 0
-      ? `Code incorrect. Encore ${left} essai${left > 1 ? 's' : ''}.`
-      : 'Code incorrect. Trop de codes faux : appelez l’équipe, elle validera la livraison.';
+    const error = left > 0 ? `Code incorrect. Encore ${left} essai${left > 1 ? 's' : ''}.` : texts.lastWrong;
     return { ok: false, wrong: true, error };
   }
   return { ok: true };
 }
 
-// Livraison validée par l'agent (client sans son code) : motif obligatoire
-export function handoverReasonError(reason) {
-  if (!reason || reason.trim().length < 3) return 'Indiquez pourquoi la livraison est validée sans code.';
+// À emporter : l'agent tape au comptoir le code de retrait donné par le client (créé au passage PRETE,
+// envoyé dans le message « commande prête »). Même réponse que checkHandover. 5 codes faux au plus ;
+// ensuite, ou si le client n'a plus son code, l'agent valide sans code avec un motif (RETRAIT_SANS_CODE).
+export function checkPickupCode(order, code) {
+  if (order.mode !== 'A_EMPORTER') return { ok: false, error: 'Cette commande est en livraison : c’est le livreur qui tape le code.' };
+  if (order.status !== 'PRETE') return { ok: false, error: 'Cette commande n’est pas prête à retirer.' };
+  return checkCode(order, code, {
+    noCode: 'Cette commande n’a pas de code de retrait : validez la remise sans code, avec un motif.',
+    locked: 'Trop de codes faux : si c’est bien le client, validez la remise sans code, avec un motif.',
+    lastWrong: 'Code incorrect. Trop de codes faux : si c’est bien le client, validez la remise sans code, avec un motif.',
+  });
+}
+
+// Livraison (ou retrait au comptoir) validée par l'agent, client sans son code : motif obligatoire
+export function handoverReasonError(reason, pickup = false) {
+  if (!reason || reason.trim().length < 3) return `Indiquez pourquoi ${pickup ? 'la remise au comptoir' : 'la livraison'} est validée sans code.`;
   return null;
 }
 
@@ -92,6 +115,8 @@ export function toCourse(o) {
       choice: i.choice,
       note: i.note,
       quantity: i.quantity,
+      // Boissons choisies (pour une formule) : le livreur vérifie le sac
+      drinks: (i.drinks || []).map((d) => ({ name: d.name, quantity: d.quantity })),
     })),
     hasCode: Boolean(o.deliveryCode),
     attemptsLeft: attemptsLeft(o),

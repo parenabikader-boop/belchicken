@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
+import { drinksLabel } from '../../utils/drinks.js';
 import { formatPrice } from '../../utils/format.js';
 import { useOrdersFeed } from './OrdersFeed.jsx';
 import { FEE_METHOD_LABEL, formatDateTime, formatPhone, isPickup, mapsHref, METHOD_LABEL, statusLabel, telHref, timeAgo, timelineOf, whatsappHref } from './labels.js';
@@ -140,6 +141,7 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
                   <span className="st-item">
                     <b>{i.productNumber != null && `N° ${i.productNumber} · `}{i.productName}</b>
                     {details && <small>{details}</small>}
+                    {i.drinks?.length > 0 && <small className="st-drinks">{drinksLabel(i.drinks, i.quantity)}</small>}
                     {i.note && <em>Note : {i.note}</em>}
                   </span>
                   <span className="st-amount">{formatPrice(i.lineTotal)}</span>

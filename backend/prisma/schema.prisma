@@ -63,6 +63,9 @@ model Category {
   heroImagePublicId String? // identifiant Cloudinary, pour remplacer ou supprimer la photo
   position          Int         @default(0)
   isActive          Boolean     @default(true)
+  // Catégorie « Boissons » (une seule) : ses plats sont les boissons à choisir dans les formules,
+  // et se vendent aussi seules au prix normal
+  isDrinks          Boolean     @default(false)
   groups            MenuGroup[]
   products          Product[]
   createdAt         DateTime    @default(now())
@@ -106,6 +109,7 @@ model Product {
   group         MenuGroup?       @relation(fields: [groupId], references: [id], onDelete: SetNull)
   variants      ProductVariant[]
   orderItems    OrderItem[]
+  drinkChoices  OrderItemDrink[] // boisson choisie dans des formules
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
@@ -122,6 +126,9 @@ model ProductVariant {
   label      String
   subLabel   String?
   price      Int
+  // Boissons incluses, au choix du client parmi les boissons disponibles, sans supplément
+  // (Menu = 1, Friends Bucket = 2, Family Bucket = 4, Seul = 0). Modifiable par le Patron.
+  drinkCount Int         @default(0)
   position   Int         @default(0)
   orderItems OrderItem[]
 
@@ -181,6 +188,8 @@ model Order {
   courierAssignedAt    DateTime?
   // Code de remise à 4 chiffres, créé au passage EN_LIVRAISON et envoyé au client dans le message
   // « en route ». Jamais envoyé au livreur : il le tape, l'API vérifie. Bloqué après 5 codes faux.
+  // À emporter : même code (code de retrait), créé au passage PRETE et envoyé dans le message « prête » ;
+  // l'agent le tape au comptoir. Jamais sur la page de suivi publique.
   deliveryCode         String?
   deliveryCodeAttempts Int        @default(0)
 
@@ -201,13 +210,13 @@ model Order {
 }
 
 model OrderItem {
-  id            String          @id @default(cuid())
+  id            String           @id @default(cuid())
   orderId       String
-  order         Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order         Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId     String?
-  product       Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  product       Product?         @relation(fields: [productId], references: [id], onDelete: SetNull)
   variantId     String?
-  variant       ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  variant       ProductVariant?  @relation(fields: [variantId], references: [id], onDelete: SetNull)
   // Copies figées au moment de la commande
   productName   String
   productNumber Int?
@@ -217,8 +226,23 @@ model OrderItem {
   unitPrice     Int
   quantity      Int
   lineTotal     Int
+  drinks        OrderItemDrink[] // boissons choisies dans la formule
 
   @@index([orderId])
+}
+
+// Boissons choisies dans une formule, pour UNE formule : à multiplier par OrderItem.quantity.
+// Ex. Family Bucket : Coca-Cola ×2, Fanta ×1, Babali ×1. name est une copie figée, comme productName.
+model OrderItemDrink {
+  id          String    @id @default(cuid())
+  orderItemId String
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name        String
+  quantity    Int
+
+  @@index([orderItemId])
 }
 
 // Historique des statuts : chaque changement, quand et par qui.
@@ -253,6 +277,7 @@ enum OrderEventType {
   LIVREUR_ASSIGNE // livreur choisi ou remplacé (nom dans courierName)
   CODE_INCORRECT // le livreur a tapé un mauvais code de remise
   LIVRAISON_SANS_CODE // livraison validée par l'agent, client sans son code (motif dans OrderStatusChange.reason)
+  RETRAIT_SANS_CODE // à emporter : remise au comptoir validée par l'agent, client sans son code de retrait (motif dans OrderStatusChange.reason)
 }
 
 model OrderEvent {

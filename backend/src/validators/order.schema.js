@@ -28,6 +28,11 @@ const item = z.object({
   quantity: z.number().int().min(1).max(50),
   choice: optionalText(40),
   note: optionalText(200),
+  // Boissons choisies dans la formule (pour une formule) : vérifiées par le serveur (pricing.js)
+  drinks: z
+    .array(z.object({ productId: z.string().min(1), quantity: z.number().int().min(1).max(10) }))
+    .max(10)
+    .default([]),
 });
 
 // Mobile money : le client donne seulement le numéro qui a payé. L'équipe vérifie

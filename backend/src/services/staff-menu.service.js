@@ -5,7 +5,7 @@ import { AppError } from '../utils/AppError.js';
 import { planVariants, sameItems, slugify, uniqueSlug } from './menu-edit.js';
 import { deletePhoto, uploadPhoto } from './photo.service.js';
 
-const variantSelect = { id: true, code: true, label: true, subLabel: true, price: true, position: true };
+const variantSelect = { id: true, code: true, label: true, subLabel: true, price: true, drinkCount: true, position: true };
 
 const toStaffProduct = (p) => ({
   id: p.id,
@@ -55,6 +55,7 @@ export async function getStaffMenu() {
       script: c.script,
       heroImageUrl: c.heroImageUrl,
       isActive: c.isActive,
+      isDrinks: c.isDrinks, // catégorie « Boissons » : ses plats se choisissent dans les formules
       groups: c.groups,
       products: c.products.map(toStaffProduct),
     })),

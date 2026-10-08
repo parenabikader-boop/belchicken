@@ -1,11 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
 import { MAX_QTY, useCart } from '../context/CartContext.jsx';
+import { useMenu } from '../context/MenuContext.jsx';
+import { menuDrinks } from '../utils/drinks.js';
 import { formatPrice } from '../utils/format.js';
 import { photoBg, sizedPhoto } from '../utils/visuals.js';
 
-// Fiche produit : formule, choix éventuel, note pour la cuisine, quantité.
+// Une boisson et son compteur (− 2 +)
+function DrinkCounter({ drink, count, onChange, canAdd, price }) {
+  const off = !drink.isAvailable;
+  return (
+    <div className={off ? 'drk off' : 'drk'}>
+      <span className="l"><b>{drink.name}</b>{off && <small>Indisponible</small>}</span>
+      {price != null && !off && <span className="pp">{formatPrice(price)}</span>}
+      <span className="qty">
+        <button type="button" onClick={() => onChange(count - 1)} disabled={off || count === 0} aria-label={`Retirer un ${drink.name}`}>−</button>
+        <span aria-live="polite">{count}</span>
+        <button type="button" onClick={() => onChange(count + 1)} disabled={off || !canAdd} aria-label={`Ajouter un ${drink.name}`}>+</button>
+      </span>
+    </div>
+  );
+}
+
+// Fiche produit : formule, boissons comprises, choix éventuel, note pour la cuisine, quantité,
+// et boissons à ajouter au prix normal.
 export default function ProductDialog({ product: p, onClose }) {
   const { add } = useCart();
+  const { categories } = useMenu();
+  const drinks = menuDrinks(categories);
+  // Boissons comprises dans la formule, pour une formule : { productId: nombre }
+  const [included, setIncluded] = useState({});
+  // Boissons ajoutées au prix normal (lignes séparées dans le panier) : { productId: nombre }
+  const [extras, setExtras] = useState({});
+  const [showExtras, setShowExtras] = useState(false);
   const [variantId, setVariantId] = useState(p.variants[0].id);
   const [choice, setChoice] = useState(p.choices.length ? p.choices[0] : null);
   const [note, setNote] = useState('');
@@ -13,6 +39,11 @@ export default function ProductDialog({ product: p, onClose }) {
   const closeRef = useRef(null);
 
   const variant = p.variants.find((v) => v.id === variantId);
+  const drinkCount = variant.drinkCount || 0;
+  const chosen = Object.values(included).reduce((n, c) => n + c, 0);
+  const missing = drinkCount - chosen;
+  const extrasTotal = drinks.reduce((s, d) => s + (extras[d.id] || 0) * d.variants[0].price, 0);
+  const pickVariant = (id) => { setVariantId(id); setIncluded({}); };
 
   useEffect(() => {
     const lastFocus = document.activeElement;
@@ -28,7 +59,10 @@ export default function ProductDialog({ product: p, onClose }) {
   }, [onClose]);
 
   const submit = () => {
-    add({ productId: p.id, variantId, choice, note, quantity: qty });
+    if (missing > 0) return;
+    const chosenDrinks = Object.entries(included).filter(([, c]) => c > 0).map(([productId, quantity]) => ({ productId, quantity }));
+    add({ productId: p.id, variantId, choice, note, quantity: qty, drinks: chosenDrinks });
+    for (const d of drinks) if (extras[d.id] > 0) add({ productId: d.id, variantId: d.variants[0].id, quantity: extras[d.id] });
     onClose();
   };
 
@@ -59,7 +93,7 @@ export default function ProductDialog({ product: p, onClose }) {
             <fieldset><legend>Formule</legend>
               <div className="opts" role="radiogroup">
                 {p.variants.map((v) => (
-                  <button key={v.id} type="button" className={v.id === variantId ? 'opt on' : 'opt'} role="radio" aria-checked={v.id === variantId} onClick={() => setVariantId(v.id)}>
+                  <button key={v.id} type="button" className={v.id === variantId ? 'opt on' : 'opt'} role="radio" aria-checked={v.id === variantId} onClick={() => pickVariant(v.id)}>
                     <span className="rd"></span>
                     <span className="l"><b>{v.label}</b>{v.subLabel && <small>{v.subLabel}</small>}</span>
                     <span className="pp">{formatPrice(v.price)}</span>
@@ -81,6 +115,46 @@ export default function ProductDialog({ product: p, onClose }) {
             </fieldset>
           )}
 
+          {drinkCount === 1 && (
+            <fieldset><legend>Votre boisson <span className="muted" style={{ fontWeight: 400 }}>(comprise)</span></legend>
+              <div className="opts drk-opts" role="radiogroup">
+                {drinks.map((d) => (
+                  <button key={d.id} type="button" className={included[d.id] ? 'opt on' : 'opt'} role="radio" aria-checked={Boolean(included[d.id])}
+                    disabled={!d.isAvailable} onClick={() => setIncluded({ [d.id]: 1 })}>
+                    <span className="rd"></span><span className="l"><b>{d.name}</b>{!d.isAvailable && <small>Indisponible</small>}</span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )}
+
+          {drinkCount > 1 && (
+            <fieldset><legend>Vos {drinkCount} boissons <span className="muted" style={{ fontWeight: 400 }}>(comprises) · {chosen}/{drinkCount}</span></legend>
+              <div className="drks">
+                {drinks.map((d) => (
+                  <DrinkCounter key={d.id} drink={d} count={included[d.id] || 0} canAdd={missing > 0}
+                    onChange={(n) => setIncluded((x) => ({ ...x, [d.id]: n }))} />
+                ))}
+              </div>
+            </fieldset>
+          )}
+
+          {/* Boissons en plus, au prix normal (pas sur la fiche d'une boisson) */}
+          {!p.category.isDrinks && drinks.some((d) => d.isAvailable) && (
+            showExtras ? (
+              <fieldset><legend>Ajouter une boisson <span className="muted" style={{ fontWeight: 400 }}>(en plus, prix normal)</span></legend>
+                <div className="drks">
+                  {drinks.map((d) => (
+                    <DrinkCounter key={d.id} drink={d} count={extras[d.id] || 0} canAdd={(extras[d.id] || 0) < MAX_QTY} price={d.variants[0].price}
+                      onChange={(n) => setExtras((x) => ({ ...x, [d.id]: n }))} />
+                  ))}
+                </div>
+              </fieldset>
+            ) : (
+              <button type="button" className="lnk drk-more" onClick={() => setShowExtras(true)}>+ Ajouter une boisson</button>
+            )
+          )}
+
           <div>
             <label htmlFor="dn" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
               Note pour la cuisine <span className="muted" style={{ fontWeight: 400 }}>(facultatif)</span>
@@ -94,7 +168,10 @@ export default function ProductDialog({ product: p, onClose }) {
               <span>{qty}</span>
               <button onClick={() => setQty((q) => Math.min(MAX_QTY, q + 1))} aria-label="Augmenter">+</button>
             </span>
-            <button className="btn btn-p" onClick={submit}><span>Ajouter</span><span>{formatPrice(variant.price * qty)}</span></button>
+            <button className="btn btn-p" onClick={submit} disabled={missing > 0}>
+              <span>{missing > 0 ? (drinkCount === 1 ? 'Choisissez votre boisson' : `Encore ${missing} boisson${missing > 1 ? 's' : ''}`) : 'Ajouter'}</span>
+              <span>{formatPrice(variant.price * qty + extrasTotal)}</span>
+            </button>
           </div>
         </div>
       </div>

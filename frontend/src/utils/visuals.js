@@ -46,7 +46,7 @@ export const isWide = (url) => WIDE.includes(photoKey(url));
 const CATEGORY_LAYOUT = {
   burgers: 'big', wraps: 'big', salades: 'big',
   combos: 'wide', buckets: 'wide', 'rice-box': 'wide', 'bel-kids': 'wide',
-  extras: 'row',
+  extras: 'row', boissons: 'row',
 };
 export const cardLayout = (slug) => CATEGORY_LAYOUT[slug] || 'std';
 

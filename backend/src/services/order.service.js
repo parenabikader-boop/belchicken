@@ -10,7 +10,8 @@ import { notifyTeamNewOrder } from './whatsapp.service.js';
 import { pushTeamNewOrder } from './push.service.js';
 
 export async function createOrder(input) {
-  const productIds = [...new Set(input.items.map((i) => i.productId))];
+  // Plats et boissons choisies dans les formules
+  const productIds = [...new Set(input.items.flatMap((i) => [i.productId, ...(i.drinks || []).map((d) => d.productId)]))];
   const products = await prisma.product.findMany({
     where: { id: { in: productIds } },
     include: { variants: true, category: true },
@@ -33,7 +34,7 @@ export async function createOrder(input) {
     locationAccuracy: delivery && input.location?.accuracy != null ? Math.round(input.location.accuracy) : null,
     addressNote: delivery ? input.addressNote ?? null : null,
     itemsTotal,
-    items: { create: lines },
+    items: { create: lines.map(({ drinks, ...l }) => ({ ...l, drinks: { create: drinks } })) },
     // Première ligne de l'historique : commande reçue, paiement à vérifier par l'équipe
     statusChanges: { create: { toStatus: INITIAL_STATUS } },
   };
@@ -44,7 +45,7 @@ export async function createOrder(input) {
     try {
       order = await prisma.order.create({
         data: { ...data, reference: newOrderReference() },
-        include: { items: true },
+        include: { items: { include: { drinks: true } } },
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') continue; // collision de référence
@@ -65,7 +66,7 @@ export async function createOrder(input) {
 export async function getOrderSummary(reference) {
   const order = await prisma.order.findUnique({
     where: { reference },
-    include: { items: true, statusChanges: { orderBy: { createdAt: 'asc' } } },
+    include: { items: { include: { drinks: true } }, statusChanges: { orderBy: { createdAt: 'asc' } } },
   });
   if (!order) throw new AppError(404, 'Commande introuvable.', 'COMMANDE_INTROUVABLE');
   return toPublicOrder(order);
@@ -101,6 +102,7 @@ export function toPublicOrder(order) {
       unitPrice: i.unitPrice,
       quantity: i.quantity,
       lineTotal: i.lineTotal,
+      drinks: (i.drinks || []).map((d) => ({ name: d.name, quantity: d.quantity })),
     })),
   };
 }

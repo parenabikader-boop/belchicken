@@ -20,13 +20,20 @@ test('planVariants garde, modifie, crée et supprime les formules', () => {
     { id: 'v2', code: 'seul', label: 'Seul', price: 4000 },
   ];
   const plan = planVariants(existing, [
-    { id: 'v1', label: 'Menu', price: 6000 },
+    { id: 'v1', label: 'Menu', price: 6000, drinkCount: 1 },
     { label: 'Menu', subLabel: 'Grand', price: 7000 },
   ]);
-  assert.deepEqual(plan.update, [{ id: 'v1', label: 'Menu', subLabel: null, price: 6000, position: 0 }]);
-  assert.deepEqual(plan.create, [{ code: 'menu-2', label: 'Menu', subLabel: 'Grand', price: 7000, position: 1 }]);
+  assert.deepEqual(plan.update, [{ id: 'v1', label: 'Menu', subLabel: null, price: 6000, drinkCount: 1, position: 0 }]);
+  assert.deepEqual(plan.create, [{ code: 'menu-2', label: 'Menu', subLabel: 'Grand', price: 7000, drinkCount: 0, position: 1 }]);
   assert.deepEqual(plan.remove, ['v2']);
   assert.throws(() => planVariants(existing, [{ id: 'autre', label: 'X', price: 1 }]));
+});
+
+test('productSchema : nombre de boissons comprises, 0 par défaut, entre 0 et 10', () => {
+  assert.equal(productSchema.parse(valid).variants[0].drinkCount, 0);
+  assert.equal(productSchema.parse({ ...valid, variants: [{ label: 'Bucket', price: 28000, drinkCount: 4 }] }).variants[0].drinkCount, 4);
+  assert.throws(() => productSchema.parse({ ...valid, variants: [{ label: 'Bucket', price: 28000, drinkCount: 11 }] }));
+  assert.throws(() => productSchema.parse({ ...valid, variants: [{ label: 'Bucket', price: 28000, drinkCount: -1 }] }));
 });
 
 const valid = {

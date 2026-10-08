@@ -43,12 +43,14 @@ staffOrdersRouter.get('/:reference', async (req, res, next) => {
 const statusSchema = z.object({
   from: z.enum(STATUSES).optional(),
   to: z.enum(STATUSES, { errorMap: () => ({ message: 'Statut inconnu.' }) }),
-  // Motif d'annulation, ou de livraison validée sans code
+  // Motif d'annulation, ou de livraison / retrait validé sans code
   reason: z.string().max(300, 'Motif trop long (300 caractères au plus).').optional(),
   // Livreur choisi au départ (to = EN_LIVRAISON)
   courierId: z.string().max(40).optional(),
   // Frais de livraison donnés avec la confirmation du paiement (to = PAYEE)
   deliveryFee: z.number({ invalid_type_error: 'Indiquez les frais de livraison en F.' }).int('Montant en F, sans centimes.').optional(),
+  // À emporter, remise au comptoir (to = LIVREE) : code de retrait donné par le client
+  code: z.string().max(20).optional(),
   // Livraison validée sans code (to = LIVREE) : comment le client a payé les frais au livreur
   feeMethod: z
     .enum(FEE_METHODS, { errorMap: () => ({ message: 'Indiquez comment le client a payé les frais de livraison : espèces ou mobile money.' }) })

@@ -66,7 +66,8 @@ export function useSteps(order, onChange, onConflict) {
     } catch (e) {
       setError(e.message);
       setBusy(false);
-      if (e.status === 409) onConflict();
+      // Code de retrait faux : on recharge pour le nombre d'essais (et le blocage après 5)
+      if (e.status === 409 || e.code === 'CODE_INCORRECT') onConflict();
       return false;
     }
   };
@@ -159,6 +160,7 @@ export function Actions({ order: o, steps }) {
   const [fee, setFee] = useState('');
   const [courierId, setCourierId] = useState('');
   const [feeMethod, setFeeMethod] = useState('');
+  const [code, setCode] = useState('');
 
   // Changement de statut (par nous ou un collègue) : on referme ce qui était ouvert
   useEffect(() => {
@@ -241,16 +243,40 @@ export function Actions({ order: o, steps }) {
     );
   }
 
-  // À emporter : remise au comptoir, après avoir reconnu le client
+  // À emporter : remise au comptoir avec le code de retrait que le client a reçu dans le message « prête »
   if (mode === 'counter' && o.status === 'PRETE') {
+    const digits = code.replace(/\D/g, '');
+    const left = o.maxCodeAttempts - o.codeAttempts;
     return (
-      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'LIVREE' })); }}>
-        <b>Le client est au comptoir ?</b>
-        <p>Vérifiez son nom (<strong>{o.customerName}</strong>) ou la référence <strong>{o.reference}</strong>, puis remettez-lui la commande.</p>
+      <form className="st-action confirm" onSubmit={async (e) => { e.preventDefault(); if (await go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'LIVREE', code: digits }))) setCode(''); }}>
+        <label htmlFor="st-pickup-code"><b>Le client est au comptoir : tapez le code qu’il vous donne</b></label>
+        <input
+          id="st-pickup-code" className="st-code-input" type="text" inputMode="numeric" autoComplete="off" maxLength={4} placeholder="• • • •"
+          value={digits} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))} autoFocus
+        />
+        <p className="st-muted">Code à 4 chiffres reçu sur WhatsApp, dans le message « commande prête ».{o.codeAttempts > 0 && <> Encore <b>{left}</b> essai{left > 1 ? 's' : ''}.</>}</p>
         {steps.error && <p className="st-err">{steps.error}</p>}
         <div className="st-action-row">
-          <button type="submit" className="btn btn-p" disabled={steps.busy}>{steps.busy ? 'Enregistrement…' : 'Oui, commande remise : remercier le client'}</button>
+          <button type="submit" className="btn btn-p" disabled={steps.busy || digits.length !== 4}>{steps.busy ? 'Vérification…' : 'Valider la remise : remercier le client'}</button>
           <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
+        </div>
+        <button type="button" className="st-text-btn" onClick={() => { setReason(''); setMode('counterNoCode'); }}>Le client n’a plus son code</button>
+      </form>
+    );
+  }
+
+  // À emporter, client sans son code (ou 5 codes faux) : l'agent valide avec un motif
+  if (mode === 'counterNoCode' && o.status === 'PRETE') {
+    return (
+      <form className="st-action cancel" onSubmit={async (e) => { e.preventDefault(); if (await go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'LIVREE', reason }))) setReason(''); }}>
+        <label htmlFor="st-counter-reason"><b>Pourquoi remettre la commande sans le code ?</b></label>
+        <textarea id="st-counter-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder="Ex. : client a effacé le message, pièce d’identité vérifiée…" autoFocus />
+        <p>Vérifiez bien que c’est le client : <strong>{o.customerName}</strong>, {formatPhone(o.customerPhone)}, commande <strong>{o.reference}</strong>.</p>
+        <p className="st-muted">Le motif est noté dans l’historique.</p>
+        {steps.error && <p className="st-err">{steps.error}</p>}
+        <div className="st-action-row">
+          <button type="submit" className="btn btn-p" disabled={steps.busy || reason.trim().length < 3}>{steps.busy ? 'Enregistrement…' : 'Valider la remise sans code et remercier le client'}</button>
+          <button type="button" className="st-text-btn" onClick={() => setMode(o.codeLocked ? null : 'counter')}>Retour</button>
         </div>
       </form>
     );
@@ -279,7 +305,9 @@ export function Actions({ order: o, steps }) {
       setCourierId('');
       setMode('depart');
     } else if (o.status === 'PRETE') {
-      setMode('counter');
+      setCode('');
+      setReason('');
+      setMode(o.codeLocked || !o.deliveryCode ? 'counterNoCode' : 'counter');
     } else go(() => staffApi.setStatus(o.reference, { from: o.status, to: next.to }));
   };
 
@@ -292,7 +320,12 @@ export function Actions({ order: o, steps }) {
           {o.paymentPayerPhone && <> depuis le <b>{formatPhone(o.paymentPayerPhone)}</b></>}.
         </p>
       )}
-      {o.status === 'PRETE' && <p className="st-wait">À emporter : le client vient la retirer au restaurant.</p>}
+      {o.status === 'PRETE' && (
+        <p className="st-wait">
+          À emporter : le client vient la retirer au restaurant et donne son <b>code de retrait</b> au comptoir.
+          {o.codeLocked && <> <b>Trop de codes faux</b> : si c’est bien le client, validez sans code, avec un motif.</>}
+        </p>
+      )}
       {o.status === 'EN_LIVRAISON' && (
         <p className="st-wait">
           Le livreur valide la livraison avec le <b>code du client</b>.

@@ -220,7 +220,8 @@
 .mn-form select{border:1px solid var(--line-2);border-radius:var(--r);padding:11px 13px;min-height:46px;background:var(--panel);font:inherit}
 .mn-form select:focus{border-color:var(--brand);outline:2px solid var(--brand-line)}
 .mn-variants{display:grid;gap:10px;margin-bottom:6px}
-.mn-variant{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 130px 40px;gap:10px;align-items:start;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.mn-variant{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 130px 120px 40px;gap:10px;align-items:start;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.mn-variant.no-drinks{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 130px 40px}
 .mn-groupline{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto 40px}
 .mn-groupline .mn-arrows,.mn-variant .mn-remove{margin-top:29px}
 .mn-price small{font-size:12px;color:var(--muted)}
@@ -241,8 +242,9 @@
   .mn-th{width:48px;height:48px}
   .mn-actions{grid-column:1/-1;justify-content:space-between;border-top:1px solid var(--line);padding-top:4px}
   .mn-cat-head{flex-direction:column}
-  .mn-variant{grid-template-columns:minmax(0,1fr) 110px 40px}
+  .mn-variant,.mn-variant.no-drinks{grid-template-columns:minmax(0,1fr) 110px 40px}
   .mn-variant > .f:nth-child(2){grid-column:1/-1;grid-row:2}
+  .mn-variant > .mn-drinks{grid-column:1/-1;grid-row:3}
   .mn-groupline{grid-template-columns:minmax(0,1fr) auto 40px}
   .mn-groupline > .f:nth-child(2){grid-column:1/-1;grid-row:2}
   .mn-form .fields{grid-template-columns:minmax(0,1fr)}
@@ -693,3 +695,9 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .od-col.s-PRETE.has{background:#eef7ec;border-color:#9cc79a}
 .od-col.s-PRETE.has .od-count{background:#2b6e2f}
 .od-col.s-PRETE .od-hint,.od-stage.s-PRETE .od-hint{border-left-color:#2b6e2f}
+
+/* À emporter : code de retrait tapé au comptoir */
+.st-action .st-code-input{display:block;width:9.5em;margin:8px 0 4px;font-size:26px;font-weight:700;letter-spacing:.35em;text-align:center;padding:8px 10px}
+
+/* Boissons choisies dans une formule : bien visibles pour la préparation */
+.st-drinks{display:inline-block;margin-top:4px;padding:2px 8px;border-radius:6px;background:#fdf1d6;color:#5a3a12;font-weight:700}

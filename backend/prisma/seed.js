@@ -18,6 +18,7 @@ async function fill(tx) {
         description: c.description ?? null,
         script: c.script ?? null,
         heroImageUrl: c.heroImageUrl ?? null,
+        isDrinks: c.isDrinks ?? false,
         position: cPos,
       },
     });
@@ -53,7 +54,7 @@ async function fill(tx) {
         groupId,
         variants: {
           create: p.variants.map((v, vPos) => ({
-            code: v.code, label: v.label, subLabel: v.subLabel ?? null, price: v.price, position: vPos,
+            code: v.code, label: v.label, subLabel: v.subLabel ?? null, price: v.price, drinkCount: v.drinkCount ?? 0, position: vPos,
           })),
         },
       },

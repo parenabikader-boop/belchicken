@@ -11,7 +11,8 @@ const toPrice = (v) => {
   if (n === '') return undefined;
   return /^\d+$/.test(n) ? Number(n) : n;
 };
-const emptyVariant = () => ({ key: Math.random().toString(36).slice(2), label: '', subLabel: '', price: '' });
+const emptyVariant = () => ({ key: Math.random().toString(36).slice(2), label: '', subLabel: '', price: '', drinkCount: 0 });
+const DRINK_COUNTS = [0, 1, 2, 3, 4, 5, 6, 8, 10];
 
 // Fiche d'un plat (Patron) : création (/equipe/menu/plats/nouveau) ou modification (/equipe/menu/plats/:id)
 export default function ProductForm() {
@@ -46,7 +47,7 @@ export default function ProductForm() {
                 composition: product.composition.join('\n'),
                 choices: product.choices.join('\n'),
                 groupId: product.groupId ?? '',
-                variants: product.variants.map((v) => ({ ...v, key: v.id, subLabel: v.subLabel ?? '', price: String(v.price) })),
+                variants: product.variants.map((v) => ({ ...v, key: v.id, subLabel: v.subLabel ?? '', price: String(v.price), drinkCount: v.drinkCount ?? 0 })),
               }
             : {
                 name: '', number: '', description: '', composition: '', isSpicy: false, serves: '', choiceLabel: '', choices: '',
@@ -89,7 +90,10 @@ export default function ProductForm() {
       choices: lines(form.choices),
       categoryId: form.categoryId,
       groupId: form.groupId || null,
-      variants: form.variants.map((v) => ({ ...(v.id ? { id: v.id } : {}), label: v.label, subLabel: v.subLabel, price: toPrice(v.price) })),
+      // Une boisson ne comprend pas de boisson
+      variants: form.variants.map((v) => ({
+        ...(v.id ? { id: v.id } : {}), label: v.label, subLabel: v.subLabel, price: toPrice(v.price), drinkCount: category?.isDrinks ? 0 : Number(v.drinkCount) || 0,
+      })),
     };
     try {
       if (isNew) {
@@ -184,9 +188,10 @@ export default function ProductForm() {
       <section className="st-box mn-box">
         <h2>Formules et prix <i className="mn-req">*</i></h2>
         <p className="st-muted mn-help">Une seule ligne pour un prix unique. Plusieurs lignes pour « Menu / Seul », « Taille L / XL », « 4 / 8 pièces »…</p>
+        {!category?.isDrinks && <p className="st-muted mn-help">Boissons comprises : le client les choisit parmi les boissons disponibles, sans supplément (Menu : 1, Family Bucket : 4, Seul : aucune).</p>}
         <div className="mn-variants">
           {form.variants.map((v, i) => (
-            <div key={v.key} className="mn-variant">
+            <div key={v.key} className={category?.isDrinks ? "mn-variant no-drinks" : "mn-variant"}>
               <div className="f">
                 <label htmlFor={`pv-l-${v.key}`}>Formule</label>
                 <input id={`pv-l-${v.key}`} value={v.label} onChange={(e) => setVariant(v.key, 'label', e.target.value)} placeholder={i === 0 ? 'Ex. Menu, Standard' : 'Ex. Seul'} maxLength={40} />
@@ -200,6 +205,14 @@ export default function ProductForm() {
                 <input id={`pv-p-${v.key}`} inputMode="numeric" value={v.price} onChange={(e) => setVariant(v.key, 'price', e.target.value)} placeholder="5500" />
                 {typeof toPrice(v.price) === 'number' && <small>{formatPrice(toPrice(v.price))}</small>}
               </div>
+              {!category?.isDrinks && (
+                <div className="f mn-drinks">
+                  <label htmlFor={`pv-d-${v.key}`}>Boissons comprises</label>
+                  <select id={`pv-d-${v.key}`} value={v.drinkCount} onChange={(e) => setVariant(v.key, 'drinkCount', Number(e.target.value))}>
+                    {[...new Set([...DRINK_COUNTS, v.drinkCount])].sort((a, b) => a - b).map((n) => <option key={n} value={n}>{n === 0 ? 'Aucune' : n}</option>)}
+                  </select>
+                </div>
+              )}
               <button type="button" className="mn-remove" disabled={form.variants.length === 1}
                 onClick={() => setForm((f) => ({ ...f, variants: f.variants.filter((x) => x.key !== v.key) }))}
                 aria-label={`Retirer la formule ${v.label || i + 1}`} title="Retirer cette formule">×</button>
