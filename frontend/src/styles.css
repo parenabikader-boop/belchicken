@@ -296,6 +296,8 @@ legend{font-size:14px;font-weight:700;margin-bottom:8px;padding:0}
 .zone-opt b{white-space:nowrap;font-size:14px}
 .zone-opt.other{border-style:dashed}
 .zone-opt b.free,.sum-fee b.free{color:var(--ok)}
+.sum-night{margin-top:2px;font-size:13px;font-weight:600;color:var(--brand)}
+.night-hint{color:var(--brand);font-weight:600}
 .zone-none{margin:4px 0;font-size:14px;color:var(--muted)}
 .sum-fee{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .sum-fee div{display:flex;justify-content:space-between;gap:12px;font-size:14px}
@@ -807,6 +809,8 @@ main.p-menu{padding-bottom:0}
 .trk-fee{margin:14px 0 0;padding:14px 16px;border-radius:var(--r);background:var(--gold-soft);border-left:4px solid var(--gold)}
 .trk-fee p{margin:0;font-size:15px}
 .trk-fee > b{display:block;font-size:28px;font-weight:800;line-height:1.2;margin:2px 0 6px}
+.trk-fee p.trk-night{font-weight:700;margin:-4px 0 6px}
+.trk-night{display:block;font-size:12px;font-weight:600;color:var(--muted)}
 .trk-num{white-space:nowrap}
 .doc .sub td{border-bottom:1px solid var(--line)}
 .btn-wa{background:#1f9e55;color:#fff}

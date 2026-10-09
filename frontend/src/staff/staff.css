@@ -474,6 +474,8 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .of-fee-form{display:grid;gap:6px}
 .of-fee-form label{font-size:14px}
 .of-fee-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.of-night{display:grid;gap:6px;margin-top:10px;justify-items:start}
+.of-night-v{display:block;font-size:13px;font-weight:600;color:var(--brand)}
 .of-amount{display:inline-flex;align-items:center;border:1px solid var(--line-2);border-radius:var(--r);background:var(--panel);padding-right:12px}
 .of-amount:focus-within{border-color:var(--brand);outline:2px solid var(--brand-line)}
 .of-amount input{width:120px;border:0;outline:none;background:transparent;height:46px;padding:0 4px 0 12px;font-size:20px;font-weight:700;text-align:right}
@@ -652,6 +654,7 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .lv-fee span{font-size:19px;font-weight:700}
 .lv-fee b{font-size:24px;font-weight:800}
 .lv-fee small{color:var(--muted);font-size:13.5px}
+.lv-fee small.lv-night{color:inherit;font-weight:700;font-size:14.5px}
 .lv-fee.paid{background:#eef7ec;border-bottom-color:#9cc79a}
 .lv-success-fee{margin-top:6px!important;font-size:15px}
 /* Page Caisse */
@@ -715,6 +718,9 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .fe-name{flex:1;min-width:140px;font-weight:700}
 .fe-fee{white-space:nowrap;min-width:90px;text-align:right}
 .fe-fee.free{color:var(--ok)}
+/* Lot 3 : supplément de nuit */
+.fe-night{display:block;font-size:12px;font-weight:600;color:var(--brand)}
+.fe-hours{margin-top:12px}
 .fe-form{flex:1;display:grid;gap:4px;padding:6px 0}
 .fe-form .fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media (max-width:560px){.fe-form .fields{grid-template-columns:1fr}}
@@ -782,6 +788,7 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .slip-paid.todo{border-style:dashed}
 .slip-fee{border:1px solid #000;padding:6px;margin-bottom:8px}
 .slip-fee p{display:flex;justify-content:space-between;gap:8px;font-size:1.05em}
+.slip-night{display:block;font-weight:700}
 .slip-foot{text-align:center;font-size:.8em;padding:6px 0 0;margin:0;border-top:2px dashed #000;background:#fff !important;color:#000 !important}
 @media print{
   html,body{background:#fff !important}

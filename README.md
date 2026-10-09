@@ -487,6 +487,28 @@ Les messages `PAIEMENT_CONFIRME`, `EN_PREPARATION` et `EN_ROUTE` ont une version
 d'activer `WHATSAPP_CUSTOMER_AUTO`, faire aussi approuver chez Meta `commande_paiement_confirme_offerte`,
 `commande_en_preparation_offerte` et `commande_en_route_offerte` (textes dans `customer-messages.js`, champ `free`).
 
+## Supplément de nuit (lot 3)
+
+Page Patron `/equipe/frais-livraison`, encadré « Supplément de nuit » : interrupteur (éteint par défaut), début et fin de la
+nuit (ex. 22:00 à 06:00, la nuit peut passer minuit ; début compris, fin exclue ; heure du Burkina = UTC). Chaque quartier et
+chaque tranche de distance a un supplément de nuit (`nightFee`, 0 F par défaut). Éteint, ou supplément à 0 F : rien ne change.
+
+- **Calcul** (`delivery-fees.js`, `quoteDelivery(grid, choix, restaurant, now)`) : la nuit, frais = prix + supplément. La part du
+  supplément est copiée dans `Order.deliveryNightFee` (vide = aucune) ; `deliveryFee` reste le total, encaissé par le livreur.
+  Quartier à 0 F avec un supplément : la livraison n'est plus offerte la nuit. Frais à confirmer : pas de supplément automatique.
+- **Site** : `GET /api/delivery` donne en plus `night: { from, to, isNight }` et `nightFee` par quartier (réglage allumé
+  seulement) ; `POST /api/delivery/quote` donne `nightFee` quand il y a un supplément. Le client voit « 1 500 F, dont 500 F de
+  supplément de nuit ». Nuit commencée entre l'aperçu et la validation : refus 409 `FRAIS_CHANGES` avec le nouveau montant,
+  comme un prix changé. Même règle pour les commandes saisies par l'agent (`POST /api/staff/orders`).
+- **Équipe** : champ facultatif « Dont supplément de nuit » (au plus les frais) quand l'agent tape les frais en confirmant le
+  paiement (`nightFee` dans `POST …/status`) ou les corrige (`nightFee` dans `PUT …/delivery-fee` ; null = aucun ; absent = gardé,
+  ramené au nouveau total s'il le dépasse). Rappel « Commande passée de nuit » (`nightOrder` dans le détail).
+- **Affichage** : détail, bon de commande, page du livreur, caisse, suivi client (`deliveryNightFee`).
+- **Messages WhatsApp** : le montant devient « 1 500 F (dont 500 F de supplément de nuit) », dans la valeur de la variable : le
+  texte des modèles Meta ne change pas, rien à refaire approuver.
+- **Réglages** : `PUT /api/staff/frais-livraison/settings` `{ allowOtherZone?, nightEnabled?, nightStart?, nightEnd? }` (« 22:00 »).
+- Migration `20261009180805_supplement_nuit` : colonnes seulement, aucune donnée écrite.
+
 ## Parcours court et bon de commande (lot 1)
 
 - Réglages du logiciel : table `AppSettings` (une ligne, id = 1 ; pas de ligne = tout éteint), `GET /api/staff/reglages`

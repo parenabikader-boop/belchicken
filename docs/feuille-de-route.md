@@ -2,6 +2,9 @@
 
 Chantier en 10 lots, demandé le 8 octobre 2026. Nous sommes prestataires du logiciel.
 
+> **L'application n'est pas encore livrée à Belchicken (9 octobre 2026) : tout est en test**, y compris le site en
+> ligne et la base de production. Voir « Avant la livraison à Belchicken » en bas de ce document.
+
 ## Règle absolue, pour tout le chantier
 
 - **On ajoute, on ne casse rien.** Le parcours actuel, de la commande à la livraison, doit continuer à fonctionner exactement pareil.
@@ -25,7 +28,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 |-----|-------|------|
 | 1 | Parcours court (option) + bon de commande imprimable | En ligne depuis le 8 octobre 2026 (réglage « Parcours court » éteint en production) |
 | 2 | Prise de commande par l'agent (appel, WhatsApp) | En ligne depuis le 9 octobre 2026 (réglage « Prise de commande par l'agent » éteint en production) |
-| 3 | Supplément de nuit dans la grille des frais | À faire |
+| 3 | Supplément de nuit dans la grille des frais | Codé et essayé sur dev le 9 octobre 2026, en attente d'accord pour la mise en ligne |
 | 4 | Compte Prestataire au-dessus du Patron | À faire |
 | 5 | Livraison en deux modes (Restaurant / Prestataire) | À faire |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | À faire |
@@ -91,6 +94,27 @@ menu, paiement, livraison, suivi et validation d'une commande du site comme avan
 - Heures de nuit réglées par le Patron ; supplément par quartier et par tranche de distance (0 F par défaut).
 - Calculé sur l'heure de la commande, affiché au client (« dont X F de supplément de nuit »), figé dans la commande.
 
+Accord du client sur le plan le 9 octobre 2026, avec 3 précisions : correction des frais d'une commande de nuit = supplément
+gardé, ramené au nouveau total s'il le dépasse ; frais « à confirmer » de nuit = rappel à l'agent **et** champ facultatif
+« dont supplément de nuit » (au plus le total) ; messages = « (dont X F de supplément de nuit) » dans la valeur du montant,
+sans nouveau modèle Meta (phrase unique mise à jour dans CLAUDE.md).
+
+**Avancement** :
+
+- [x] Base : `DeliveryZone.nightFee`, `DeliveryDistanceBand.nightFee` (0 F par défaut), `DeliverySettings.nightEnabled`
+  (éteint par défaut), `nightStartMin` (22 h), `nightEndMin` (6 h), `Order.deliveryNightFee`. Migration
+  `20261009180805_supplement_nuit` (structure seulement), passée sur dev seulement.
+- [x] Serveur : calcul à l'heure de la commande (heure du Burkina), passage à la nuit = `FRAIS_CHANGES`, même règle pour
+  l'agent, saisie et correction « dont supplément de nuit » (`nightFeeAfter()`), rappel `nightOrder`, réglages du Patron.
+- [x] Messages : « 1 500 F (dont 500 F de supplément de nuit) » dans la valeur du montant, mêmes modèles Meta.
+- [x] Pages : Frais de livraison (Patron), Vos informations, Nouvelle commande (agent), détail, bon, livreur, caisse, suivi.
+- [x] Tests `backend/test/night-fee.test.js`, 10 tests, 166 au total, tous passent (9 octobre).
+- [x] Essai de bout en bout sur dev (9 octobre) : jour, nuit, passage à la nuit pendant la commande (refus puis nouveau
+  montant), commande saisie par l'agent, frais à confirmer avec supplément, corrections, livraison en espèces, caisse,
+  réglage éteint = comme avant. Commandes, grille, réglages et comptes d'essai supprimés ensuite (dev comme avant l'essai).
+- [x] Captures (19 images et 2 messages) dans `C:\Users\HP\Desktop\belchiken\captures-lot3-supplement-nuit\`.
+- [ ] Accord du client, enregistrement Git, sauvegarde Neon, mise en ligne (réglage éteint en production).
+
 ### 4. Compte Prestataire
 
 - Compte au-dessus du Patron, très protégé.
@@ -129,3 +153,22 @@ menu, paiement, livraison, suivi et validation d'une commande du site comme avan
 - API Meta, une fois tous les messages définitifs, pour les deux numéros.
 
 ### 10. Application Play Store
+
+## Avant la livraison à Belchicken
+
+À faire une seule fois, juste avant de remettre l'application au restaurant (aujourd'hui, tout est encore en test).
+Chaque point se fait avec l'accord du client, et chaque action sur la production est annoncée avant.
+
+- [ ] **Nettoyer les commandes d'essai en production**, avec un script sûr : il ne supprime **que les commandes** et ce qui
+  leur appartient (lignes, boissons, historique, événements, journal des alertes, remises d'espèces liées). **Jamais** le
+  menu, les photos, les comptes de l'équipe, les réglages, la grille des frais ni les provenances. Le script affiche
+  d'abord ce qu'il va supprimer (nombre de commandes, références) et attend une confirmation ; sauvegarde Neon juste avant.
+- [ ] **Passer Render en offre Starter** (le serveur ne s'endort plus : pas d'attente au premier client du matin).
+- [ ] **Changer le mot de passe Neon de production**, puis mettre à jour `DATABASE_URL` sur Render.
+- [ ] **Nettoyer les variables Render** : retirer celles qui ne servent plus ou d'essai, vérifier les autres
+  (codes marchands, `PUBLIC_SITE_URL`, WhatsApp, Cloudinary, clés des alertes).
+- [ ] **Créer les comptes** des agents du call center (Opérateur) et des livreurs (Livreur), page Équipe du Patron.
+- [ ] **Faire remplir la grille des frais de livraison** par le Patron (quartiers, tranches de distance, et supplément
+  de nuit une fois le lot 3 en ligne).
+- [ ] **Former le call center** : commandes une étape à la fois, messages WhatsApp, caisse, prise de commande par l'agent,
+  bon de commande ; et les livreurs à leur page de courses.

@@ -100,6 +100,7 @@ export function toPublicOrder(order) {
     paymentMethod: order.paymentMethod,
     itemsTotal: order.itemsTotal,
     deliveryFee: order.deliveryFee ?? null,
+    deliveryNightFee: order.deliveryNightFee ?? null, // lot 3 : dont supplément de nuit
     // Quartier choisi (copié à la commande) ; A_CONFIRMER = frais confirmés par l'équipe au téléphone
     deliveryZoneName: order.deliveryZoneName ?? null,
     deliveryFeeSource: order.deliveryFeeSource ?? null,

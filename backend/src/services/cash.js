@@ -19,7 +19,7 @@ export function cashByCourier(orders, couriers = [], now = new Date()) {
     const cur = map.get(key) || { courierId: o.courierId, courierName: o.courierName || 'Livreur inconnu', amount: 0, today: 0, orders: [] };
     cur.amount += o.deliveryFee;
     if (o.deliveredAt && new Date(o.deliveredAt).getTime() >= today) cur.today += o.deliveryFee;
-    cur.orders.push({ reference: o.reference, customerName: o.customerName, deliveryFee: o.deliveryFee, deliveryZoneName: o.deliveryZoneName ?? null, deliveredAt: o.deliveredAt });
+    cur.orders.push({ reference: o.reference, customerName: o.customerName, deliveryFee: o.deliveryFee, deliveryNightFee: o.deliveryNightFee ?? null, deliveryZoneName: o.deliveryZoneName ?? null, deliveredAt: o.deliveredAt });
     map.set(key, cur);
   }
   return [...map.values()]

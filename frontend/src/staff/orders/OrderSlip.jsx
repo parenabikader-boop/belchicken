@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { drinksLabel } from '../../utils/drinks.js';
 import { formatPrice } from '../../utils/format.js';
+import { nightLine } from '../../utils/deliveryFee.js';
 import { feeText, formatDateTime, formatPhone, formatTime, isPickup, METHOD_LABEL } from './labels.js';
 
 // Bon de commande imprimable depuis le navigateur : ticket 80 mm ou A4. Il passe d'abord par la caisse, qui
@@ -126,6 +127,7 @@ function Slip({ o }) {
             <span>Frais de livraison</span>
             <b>{o.deliveryFee == null ? 'À confirmer' : feeText(o.deliveryFee)}</b>
           </p>
+          {o.deliveryNightFee > 0 && <small className="slip-night">{nightLine(o.deliveryNightFee)}</small>}
           <small>
             {o.deliveryFee === 0
               ? 'Rien à payer au livreur.'

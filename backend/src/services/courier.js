@@ -101,6 +101,7 @@ export function toCourse(o) {
     deliveredAt,
     // Frais à encaisser à la réception ; feePaidBefore : anciennes commandes, frais déjà payés avant le départ
     deliveryFee: o.deliveryFee,
+    deliveryNightFee: o.deliveryNightFee ?? null, // lot 3 : dont supplément de nuit (compris dans deliveryFee)
     deliveryZoneName: o.deliveryZoneName, // quartier choisi par le client (grille des frais)
     feePaidBefore: o.status === 'EN_LIVRAISON' && o.deliveryFeeMethod != null,
     feeMethod: o.status === 'LIVREE' ? o.deliveryFeeMethod : null,

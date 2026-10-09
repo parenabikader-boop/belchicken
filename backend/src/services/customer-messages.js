@@ -10,6 +10,7 @@
 // sans retour à la ligne (voir clean() dans whatsapp.message.js).
 import { formatFcfa } from '../utils/format.js';
 import { paymentCodes } from './payment-codes.js';
+import { feeWithNight } from './delivery-fees.js';
 import { clean, itemsText } from './whatsapp.message.js';
 
 // Phrase des frais de livraison, la même dans les messages et sur la page de suivi. Les frais sont
@@ -42,7 +43,10 @@ const payCodes = (o, ctx) => {
   const { merchantName, operators } = paymentCodes(ctx.payment, o.itemsTotal);
   return [merchantName, ...operators.map((op) => op.code)];
 };
-export const feeSentence = (o, ctx) => (o.deliveryFee === 0 ? FREE_LINE : feeLine(formatFcfa(o.deliveryFee), ...feeCodes(o, ctx)));
+// Montant des frais : « 1 500 F », ou la nuit « 1 500 F (dont 500 F de supplément de nuit) » (lot 3).
+// Dans la valeur de la variable : le texte des modèles Meta ne change pas.
+const feeAmount = (o) => feeWithNight(o.deliveryFee, o.deliveryNightFee);
+export const feeSentence = (o, ctx) => (o.deliveryFee === 0 ? FREE_LINE : feeLine(feeAmount(o), ...feeCodes(o, ctx)));
 
 export const MESSAGES = {
   PAIEMENT_CONFIRME: {
@@ -52,7 +56,7 @@ export const MESSAGES = {
       'Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande {{2}}. Merci !\n\n' +
       feeLine('{{4}}', '{{5}}', '{{6}}', '{{7}}', '{{8}}') + '\n\n' +
       'Suivez votre commande ici : {{9}}\n\nBelchicken Burkina',
-    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), formatFcfa(o.deliveryFee), ...feeCodes(o, ctx), trackingUrl(o, ctx)],
+    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), feeAmount(o), ...feeCodes(o, ctx), trackingUrl(o, ctx)],
     free: {
       template: 'commande_paiement_confirme_offerte',
       body:
@@ -68,7 +72,7 @@ export const MESSAGES = {
       'Bonjour {{1}}, votre commande {{2}} est en préparation.\n\n' +
       feeLine('{{3}}', '{{4}}', '{{5}}', '{{6}}', '{{7}}') + '\n\n' +
       'Suivez votre commande ici : {{8}}\n\nBelchicken Burkina',
-    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.deliveryFee), ...feeCodes(o, ctx), trackingUrl(o, ctx)],
+    params: (o, ctx) => [firstName(o.customerName), o.reference, feeAmount(o), ...feeCodes(o, ctx), trackingUrl(o, ctx)],
     free: {
       template: 'commande_en_preparation_offerte',
       body:
@@ -86,7 +90,7 @@ export const MESSAGES = {
       feeLine('{{4}}', '{{5}}', '{{6}}', '{{7}}', '{{8}}') + '\n\n' +
       'Suivez votre commande ici : {{9}}\n\nBelchicken Burkina',
     // Code de remise à 4 chiffres (courier.js), créé au passage EN_LIVRAISON
-    params: (o, ctx) => [firstName(o.customerName), o.reference, o.deliveryCode || '-', formatFcfa(o.deliveryFee), ...feeCodes(o, ctx), trackingUrl(o, ctx)],
+    params: (o, ctx) => [firstName(o.customerName), o.reference, o.deliveryCode || '-', feeAmount(o), ...feeCodes(o, ctx), trackingUrl(o, ctx)],
     free: {
       template: 'commande_en_route_offerte',
       body:
@@ -128,7 +132,7 @@ export const MESSAGES = {
       'Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande {{2}}. Merci ! Votre commande est en préparation.\n\n' +
       feeLine('{{4}}', '{{5}}', '{{6}}', '{{7}}', '{{8}}') + '\n\n' +
       'Suivez votre commande ici : {{9}}\n\nBelchicken Burkina',
-    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), formatFcfa(o.deliveryFee), ...feeCodes(o, ctx), trackingUrl(o, ctx)],
+    params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), feeAmount(o), ...feeCodes(o, ctx), trackingUrl(o, ctx)],
     free: {
       template: 'commande_paiement_preparation_offerte',
       body:

@@ -5,6 +5,10 @@
 // le serveur calcule les frais, toujours, et les copie dans la commande (montant, nom du quartier,
 // distance) : un prix changé ensuite ne modifie pas les commandes déjà passées.
 // 0 F = livraison offerte (grille seulement). Grille vide : l'équipe saisit les frais comme avant.
+// Lot 3 : supplément de nuit par quartier et par tranche, ajouté aux frais pendant les heures de nuit
+// réglées par le Patron (heure de la commande, heure du Burkina). Les frais restent un seul montant
+// (supplément compris) ; le supplément est aussi copié à part (deliveryNightFee) pour les rapports.
+// Réglage éteint ou supplément à 0 F : frais exactement comme avant.
 import { z } from 'zod';
 import { FEE_MAX } from './order-status.js';
 import { formatFcfa } from '../utils/format.js';
@@ -15,6 +19,34 @@ export const BAND_MAX_METERS = 100000;
 // Position GPS moins précise que 1 km : la tranche n'est pas sûre, frais à confirmer par l'agent
 export const MAX_ACCURACY_METERS = 1000;
 export const ZONE_NAME_MAX = 60;
+
+// ─────────── Heures de nuit (lot 3) ───────────
+// Burkina Faso = heure UTC toute l'année (pas d'heure d'été), comme le tableau de bord.
+export const burkinaMinutes = (date) => date.getUTCHours() * 60 + date.getUTCMinutes();
+
+// Heures de nuit réglées (null = réglage éteint)
+export const nightHours = (settings) =>
+  settings?.nightEnabled ? { startMin: settings.nightStartMin, endMin: settings.nightEndMin } : null;
+
+// Vrai si `date` tombe dans les heures de nuit. Début compris, fin exclue : 22 h 00 est la nuit, 6 h 00 le jour.
+// Fin avant le début (22 h → 6 h) : la nuit passe minuit.
+export function isNightTime(night, date = new Date()) {
+  if (!night || night.startMin === night.endMin) return false;
+  const t = burkinaMinutes(date);
+  return night.startMin < night.endMin ? t >= night.startMin && t < night.endMin : t >= night.startMin || t < night.endMin;
+}
+
+// « 22:00 » <-> 1320
+export const minutesToHHMM = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
+export const hhmmToMinutes = (s) => {
+  const m = HHMM.exec(s);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+};
+
+// « dont 500 F de supplément de nuit » ; frais : « 1 500 F (dont 500 F de supplément de nuit) » ou « 1 000 F »
+export const nightPart = (nightFee) => `dont ${formatFcfa(nightFee)} de supplément de nuit`;
+export const feeWithNight = (fee, nightFee) => (nightFee ? `${formatFcfa(fee)} (${nightPart(nightFee)})` : formatFcfa(fee));
 
 // Distance à vol d'oiseau entre deux positions, en mètres (formule de haversine)
 export function distanceMeters(a, b) {
@@ -34,6 +66,7 @@ export function activeGrid({ zones = [], bands = [], settings = null }) {
     zones: activeZones,
     bands: activeBands,
     allowOther: settings?.allowOtherZone ?? true,
+    night: nightHours(settings),
     isEmpty: activeZones.length === 0 && activeBands.length === 0,
   };
 }
@@ -44,19 +77,25 @@ export const bandRanges = (bands) => bands.map((b, i) => ({ ...b, fromMeters: i 
 // Tranche d'une distance : de « début » (exclu, sauf 0) à « fin » (comprise). null = au-delà de la dernière.
 export const bandFor = (bands, meters) => bands.find((b) => meters <= b.upToMeters) || null;
 
+// Supplément de nuit ajouté au prix de base : seulement la nuit, et s'il n'est pas de 0 F
+const withNight = (grid, now, quote, nightFee) =>
+  nightFee > 0 && isNightTime(grid.night, now) ? { ...quote, fee: quote.fee + nightFee, nightFee } : quote;
+
 const toConfirm = (extra = {}) => ({ source: 'A_CONFIRMER', fee: null, zoneId: null, zoneName: null, distanceM: null, ...extra });
 
 // Frais pour une livraison. choice : { zoneId } (quartier choisi), { other: true } (autre quartier),
 // et/ou location ({ latitude, longitude, accuracy }). Le quartier choisi passe avant la position, qui sert
 // alors seulement au livreur. legacy = ancienne version du site, qui n'envoie aucun choix.
 // Renvoie { source, fee, zoneId, zoneName, distanceM } (fee null = à confirmer), ou { error }.
+// La nuit, avec un supplément : fee le comprend et nightFee donne sa part.
 // Grille vide : { source: null } (frais saisis par l'équipe, comme avant).
-export function quoteDelivery(grid, { zoneId, other, location, legacy = false } = {}, restaurant) {
+// now : heure de la commande (ou de l'aperçu).
+export function quoteDelivery(grid, { zoneId, other, location, legacy = false } = {}, restaurant, now = new Date()) {
   if (grid.isEmpty) return { source: null, fee: null, zoneId: null, zoneName: null, distanceM: null };
   if (zoneId) {
     const zone = grid.zones.find((z) => z.id === zoneId);
     if (!zone) return { error: 'Ce quartier n’est plus proposé. Choisissez-en un autre dans la liste.' };
-    return { source: 'QUARTIER', fee: zone.fee, zoneId: zone.id, zoneName: zone.name, distanceM: null };
+    return withNight(grid, now, { source: 'QUARTIER', fee: zone.fee, zoneId: zone.id, zoneName: zone.name, distanceM: null }, zone.nightFee);
   }
   if (other) {
     if (!grid.allowOther && !legacy) return { error: 'Choisissez votre quartier dans la liste ou partagez votre position.' };
@@ -66,7 +105,9 @@ export function quoteDelivery(grid, { zoneId, other, location, legacy = false } 
     const distanceM = distanceMeters(restaurant, location);
     if (location.accuracy != null && location.accuracy > MAX_ACCURACY_METERS) return toConfirm({ distanceM });
     const band = bandFor(grid.bands, distanceM);
-    return band ? { source: 'DISTANCE', fee: band.fee, zoneId: null, zoneName: null, distanceM } : toConfirm({ distanceM });
+    return band
+      ? withNight(grid, now, { source: 'DISTANCE', fee: band.fee, zoneId: null, zoneName: null, distanceM }, band.nightFee)
+      : toConfirm({ distanceM });
   }
   // Ancienne version du site (aucun choix envoyé) : l'agent fixe les frais, comme avant
   if (legacy) return toConfirm();
@@ -83,15 +124,21 @@ export function expectedFeeError(quote, expectedFee) {
   if (quote.fee === expectedFee) return null;
   return quote.fee == null
     ? 'Les frais de livraison ont changé : ils seront confirmés par notre équipe au téléphone. Vérifiez puis validez à nouveau.'
-    : `Les frais de livraison ont changé : ${quote.fee === 0 ? 'livraison offerte' : formatFcfa(quote.fee)}. Vérifiez puis validez à nouveau.`;
+    : `Les frais de livraison ont changé : ${quoteText(quote)}. Vérifiez puis validez à nouveau.`;
 }
+// « livraison offerte », « 1 000 F » ou « 1 500 F, dont 500 F de supplément de nuit »
+const quoteText = (q) => (q.fee === 0 ? 'livraison offerte' : q.nightFee ? `${formatFcfa(q.fee)}, ${nightPart(q.nightFee)}` : formatFcfa(q.fee));
 
-// Ce que le site public reçoit pour la page Valider
-export const publicGrid = (grid) => ({
+// Ce que le site public reçoit pour la page Valider. Heures de nuit réglées : supplément de chaque
+// quartier, heures, et « c'est la nuit maintenant ». Réglage éteint : rien de plus, comme avant.
+export const publicGrid = (grid, now = new Date()) => ({
   active: !grid.isEmpty,
-  zones: grid.zones.map((z) => ({ id: z.id, name: z.name, fee: z.fee })),
+  zones: grid.zones.map((z) => ({ id: z.id, name: z.name, fee: z.fee, ...(grid.night && { nightFee: z.nightFee ?? 0 }) })),
   gps: grid.bands.length > 0,
   allowOther: grid.allowOther,
+  ...(grid.night && {
+    night: { from: minutesToHHMM(grid.night.startMin), to: minutesToHHMM(grid.night.endMin), isNight: isNightTime(grid.night, now) },
+  }),
 });
 
 // Champs de la commande, copiés au moment de la commande
@@ -103,6 +150,7 @@ export const orderFeeFields = (quote) =>
         deliveryZoneId: quote.zoneId,
         deliveryZoneName: quote.zoneName,
         deliveryDistanceM: quote.distanceM,
+        ...(quote.nightFee ? { deliveryNightFee: quote.nightFee } : {}),
       }
     : {};
 
@@ -131,14 +179,29 @@ export function feeEditRight(order) {
   return { who: null, error: 'Les frais de cette commande ne se modifient plus.' };
 }
 
-// null si permis, sinon le message. amount : nouveau montant (au moins 1 F quand l'équipe le saisit)
-export function feeCorrectionError(order, role, amount, reason) {
+// null si permis, sinon le message. amount : nouveau montant (au moins 1 F quand l'équipe le saisit).
+// nightFee (lot 3) : supplément de nuit après la correction ; même total avec un autre supplément = correction.
+export function feeCorrectionError(order, role, amount, reason, nightFee = order.deliveryNightFee ?? null) {
   const right = feeEditRight(order);
   if (!right.who) return right.error;
   if (right.who === 'PATRON' && role !== 'PATRON') return 'Le livreur est parti : seul le Patron peut encore corriger les frais.';
   if (order.deliveryFee != null && (!reason || reason.trim().length < 3)) return 'Indiquez le motif de la correction des frais.';
-  if (order.deliveryFee === amount) return 'Les frais sont déjà de ce montant.';
+  if (order.deliveryFee === amount && (order.deliveryNightFee ?? null) === nightFee) return 'Les frais sont déjà de ce montant.';
   return null;
+}
+
+// Supplément de nuit après une saisie ou une correction des frais par l'équipe (amount = nouveau total).
+// nightFee donné (champ « dont supplément de nuit ») : celui-là ; 0 ou null = aucun ; jamais plus que le total.
+// Non donné : celui de la commande est gardé, ramené au nouveau total s'il le dépasse.
+// Renvoie { nightFee } (null = aucun) ou { error }.
+export function nightFeeAfter(order, amount, nightFee) {
+  if (nightFee === undefined) {
+    const kept = order.deliveryNightFee ?? null;
+    return { nightFee: kept == null || amount == null ? kept : Math.min(kept, amount) || null };
+  }
+  if (nightFee == null || nightFee === 0) return { nightFee: null };
+  if (amount == null || nightFee > amount) return { error: 'Le supplément de nuit ne peut pas dépasser les frais de livraison.' };
+  return { nightFee };
 }
 
 // ─────────── Page « Frais de livraison » du Patron ───────────
@@ -155,6 +218,7 @@ export const zoneSchema = z.object({
     .min(2, 'Indiquez le nom du quartier.')
     .max(ZONE_NAME_MAX, `Nom trop long (${ZONE_NAME_MAX} caractères au plus).`),
   fee,
+  nightFee: fee.optional(), // supplément de nuit (0 F par défaut, en base)
   isActive: z.boolean().default(true),
 });
 export const zoneUpdateSchema = zoneSchema.partial();
@@ -167,11 +231,29 @@ export const bandSchema = z.object({
     .max(BAND_MAX_METERS / 1000, 'Distance trop grande (100 km au plus).')
     .transform((km) => Math.round(km * 10) * 100), // à 100 m près
   fee,
+  nightFee: fee.optional(), // supplément de nuit (0 F par défaut, en base)
   isActive: z.boolean().default(true),
 });
 export const bandUpdateSchema = bandSchema.partial();
 
-export const settingsSchema = z.object({ allowOtherZone: z.boolean() });
+const hhmm = z
+  .string({ invalid_type_error: 'Indiquez l’heure (ex. 22:00).' })
+  .regex(HHMM, 'Indiquez l’heure au format 22:00.')
+  .transform(hhmmToMinutes);
+
+// Réglages de la grille : chaque champ est facultatif (seulement ce qui change)
+export const settingsSchema = z
+  .object({
+    allowOtherZone: z.boolean().optional(),
+    // Lot 3 : heures de nuit (« 22:00 », enregistrées en minutes)
+    nightEnabled: z.boolean().optional(),
+    nightStart: hhmm.optional(),
+    nightEnd: hhmm.optional(),
+  })
+  .refine((v) => v.nightStart == null || v.nightEnd == null || v.nightStart !== v.nightEnd, {
+    message: 'Le début et la fin de la nuit doivent être différents.',
+    path: ['nightEnd'],
+  });
 
 // Même nom de quartier, sans tenir compte des majuscules, accents ni espaces en trop
 export const sameZoneName = (a, b) =>

@@ -117,7 +117,7 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
               ? o.deliveryFeeSource === 'A_CONFIRMER' ? 'à confirmer avec le client' : 'pas encore saisis'
               : o.deliveryFee === 0
                 ? 'livraison offerte'
-                : `${formatPrice(o.deliveryFee)}, ${o.deliveryFeeMethod ? `payés ${FEE_METHOD_LABEL[o.deliveryFeeMethod]}` : 'payés au livreur à la réception'}`}
+                : `${formatPrice(o.deliveryFee)}${o.deliveryNightFee > 0 ? ` (dont ${formatPrice(o.deliveryNightFee)} de supplément de nuit)` : ''}, ${o.deliveryFeeMethod ? `payés ${FEE_METHOD_LABEL[o.deliveryFeeMethod]}` : 'payés au livreur à la réception'}`}
             {o.deliveryZoneName && <> · quartier : {o.deliveryZoneName}</>}.
           </p>
           )}

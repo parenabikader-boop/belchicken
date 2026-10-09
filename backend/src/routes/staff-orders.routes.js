@@ -73,6 +73,15 @@ staffOrdersRouter.get('/:reference', async (req, res, next) => {
   }
 });
 
+// « dont supplément de nuit » saisi par l'équipe (lot 3)
+const nightFeeField = z
+  .number({ invalid_type_error: 'Indiquez le supplément de nuit en F.' })
+  .int('Montant en F, sans centimes.')
+  .min(0, 'Le supplément de nuit ne peut pas être négatif.')
+  .max(FEE_MAX, 'Montant trop élevé (50 000 F au plus).')
+  .nullable()
+  .optional();
+
 const statusSchema = z.object({
   from: z.enum(STATUSES).optional(),
   to: z.enum(STATUSES, { errorMap: () => ({ message: 'Statut inconnu.' }) }),
@@ -82,6 +91,8 @@ const statusSchema = z.object({
   courierId: z.string().max(40).optional(),
   // Frais de livraison donnés avec la confirmation du paiement (to = PAYEE)
   deliveryFee: z.number({ invalid_type_error: 'Indiquez les frais de livraison en F.' }).int('Montant en F, sans centimes.').optional(),
+  // Lot 3 : « dont supplément de nuit » avec les frais (to = PAYEE), au plus le total ; null ou 0 = aucun
+  nightFee: nightFeeField,
   // Motif quand l'agent change les frais calculés par la grille (to = PAYEE)
   feeReason: z.string().max(300, 'Motif trop long (300 caractères au plus).').optional(),
   // À emporter, remise au comptoir (to = LIVREE) : code de retrait donné par le client
@@ -111,12 +122,14 @@ export const feeSchema = z.object({
     .max(FEE_MAX, 'Montant trop élevé (50 000 F au plus).'),
   // Motif de la correction : obligatoire dès que des frais existent déjà (delivery-fees.js)
   reason: z.string().max(300, 'Motif trop long (300 caractères au plus).').optional(),
+  // Lot 3 : « dont supplément de nuit », au plus le montant ; null ou 0 = aucun ; absent = gardé
+  nightFee: nightFeeField,
 });
 
 staffOrdersRouter.put('/:reference/delivery-fee', async (req, res, next) => {
   try {
-    const { amount, reason } = feeSchema.parse(req.body);
-    res.json({ order: await setDeliveryFee(reference(req), amount, req.staff, reason) });
+    const { amount, reason, nightFee } = feeSchema.parse(req.body);
+    res.json({ order: await setDeliveryFee(reference(req), amount, req.staff, reason, nightFee) });
   } catch (e) {
     next(e);
   }

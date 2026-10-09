@@ -8,7 +8,7 @@ import { useCart, useCartDetails } from '../context/CartContext.jsx';
 import { useMenu } from '../context/MenuContext.jsx';
 import { formatPrice, plural } from '../utils/format.js';
 import { fillCode, MOBILE_MONEY, usePaymentCodes } from '../utils/payment.js';
-import { FEE_PAID_TO_COURIER, FEE_TO_CONFIRM, feeLabel, normalize } from '../utils/deliveryFee.js';
+import { FEE_PAID_TO_COURIER, FEE_TO_CONFIRM, feeLabel, hourLabel, nightLine, normalize } from '../utils/deliveryFee.js';
 
 const DRAFT_KEY = 'belchicken.infos.v1';
 // zone : quartier choisi dans la grille des frais ({ id, name }) ; other : « Autre quartier »
@@ -120,19 +120,24 @@ function ZonePicker({ grid, form, onPick, error }) {
   const [q, setQ] = useState('');
   const search = normalize(q);
   const zones = grid.zones.filter((z) => normalize(z.name).includes(search));
+  // Lot 3 : la nuit, le prix affiché comprend le supplément de nuit du quartier
+  const isNight = Boolean(grid.night?.isNight);
   return (
     <div className={`zone${error ? ' bad' : ''}`}>
       <label htmlFor="c-zone-q" className="zone-l">Votre quartier {!grid.gps && <i>*</i>}</label>
       <span className="hint">{grid.gps ? 'Choisissez votre quartier, ou partagez votre position ci-dessous : les frais suivent alors la distance.' : 'Les frais de livraison dépendent du quartier.'}</span>
+      {isNight && <span className="hint night-hint">Supplément de nuit compris dans les prix, de {hourLabel(grid.night.from)} à {hourLabel(grid.night.to)}.</span>}
       <input id="c-zone-q" type="search" className="zone-q" placeholder="Rechercher votre quartier" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" aria-controls="c-zone-list" />
       <div className="zone-list" id="c-zone-list" role="radiogroup" aria-label="Quartier" aria-describedby={error ? 'c-zone-err' : undefined}>
         {zones.map((z) => {
           const on = form.zone?.id === z.id;
+          const night = isNight ? z.nightFee || 0 : 0;
+          const fee = z.fee + night;
           return (
             <button key={z.id} type="button" role="radio" aria-checked={on} className={`zone-opt${on ? ' on' : ''}`} onClick={() => onPick(on ? null : { id: z.id, name: z.name }, false)}>
               <span className="rd" aria-hidden="true" />
-              <span className="zone-n">{z.name}</span>
-              <b className={z.fee === 0 ? 'free' : undefined}>{feeLabel(z.fee)}</b>
+              <span className="zone-n">{z.name}{night > 0 && <small>{nightLine(night)}</small>}</span>
+              <b className={fee === 0 ? 'free' : undefined}>{feeLabel(fee)}</b>
             </button>
           );
         })}
@@ -156,19 +161,22 @@ const km = (d) => `environ ${String(d).replace('.', ',')} km du restaurant`;
 function FeeSummary({ grid, quote }) {
   let value = grid.gps ? 'Choisissez votre quartier ou partagez votre position' : 'Choisissez votre quartier';
   let note = FEE_PAID_TO_COURIER;
+  let night = null; // lot 3 : « dont 500 F de supplément de nuit »
   if (quote?.loading) value = 'Calcul…';
   else if (quote?.error) [value, note] = ['Indisponibles', quote.error];
   else if (quote?.source === 'A_CONFIRMER') {
     value = 'À confirmer';
-    note = `${FEE_TO_CONFIRM}${quote.distanceKm != null ? ` (${km(quote.distanceKm)})` : ''}. ${FEE_PAID_TO_COURIER}`;
+    note = `${FEE_TO_CONFIRM}${quote.distanceKm != null ? ` (${km(quote.distanceKm)})` : ''}${grid.night?.isNight ? ', supplément de nuit compris' : ''}. ${FEE_PAID_TO_COURIER}`;
   } else if (quote && quote.fee != null) {
     value = feeLabel(quote.fee);
+    if (quote.nightFee) night = nightLine(quote.nightFee);
     const where = quote.zoneName || (quote.distanceKm != null ? km(quote.distanceKm) : '');
     note = quote.fee === 0 ? `${where ? `${where} : ` : ''}rien à payer au livreur.` : `${where ? `${where}. ` : ''}${FEE_PAID_TO_COURIER}`;
   }
   return (
     <div className="sum-fee" aria-live="polite">
       <div><span>Frais de livraison</span><b className={quote?.fee === 0 ? 'free' : undefined}>{value}</b></div>
+      {night && <div className="sum-night"><span>{night}</span></div>}
       <p>{note}</p>
     </div>
   );
@@ -403,7 +411,11 @@ export default function Valider() {
       // Un plat est passé indisponible entre-temps : on recharge le menu pour le griser
       if (err.code === 'PRODUIT_INDISPONIBLE') reload();
       // Prix changé par le Patron entre l'aperçu et l'envoi : le nouveau montant s'affiche, le client revalide
-      if (err.code === 'FRAIS_CHANGES' && err.details?.quote) setQuote(err.details.quote);
+      // (ou début des heures de nuit) : la liste des quartiers est rechargée avec les prix du moment
+      if (err.code === 'FRAIS_CHANGES' && err.details?.quote) {
+        setQuote(err.details.quote);
+        loadGrid();
+      }
       if (err.code === 'FRAIS_LIVRAISON') loadGrid();
       setErrors(fieldErrors);
       setAlert(err.message);

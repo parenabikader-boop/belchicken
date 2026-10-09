@@ -4,7 +4,8 @@ import { customerAutoEnabled, messageContext } from '../config/env.js';
 import {
   ACTIVE, deliveryError, feeAlreadyPaid, isShortcut, SHORTCUT_OFF, feeMethodError, feeToCollect, feeVerifyError, isPickup, paymentConfirmError, STATUSES, transitionError,
 } from './order-status.js';
-import { feeCorrectionError, feeEditRight } from './delivery-fees.js';
+import { feeCorrectionError, feeEditRight, isNightTime, minutesToHHMM, nightFeeAfter } from './delivery-fees.js';
+import { loadGrid } from './delivery-fees.service.js';
 import { getAppSettings } from './app-settings.service.js';
 import { customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticeState, THANKS_KEYS, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
@@ -73,6 +74,7 @@ export async function listOrders({ status, q }) {
       paymentMethod: o.paymentMethod,
       itemsTotal: o.itemsTotal,
       deliveryFee: o.deliveryFee,
+      deliveryNightFee: o.deliveryNightFee,
       deliveryFeeMethod: o.deliveryFeeMethod,
       deliveryFeeSource: o.deliveryFeeSource,
       deliveryZoneName: o.deliveryZoneName,
@@ -101,7 +103,8 @@ const withCancelReason = (o) => ({ ...o, cancelReason: o.statusChanges.findLast(
 
 const notice = (o) => noticeState(o, { auto: customerAutoEnabled() });
 
-export function toStaffOrder(order) {
+// night : heures de nuit réglées (null = réglage éteint), pour le rappel « commande passée de nuit »
+export function toStaffOrder(order, night = null) {
   const o = withCancelReason(order);
   const state = notice(o);
   const from = sendFrom(o);
@@ -123,6 +126,10 @@ export function toStaffOrder(order) {
     sendFrom: from,
     itemsTotal: o.itemsTotal,
     deliveryFee: o.deliveryFee,
+    // Lot 3 : part du supplément de nuit dans deliveryFee (null = aucun)
+    deliveryNightFee: o.deliveryNightFee,
+    // Commande passée pendant les heures de nuit (réglage allumé) : rappel à l'agent qui saisit les frais
+    nightOrder: night && isNightTime(night, new Date(o.createdAt)) ? { from: minutesToHHMM(night.startMin), to: minutesToHHMM(night.endMin) } : null,
     // Frais payés au livreur à la réception : comment (espèces / mobile money), vérification du mobile money
     // sur le téléphone marchand, remise des espèces au restaurant. feeAlreadyPaid : anciennes commandes,
     // frais payés avant le départ du livreur.
@@ -192,7 +199,7 @@ export function toStaffOrder(order) {
 async function afterChange(reference) {
   const order = await prisma.order.findUnique({ where: { reference }, include: DETAIL_INCLUDE });
   autoNotifyCustomer(withCancelReason(order)).catch((e) => console.error('[whatsapp]', e));
-  return toStaffOrder(order);
+  return toStaffOrder(order, (await loadGrid()).night);
 }
 
 const event = (orderId, type, staff, extra = {}) => ({ orderId, type, staffUserId: staff.id, staffName: staff.name, ...extra });
@@ -207,7 +214,7 @@ const feeEvent = (order, amount, staff, reason) =>
 export async function getOrder(reference) {
   const order = await prisma.order.findUnique({ where: { reference }, include: DETAIL_INCLUDE });
   if (!order) throw new AppError(404, 'Commande introuvable.', 'COMMANDE_INTROUVABLE');
-  return toStaffOrder(order);
+  return toStaffOrder(order, (await loadGrid()).night);
 }
 
 // Commande lue dans une transaction, avec ce qu'il faut pour les règles (statuts et événements)
@@ -215,7 +222,7 @@ async function findForRules(tx, reference) {
   const order = await tx.order.findUnique({
     where: { reference },
     select: {
-      id: true, status: true, mode: true, deliveryFee: true, deliveryFeeMethod: true, deliveryFeeVerifiedAt: true, courierId: true,
+      id: true, status: true, mode: true, deliveryFee: true, deliveryNightFee: true, deliveryFeeMethod: true, deliveryFeeVerifiedAt: true, courierId: true,
       cashRemittanceId: true,
       deliveryCode: true, deliveryCodeAttempts: true, shortFlow: true,
       createdById: true, // commande saisie par un agent : message « à payer » facultatif
@@ -269,7 +276,8 @@ export const statusChange = (order, to, staff, reason = null) => ({
 // quand l'agent remet la commande au comptoir : il tape le code donné par le client (code), ou, client
 // sans son code, valide avec un motif (reason, événement RETRAIT_SANS_CODE). Jamais de frais.
 // Chaque étape, sauf l'annulation, demande que le client ait été prévenu de l'étape en cours.
-export async function changeStatus(reference, { from, to, reason, deliveryFee, feeReason, courierId, feeMethod, code }, staff) {
+// nightFee : « dont supplément de nuit » saisi avec les frais (lot 3, facultatif, voir nightFeeAfter).
+export async function changeStatus(reference, { from, to, reason, deliveryFee, nightFee, feeReason, courierId, feeMethod, code }, staff) {
   let courier = null;
   let cancelledCourierId = null;
   let wrongCode = null;
@@ -288,10 +296,12 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, f
     const counter = to === 'LIVREE' && pickup;
     const withCode = counter && !reason?.trim();
     const fee = pickup ? deliveryFee ?? null : paying ? deliveryFee ?? order.deliveryFee : order.deliveryFee;
+    const night = paying && !pickup ? nightFeeAfter(order, fee, nightFee) : null;
     const error =
       transitionError(order.status, shortcut ? 'PAYEE' : to, reason, order.mode) ||
       (to !== 'ANNULEE' ? noticeError(notice(order)) : null) ||
       (paying ? paymentConfirmError(fee, order.mode, order.deliveryFee) : null) ||
+      night?.error ||
       // Frais de la grille changés par l'agent en confirmant le paiement : c'est une correction, avec un motif
       (paying && !pickup && order.deliveryFee != null && fee !== order.deliveryFee && (!feeReason || feeReason.trim().length < 3)
         ? 'Vous changez les frais calculés pour ce quartier : indiquez le motif.'
@@ -323,7 +333,9 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, f
     await guardedUpdate(tx, order, {
       status: to,
       ...(shortcut ? { shortFlow: true } : {}),
-      ...(paying && !pickup ? { deliveryFee: fee, ...(fee !== order.deliveryFee ? { deliveryFeeSource: 'AGENT' } : {}) } : {}),
+      ...(paying && !pickup
+        ? { deliveryFee: fee, deliveryNightFee: night.nightFee, ...(fee !== order.deliveryFee ? { deliveryFeeSource: 'AGENT' } : {}) }
+        : {}),
       ...(courier ? { ...assignment(courier), deliveryCode: generateDeliveryCode(), deliveryCodeAttempts: 0 } : {}),
       ...(to === 'PRETE' ? { deliveryCode: generateDeliveryCode(), deliveryCodeAttempts: 0 } : {}),
       ...(to === 'LIVREE' && feeToCollect(order) ? { deliveryFeeMethod: feeMethod } : {}),
@@ -398,12 +410,15 @@ function notifyCourier(reference, courierId, send = pushCourierAssigned) {
 // Après la confirmation du paiement, un nouveau montant demande un nouveau message au client.
 // Première saisie (frais à confirmer, grille vide) ou correction, avec un motif (feeCorrectionError :
 // Patron et Opérateur avant le départ du livreur, Patron seulement ensuite)
-export async function setDeliveryFee(reference, amount, staff, reason = null) {
+// nightFee : « dont supplément de nuit » (lot 3, facultatif). Non envoyé : celui de la commande est gardé,
+// ramené au nouveau total s'il le dépasse.
+export async function setDeliveryFee(reference, amount, staff, reason = null, nightFee = undefined) {
   await prisma.$transaction(async (tx) => {
     const order = await findForRules(tx, reference);
-    const error = feeCorrectionError(order, staff.role, amount, reason);
-    if (error) throw new AppError(order.deliveryFee === amount ? 409 : 400, error, 'FRAIS_IMPOSSIBLES');
-    await guardedUpdate(tx, order, { deliveryFee: amount, deliveryFeeSource: 'AGENT' });
+    const night = nightFeeAfter(order, amount, nightFee);
+    const error = feeCorrectionError(order, staff.role, amount, reason, night.nightFee) || night.error;
+    if (error) throw new AppError(order.deliveryFee === amount && !night.error ? 409 : 400, error, 'FRAIS_IMPOSSIBLES');
+    await guardedUpdate(tx, order, { deliveryFee: amount, deliveryNightFee: night.nightFee, deliveryFeeSource: 'AGENT' });
     await tx.orderEvent.create({ data: feeEvent(order, amount, staff, reason) });
   });
   return afterChange(reference);

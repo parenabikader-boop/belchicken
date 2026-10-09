@@ -4,7 +4,7 @@ import { api, staffApi } from '../../api/client.js';
 import ProductDialog from '../../components/ProductDialog.jsx';
 import { CartProvider, useCart, useCartDetails } from '../../context/CartContext.jsx';
 import { useMenu } from '../../context/MenuContext.jsx';
-import { feeLabel, normalize } from '../../utils/deliveryFee.js';
+import { feeLabel, hourLabel, nightLine, normalize } from '../../utils/deliveryFee.js';
 import { formatPrice } from '../../utils/format.js';
 import { MOBILE_MONEY } from '../../utils/payment.js';
 import { searchProducts } from '../../utils/product.js';
@@ -147,6 +147,8 @@ function NewOrderForm() {
     } catch (err) {
       setError(err);
       setSending(false);
+      // Frais changés entre l'aperçu et l'envoi (prix du Patron, début des heures de nuit) : nouveau montant affiché
+      if (err.code === 'FRAIS_CHANGES' && err.details?.quote) setQuote(err.details.quote);
       // Provenance désactivée ou réglage éteint entre-temps : liste à jour
       if (err.code === 'PROVENANCE_REFUSEE' || err.code === 'SAISIE_ETEINTE') staffApi.agentContext().then(setCtx, () => {});
     }
@@ -353,18 +355,23 @@ function Zones({ grid, form, setForm, quote }) {
   const [q, setQ] = useState('');
   const zones = grid.zones.filter((z) => normalize(z.name).includes(normalize(q)));
   const pick = (zone, other) => setForm((f) => ({ ...f, zone, other }));
+  // Lot 3 : la nuit, le prix affiché comprend le supplément de nuit du quartier
+  const isNight = Boolean(grid.night?.isNight);
   return (
     <div className="zone" style={{ marginTop: 0 }}>
       <label htmlFor="no-zone-q" className="zone-l">Quartier du client</label>
+      {isNight && <span className="hint night-hint">Supplément de nuit compris dans les prix, de {hourLabel(grid.night.from)} à {hourLabel(grid.night.to)}.</span>}
       <input id="no-zone-q" type="search" className="zone-q" placeholder="Rechercher le quartier" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" />
       <div className="zone-list" role="radiogroup" aria-label="Quartier">
         {zones.map((z) => {
           const on = form.zone?.id === z.id;
+          const night = isNight ? z.nightFee || 0 : 0;
+          const fee = z.fee + night;
           return (
             <button key={z.id} type="button" role="radio" aria-checked={on} className={`zone-opt${on ? ' on' : ''}`} onClick={() => pick(on ? null : { id: z.id, name: z.name }, false)}>
               <span className="rd" aria-hidden="true" />
-              <span className="zone-n">{z.name}</span>
-              <b className={z.fee === 0 ? 'free' : undefined}>{feeLabel(z.fee)}</b>
+              <span className="zone-n">{z.name}{night > 0 && <small>{nightLine(night)}</small>}</span>
+              <b className={fee === 0 ? 'free' : undefined}>{feeLabel(fee)}</b>
             </button>
           );
         })}
@@ -377,7 +384,7 @@ function Zones({ grid, form, setForm, quote }) {
         )}
       </div>
       {quote?.error && <p className="st-err">{quote.error}</p>}
-      {quote && quote.fee != null && !quote.loading && <p className="st-muted">Frais de livraison : <b>{feeLabel(quote.fee)}</b>, payés au livreur à la réception.</p>}
+      {quote && quote.fee != null && !quote.loading && <p className="st-muted">Frais de livraison : <b>{feeLabel(quote.fee)}</b>{quote.nightFee ? `, ${nightLine(quote.nightFee)}` : ''}, payés au livreur à la réception.</p>}
     </div>
   );
 }

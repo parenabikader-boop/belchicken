@@ -65,8 +65,9 @@ export const staffApi = {
   setStatus: (reference, body) =>
     staffRequest(`/orders/${encodeURIComponent(reference)}/status`, { method: 'POST', body: JSON.stringify(body) }).then((d) => d.order),
   // Frais de livraison (montant en F) : saisie, ou correction avec un motif (Patron seul après le départ du livreur)
-  setDeliveryFee: (reference, amount, reason) =>
-    staffRequest(`/orders/${encodeURIComponent(reference)}/delivery-fee`, { method: 'PUT', body: JSON.stringify({ amount, reason }) }).then((d) => d.order),
+  // nightFee (lot 3) : « dont supplément de nuit » (null = aucun ; absent = gardé)
+  setDeliveryFee: (reference, amount, reason, nightFee) =>
+    staffRequest(`/orders/${encodeURIComponent(reference)}/delivery-fee`, { method: 'PUT', body: JSON.stringify({ amount, reason, nightFee }) }).then((d) => d.order),
   // Frais payés par mobile money : vérifiés (ou non) sur le téléphone marchand
   setFeeVerified: (reference, verified) =>
     staffRequest(`/orders/${encodeURIComponent(reference)}/delivery-fee/verified`, { method: 'POST', body: JSON.stringify({ verified }) }).then((d) => d.order),

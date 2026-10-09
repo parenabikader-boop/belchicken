@@ -9,7 +9,7 @@ import { METHOD_LABEL } from '../utils/payment.js';
 import { TunnelHead } from '../components/PageParts.jsx';
 import { useCart } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils/format.js';
-import { feeLabel } from '../utils/deliveryFee.js';
+import { feeLabel, nightLine } from '../utils/deliveryFee.js';
 
 // Rafraîchissement de la page de suivi, tant que la commande n'est ni livrée ni annulée
 const REFRESH_MS = 20000;
@@ -137,7 +137,7 @@ export default function Confirmation() {
               <tr className={fee != null ? 'sub' : 'tot'}><td>Total des plats</td><td></td><td className="r">{formatPrice(order.itemsTotal)}</td></tr>
               {fee != null && (
                 <>
-                  <tr className="sub"><td>Frais de livraison</td><td></td><td className="r">{feeLabel(fee)}</td></tr>
+                  <tr className="sub"><td>Frais de livraison{order.deliveryNightFee > 0 && <small className="trk-night">{nightLine(order.deliveryNightFee)}</small>}</td><td></td><td className="r">{feeLabel(fee)}</td></tr>
                   <tr className="tot"><td>Total</td><td></td><td className="r">{formatPrice(order.itemsTotal + fee)}</td></tr>
                 </>
               )}
@@ -159,7 +159,7 @@ export default function Confirmation() {
                       : 'Selon votre quartier : affichés ici après la vérification de votre paiement'
                     : fee === 0
                       ? 'Livraison offerte : rien à payer au livreur'
-                      : `${formatPrice(fee)} · ${order.deliveryFeePaid ? 'payés, merci' : 'à payer au livreur à la réception'}`}
+                      : `${formatPrice(fee)}${order.deliveryNightFee > 0 ? `, ${nightLine(order.deliveryNightFee)}` : ''} · ${order.deliveryFeePaid ? 'payés, merci' : 'à payer au livreur à la réception'}`}
                 </dd>
               </>
             )}
@@ -217,13 +217,14 @@ function Tracking({ order, offline }) {
 }
 
 // Frais de livraison : payés au livreur à la réception, en espèces ou par mobile money avec le code marchand
-function FeeToPay({ fee, feePayment, children }) {
+function FeeToPay({ fee, nightFee, feePayment, children }) {
   // feePayment : codes avec le montant des frais, donnés par le serveur (les mêmes que dans les messages WhatsApp)
   return (
     <div className="trk-fee">
       {children}
       <p>Frais de livraison</p>
       <b>{formatPrice(fee)}</b>
+      {nightFee > 0 && <p className="trk-night">{nightLine(nightFee)}</p>}
       <p>À payer au livreur à la réception, en espèces ou par mobile money avec le code marchand :</p>
       {feePayment && (
         <>
@@ -268,7 +269,7 @@ function Now({ order }) {
   const feeDue = fee > 0 && !order.deliveryFeePaid; // 0 F : livraison offerte
   const toConfirm = order.deliveryFeeSource === 'A_CONFIRMER';
   // Frais déjà connus à la commande (grille du Patron) : annoncés dès la vérification du paiement
-  const known = fee == null ? null : fee === 0 ? <> Livraison offerte : rien à payer au livreur.</> : <> Frais de livraison : <b>{formatPrice(fee)}</b>, à payer au livreur à la réception.</>;
+  const known = fee == null ? null : fee === 0 ? <> Livraison offerte : rien à payer au livreur.</> : <> Frais de livraison : <b>{formatPrice(fee)}</b>{order.deliveryNightFee > 0 && `, ${nightLine(order.deliveryNightFee)}`}, à payer au livreur à la réception.</>;
   if (isPickup(order) && order.status !== 'ANNULEE') return <PickupNow order={order} />;
 
   switch (order.status) {
@@ -290,7 +291,7 @@ function Now({ order }) {
       if (fee === 0) return <p className="trk-now ok">{order.status === 'EN_PREPARATION' ? 'Votre commande est en préparation.' : 'Paiement vérifié, merci ! Votre commande va être préparée.'} Livraison offerte : rien à payer au livreur.</p>;
       if (feeDue) {
         return (
-          <FeeToPay fee={fee} feePayment={order.feePayment}>
+          <FeeToPay fee={fee} nightFee={order.deliveryNightFee} feePayment={order.feePayment}>
             <p className="trk-fee-lead">{order.status === 'EN_PREPARATION' ? 'Votre commande est en préparation.' : 'Paiement vérifié, merci ! Votre commande va être préparée.'}</p>
           </FeeToPay>
         );
@@ -299,7 +300,7 @@ function Now({ order }) {
     case 'EN_LIVRAISON':
       if (feeDue) {
         return (
-          <FeeToPay fee={fee} feePayment={order.feePayment}>
+          <FeeToPay fee={fee} nightFee={order.deliveryNightFee} feePayment={order.feePayment}>
             <p className="trk-fee-lead">Votre commande est en route ! Gardez votre téléphone près de vous : le livreur peut vous appeler. Donnez-lui le code reçu sur WhatsApp.</p>
           </FeeToPay>
         );

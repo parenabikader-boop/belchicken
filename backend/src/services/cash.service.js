@@ -35,6 +35,7 @@ export async function getCash(now = new Date()) {
     customerName: o.customerName,
     customerPhone: o.customerPhone,
     deliveryFee: o.deliveryFee,
+    deliveryNightFee: o.deliveryNightFee ?? null, // lot 3 : dont supplément de nuit
     deliveryZoneName: o.deliveryZoneName,
     courierName: o.courierName,
     deliveredAt: deliveredAt(o),

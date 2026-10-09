@@ -5,7 +5,9 @@ import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { env } from '../config/env.js';
 import { sameItems } from './menu-edit.js';
-import { activeGrid, bandRanges, expectedFeeError, publicGrid, quoteDelivery, sameZoneName } from './delivery-fees.js';
+import {
+  activeGrid, bandRanges, expectedFeeError, isNightTime, minutesToHHMM, publicGrid, quoteDelivery, sameZoneName,
+} from './delivery-fees.js';
 
 async function readGrid(db = prisma) {
   const [zones, bands, settings] = await Promise.all([
@@ -23,15 +25,17 @@ export const loadGrid = async (db = prisma) => activeGrid(await readGrid(db));
 export const getPublicGrid = async () => publicGrid(await loadGrid());
 
 // Frais pour un choix du client (aperçu sur la page Vos informations, puis à la commande)
-export async function quoteFor(choice, location, { legacy = false } = {}) {
-  const quote = quoteDelivery(await loadGrid(), { ...choice, location, legacy }, env.restaurantPosition);
+// now : heure de la commande, qui décide du supplément de nuit
+export async function quoteFor(choice, location, { legacy = false, now = new Date() } = {}) {
+  const quote = quoteDelivery(await loadGrid(), { ...choice, location, legacy }, env.restaurantPosition, now);
   if (quote.error) throw new AppError(400, quote.error, 'FRAIS_LIVRAISON', [{ path: 'delivery', message: quote.error }]);
   return quote;
 }
 
-// À la commande : le montant affiché au client doit être celui que le serveur trouve
-export async function quoteForOrder(choice, location) {
-  const quote = await quoteFor(choice || {}, location, { legacy: !choice });
+// À la commande : le montant affiché au client doit être celui que le serveur trouve (un supplément de
+// nuit commencé entre l'aperçu et la validation est un changement de frais, comme un prix changé)
+export async function quoteForOrder(choice, location, now = new Date()) {
+  const quote = await quoteFor(choice || {}, location, { legacy: !choice, now });
   const changed = expectedFeeError(quote, choice?.expectedFee);
   if (changed) throw new AppError(409, changed, 'FRAIS_CHANGES', { quote: publicQuote(quote) });
   return quote;
@@ -43,7 +47,16 @@ export const publicQuote = (q) => ({
   fee: q.fee,
   zoneName: q.zoneName,
   distanceKm: q.distanceM != null ? Math.round(q.distanceM / 100) / 10 : null,
+  ...(q.nightFee ? { nightFee: q.nightFee } : {}), // lot 3 : part du supplément de nuit dans fee
 });
+
+// Heures de nuit réglées et « c'est la nuit maintenant » (null = réglage éteint) : rappel à l'agent qui
+// saisit des frais à confirmer, et commande passée de nuit (heure de la commande)
+export async function nightInfo(at = new Date()) {
+  const { night } = await loadGrid();
+  if (!night) return null;
+  return { from: minutesToHHMM(night.startMin), to: minutesToHHMM(night.endMin), isNight: isNightTime(night, at), startMin: night.startMin, endMin: night.endMin };
+}
 
 // ─── Page « Frais de livraison » du Patron ───
 
@@ -52,9 +65,18 @@ export async function getStaffGrid() {
   const active = activeGrid({ zones, bands, settings });
   const ranges = new Map(bandRanges(active.bands).map((b) => [b.id, b.fromMeters]));
   return {
-    zones: zones.map((z) => ({ id: z.id, name: z.name, fee: z.fee, isActive: z.isActive, position: z.position })),
-    bands: bands.map((b) => ({ id: b.id, upToMeters: b.upToMeters, fromMeters: ranges.get(b.id) ?? null, fee: b.fee, isActive: b.isActive })),
-    settings: { allowOtherZone: active.allowOther },
+    zones: zones.map((z) => ({ id: z.id, name: z.name, fee: z.fee, nightFee: z.nightFee, isActive: z.isActive, position: z.position })),
+    bands: bands.map((b) => ({
+      id: b.id, upToMeters: b.upToMeters, fromMeters: ranges.get(b.id) ?? null, fee: b.fee, nightFee: b.nightFee, isActive: b.isActive,
+    })),
+    settings: {
+      allowOtherZone: active.allowOther,
+      // Lot 3 : heures de nuit (réglées même quand le supplément est éteint)
+      nightEnabled: settings?.nightEnabled ?? false,
+      nightStart: minutesToHHMM(settings?.nightStartMin ?? 1320),
+      nightEnd: minutesToHHMM(settings?.nightEndMin ?? 360),
+      isNight: isNightTime(active.night),
+    },
     isEmpty: active.isEmpty,
     restaurant: env.restaurantPosition,
   };
@@ -122,7 +144,15 @@ export async function deleteBand(id) {
   return getStaffGrid();
 }
 
-export async function setSettings({ allowOtherZone }) {
-  await prisma.deliverySettings.upsert({ where: { id: 1 }, create: { id: 1, allowOtherZone }, update: { allowOtherZone } });
+// Seulement les champs envoyés (le reste garde sa valeur, ou la valeur par défaut à la création)
+export async function setSettings({ allowOtherZone, nightEnabled, nightStart, nightEnd }) {
+  const data = Object.fromEntries(
+    Object.entries({ allowOtherZone, nightEnabled, nightStartMin: nightStart, nightEndMin: nightEnd }).filter(([, v]) => v !== undefined),
+  );
+  const current = await prisma.deliverySettings.findUnique({ where: { id: 1 } });
+  const start = data.nightStartMin ?? current?.nightStartMin ?? 1320;
+  const end = data.nightEndMin ?? current?.nightEndMin ?? 360;
+  if (start === end) throw new AppError(400, 'Le début et la fin de la nuit doivent être différents.', 'HEURES_NUIT');
+  await prisma.deliverySettings.upsert({ where: { id: 1 }, create: { id: 1, ...data }, update: data });
   return getStaffGrid();
 }

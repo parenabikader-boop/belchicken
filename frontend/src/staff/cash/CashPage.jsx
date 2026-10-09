@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatPrice, plural } from '../../utils/format.js';
+import { nightLine } from '../../utils/deliveryFee.js';
 import { formatDateTime, formatPhone, formatTime, timeAgo } from '../orders/labels.js';
 
 const REFRESH_MS = 15000;
@@ -112,6 +113,7 @@ function FeeRow({ row: o, onChange }) {
           Livrée{o.courierName && ` par ${o.courierName}`}{o.deliveredAt && ` ${timeAgo(o.deliveredAt)}`}
           {o.deliveryZoneName && ` · ${o.deliveryZoneName}`}
           {verified && ` · vérifiés à ${formatTime(o.verifiedAt)}`}
+          {o.deliveryNightFee > 0 && ` · ${nightLine(o.deliveryNightFee)}`}
         </small>
       </div>
       <b className="ca-amount">{formatPrice(o.deliveryFee)}</b>
@@ -203,7 +205,7 @@ function CourierCash({ cash: c, onChange }) {
               <li key={o.reference}>
                 <Link to={`/equipe/commandes/${o.reference}`}>{o.reference}</Link>
                 <span>{o.customerName}</span>
-                <small className="st-muted">{o.deliveredAt && formatDateTime(o.deliveredAt)}{o.deliveryZoneName && ` · ${o.deliveryZoneName}`}</small>
+                <small className="st-muted">{o.deliveredAt && formatDateTime(o.deliveredAt)}{o.deliveryZoneName && ` · ${o.deliveryZoneName}`}{o.deliveryNightFee > 0 && ` · ${nightLine(o.deliveryNightFee)}`}</small>
                 <b>{formatPrice(o.deliveryFee)}</b>
               </li>
             ))}

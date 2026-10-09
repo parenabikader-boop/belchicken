@@ -7,6 +7,7 @@ import { FEE_METHOD_LABEL, formatPhone, formatTime, telHref, whatsappHref } from
 import { FeeMethodPicker } from '../orders/OrderSteps.jsx';
 import { drinksLabel } from '../../utils/drinks.js';
 import { formatPrice } from '../../utils/format.js';
+import { nightLine } from '../../utils/deliveryFee.js';
 
 // /equipe/courses : le livreur ne voit que ses courses du jour (l'API ne lui donne rien d'autre).
 // Seul montant affiché : les frais de livraison à encaisser (le client a payé les plats d'avance). Pour remettre
@@ -145,6 +146,7 @@ function Course({ course: c, onDelivered, onRefresh }) {
       ) : c.deliveryFee != null && (
         <p className="lv-fee">
           <span>Frais à encaisser : <b>{formatPrice(c.deliveryFee)}</b></span>
+          {c.deliveryNightFee > 0 && <small className="lv-night">{nightLine(c.deliveryNightFee)}</small>}
           <small>
             {c.deliveryZoneName && <>Quartier : {c.deliveryZoneName}. </>}
             En espèces, ou par Orange Money / Moov Money / Telecel Money avec le code marchand, au choix du client.

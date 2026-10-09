@@ -1,12 +1,38 @@
 import { useEffect, useState } from 'react';
 import { staffApi } from '../../api/client.js';
 import { formatPrice } from '../../utils/format.js';
+import { hourLabel, nightLine } from '../../utils/deliveryFee.js';
 import { useStaff } from '../StaffContext.jsx';
 import { useAppSettings } from '../settings/useAppSettings.js';
 import { ACTIVE, canEditFee, deliveryBlock, feeOrigin, feeText, FEE_METHODS, formatPhone, formatTime, isPickup, METHOD_LABEL, nextAction } from './labels.js';
 
 // « 1 500 » -> 1500 ; champ vide -> NaN (jamais 0 par erreur : 0 F = livraison offerte)
 const toAmount = (v) => (v.trim() === '' ? NaN : Number(v.replace(/\s/g, '')));
+// « dont supplément de nuit » (lot 3) : vide = aucun (null)
+const toNight = (v) => (v.trim() === '' ? null : Number(v.replace(/\s/g, '')));
+const nightInput = (n) => (n ? String(n) : '');
+// Supplément valide : vide, ou un nombre entier entre 0 et le total des frais
+const nightOk = (night, amount) => night == null || (Number.isInteger(night) && night >= 0 && night <= amount);
+
+// Lot 3 : champ facultatif « dont supplément de nuit », avec un rappel pour une commande passée de nuit
+function NightFeeField({ order: o, id, value, onChange, amount }) {
+  const night = toNight(value);
+  return (
+    <div className="of-night">
+      {o.nightOrder && (
+        <p className="st-note">
+          Commande passée de nuit ({hourLabel(o.nightOrder.from)} – {hourLabel(o.nightOrder.to)}) : pensez au supplément de nuit.
+        </p>
+      )}
+      <label htmlFor={id} className="st-fee-label">Dont supplément de nuit (facultatif)</label>
+      <span className="of-amount">
+        <input id={id} type="text" inputMode="numeric" autoComplete="off" placeholder="0" value={value} onChange={(e) => onChange(e.target.value.replace(/[^\d\s]/g, ''))} />
+        <span>F</span>
+      </span>
+      {!nightOk(night, amount) && Number.isInteger(amount) && <p className="st-err">Le supplément de nuit ne peut pas dépasser les frais ({formatPrice(amount)}).</p>}
+    </div>
+  );
+}
 
 // Étapes d'une commande : un seul bouton par étape, qui enregistre l'étape ET ouvre WhatsApp avec le
 // message du client. L'étape suivante reste bloquée (ici et par l'API) tant que l'agent n'a pas
@@ -195,6 +221,7 @@ export function Actions({ order: o, steps }) {
   const [reason, setReason] = useState('');
   const [fee, setFee] = useState('');
   const [feeReason, setFeeReason] = useState('');
+  const [night, setNight] = useState('');
   const [courierId, setCourierId] = useState('');
   const [feeMethod, setFeeMethod] = useState('');
   const [code, setCode] = useState('');
@@ -217,11 +244,14 @@ export function Actions({ order: o, steps }) {
   // Frais calculés par la grille et changés par l'agent : c'est une correction, avec un motif
   const gridFee = o.deliveryFee;
   const changed = !pickup && gridFee != null && amount !== gridFee;
-  const feeOk = pickup || (Number.isInteger(amount) && (amount === gridFee || amount >= 1)) && (!changed || feeReason.trim().length >= 3);
+  // Frais tapés par l'agent (à confirmer, grille vide, ou changés) : « dont supplément de nuit » facultatif
+  const typed = !pickup && (gridFee == null || changed);
+  const nightFee = toNight(night);
+  const feeOk = pickup || ((Number.isInteger(amount) && (amount === gridFee || amount >= 1)) && (!changed || feeReason.trim().length >= 3) && (!typed || nightOk(nightFee, amount)));
 
   if (mode === 'confirm' && o.status === 'PAIEMENT_A_VERIFIER') {
     return (
-      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: next.to, ...(pickup ? {} : { deliveryFee: amount, ...(changed ? { feeReason } : {}) }) })); }}>
+      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: next.to, ...(pickup ? {} : { deliveryFee: amount, ...(changed ? { feeReason } : {}), ...(typed ? { nightFee } : {}) }) })); }}>
         <b>Avez-vous vérifié le paiement sur le téléphone marchand ?</b>
         <p>
           <strong>{formatPrice(o.itemsTotal)}</strong> reçus par {METHOD_LABEL[o.paymentMethod]}
@@ -239,6 +269,7 @@ export function Actions({ order: o, steps }) {
                   : 'Frais de livraison pour le quartier du client (annoncés dans le message)'}
             </label>
             {feeOrigin(o) && <p className="st-muted">{feeOrigin(o)}.</p>}
+            {gridFee != null && o.deliveryNightFee > 0 && !changed && <p className="st-muted">{nightLine(o.deliveryNightFee)}.</p>}
             <span className="of-amount">
               <input id="st-fee" type="text" inputMode="numeric" autoComplete="off" placeholder="ex. 1000" value={fee} onChange={(e) => setFee(e.target.value.replace(/[^\d\s]/g, ''))} autoFocus={gridFee == null} />
               <span>F</span>
@@ -249,6 +280,7 @@ export function Actions({ order: o, steps }) {
                 <textarea id="st-fee-reason" value={feeReason} onChange={(e) => setFeeReason(e.target.value)} maxLength={300} placeholder="Ex. : client en dehors du quartier choisi…" />
               </>
             )}
+            {typed && <NightFeeField order={o} id="st-fee-night" value={night} onChange={setNight} amount={amount} />}
           </>
         )}
         {steps.error && <p className="st-err">{steps.error}</p>}
@@ -363,6 +395,7 @@ export function Actions({ order: o, steps }) {
     if (o.status === 'PAIEMENT_A_VERIFIER') {
       setFee(o.deliveryFee != null ? String(o.deliveryFee) : '');
       setFeeReason('');
+      setNight(nightInput(o.deliveryNightFee));
       setMode('confirm');
     } else if (o.status === 'EN_PREPARATION' && !pickup) {
       setCourierId('');
@@ -426,16 +459,19 @@ export function DeliveryFee({ order: o, steps }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState('');
   const [reason, setReason] = useState('');
+  const [night, setNight] = useState('');
 
   useEffect(() => {
     setEditing(false);
-  }, [o.deliveryFee, o.status]);
+  }, [o.deliveryFee, o.deliveryNightFee, o.status]);
 
   const save = async (e) => {
     e.preventDefault();
-    if (await steps.run(() => staffApi.setDeliveryFee(o.reference, toAmount(value), reason.trim()))) setEditing(false);
+    if (await steps.run(() => staffApi.setDeliveryFee(o.reference, toAmount(value), reason.trim(), toNight(night)))) setEditing(false);
   };
   const newAmount = toAmount(value);
+  const newNight = toNight(night);
+  const same = newAmount === o.deliveryFee && (newNight || null) === (o.deliveryNightFee || null);
   const paid = o.status === 'LIVREE' && method;
   const ok = paid && (method === 'ESPECES' ? o.cashRemitted : Boolean(o.deliveryFeeVerifiedAt));
 
@@ -449,12 +485,13 @@ export function DeliveryFee({ order: o, steps }) {
             <input id="of-fee" type="text" inputMode="numeric" autoComplete="off" value={value} onChange={(e) => setValue(e.target.value.replace(/[^\d\s]/g, ''))} autoFocus />
             <span>F</span>
           </span>
+          <NightFeeField order={o} id="of-fee-night" value={night} onChange={setNight} amount={newAmount} />
           <label htmlFor="of-fee-reason" className="st-muted">Motif de la correction (noté dans l’historique)</label>
           <textarea id="of-fee-reason" className="of-fee-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder="Ex. : client plus loin que le quartier choisi…" />
           {patronOnly && <p className="st-note">Le livreur est déjà parti : prévenez-le aussi du nouveau montant.</p>}
           {steps.error && <p className="st-err">{steps.error}</p>}
           <div className="of-fee-row">
-            <button type="submit" className="btn btn-p" disabled={steps.busy || !(newAmount >= 1) || newAmount === o.deliveryFee || reason.trim().length < 3}>Corriger et prévenir</button>
+            <button type="submit" className="btn btn-p" disabled={steps.busy || !(newAmount >= 1) || same || !nightOk(newNight, newAmount) || reason.trim().length < 3}>Corriger et prévenir</button>
             <button type="button" className="st-text-btn" onClick={() => setEditing(false)}>Annuler</button>
           </div>
         </form>
@@ -462,9 +499,9 @@ export function DeliveryFee({ order: o, steps }) {
         <p className="of-fee-value">
           {o.deliveryFee == null
             ? <span className="st-muted">{o.deliveryFeeSource === 'A_CONFIRMER' ? 'À confirmer avec le client au téléphone, puis à saisir en confirmant le paiement.' : 'À saisir en confirmant le paiement.'}</span>
-            : <b className={o.deliveryFee === 0 ? 'of-free' : undefined}>{feeText(o.deliveryFee)}</b>}
+            : <b className={o.deliveryFee === 0 ? 'of-free' : undefined}>{feeText(o.deliveryFee)}{o.deliveryNightFee > 0 && <small className="of-night-v">{nightLine(o.deliveryNightFee)}</small>}</b>}
           {editable && (
-            <button type="button" className="st-text-btn" onClick={() => { setValue(String(o.deliveryFee)); setReason(''); setEditing(true); }}>Corriger</button>
+            <button type="button" className="st-text-btn" onClick={() => { setValue(String(o.deliveryFee)); setReason(''); setNight(nightInput(o.deliveryNightFee)); setEditing(true); }}>Corriger</button>
           )}
         </p>
       )}

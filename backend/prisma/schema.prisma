@@ -187,6 +187,7 @@ model DeliveryZone {
   id        String   @id @default(cuid())
   name      String   @unique // « Ouaga 2000 », « Kamsonghin »…
   fee       Int // en F, de 0 (livraison offerte) à 50 000
+  nightFee  Int      @default(0) // lot 3 : supplément de nuit en F (0 = aucun), ajouté pendant les heures de nuit
   position  Int      @default(0) // ordre dans la liste du client
   isActive  Boolean  @default(true) // faux = n'apparaît plus pour les clients
   createdAt DateTime @default(now())
@@ -203,6 +204,7 @@ model DeliveryDistanceBand {
   id         String   @id @default(cuid())
   upToMeters Int      @unique // 3000 = jusqu'à 3 km
   fee        Int // en F, de 0 (livraison offerte) à 50 000
+  nightFee   Int      @default(0) // lot 3 : supplément de nuit en F (0 = aucun)
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -213,6 +215,11 @@ model DeliveryDistanceBand {
 model DeliverySettings {
   id             Int      @id @default(1)
   allowOtherZone Boolean  @default(true) // option « Autre quartier » : frais confirmés par l'agent au téléphone
+  // Lot 3 : heures de nuit (heure du Burkina = UTC), en minutes depuis minuit. Fin avant le début = passe minuit.
+  // Éteint (par défaut) = aucun supplément de nuit, comme avant.
+  nightEnabled   Boolean  @default(false)
+  nightStartMin  Int      @default(1320) // 22 h
+  nightEndMin    Int      @default(360) // 6 h
   updatedAt      DateTime @updatedAt
 }
 
@@ -274,6 +281,9 @@ model Order {
   deliveryZone          DeliveryZone?      @relation(fields: [deliveryZoneId], references: [id], onDelete: SetNull)
   deliveryZoneName      String? // nom du quartier choisi par le client
   deliveryDistanceM     Int? // distance à vol d'oiseau depuis le restaurant (position GPS), en mètres
+  // Lot 3 : supplément de nuit compris dans deliveryFee (figé). Vide = de jour, frais saisis sans
+  // supplément, ou commande d'avant le lot 3. Toujours inférieur ou égal à deliveryFee.
+  deliveryNightFee      Int?
   deliveryFeeMethod     FeePaymentMethod? // vide = pas encore payés
   // Mobile money : vérifiés par l'équipe sur le téléphone marchand (vide = à vérifier).
   // Anciennes commandes (avant le 6 octobre 2026) : frais reçus avant le départ du livreur.
