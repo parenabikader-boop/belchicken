@@ -28,7 +28,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 |-----|-------|------|
 | 1 | Parcours court (option) + bon de commande imprimable | En ligne depuis le 8 octobre 2026 (réglage « Parcours court » éteint en production) |
 | 2 | Prise de commande par l'agent (appel, WhatsApp) | En ligne depuis le 9 octobre 2026 (réglage « Prise de commande par l'agent » éteint en production) |
-| 3 | Supplément de nuit dans la grille des frais | Codé et essayé sur dev le 9 octobre 2026, en attente d'accord pour la mise en ligne |
+| 3 | Supplément de nuit dans la grille des frais | En ligne depuis le 9 octobre 2026 (réglage « Supplément de nuit » éteint en production) |
 | 4 | Compte Prestataire au-dessus du Patron | À faire |
 | 5 | Livraison en deux modes (Restaurant / Prestataire) | À faire |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | À faire |
@@ -113,7 +113,10 @@ sans nouveau modèle Meta (phrase unique mise à jour dans CLAUDE.md).
   montant), commande saisie par l'agent, frais à confirmer avec supplément, corrections, livraison en espèces, caisse,
   réglage éteint = comme avant. Commandes, grille, réglages et comptes d'essai supprimés ensuite (dev comme avant l'essai).
 - [x] Captures (19 images et 2 messages) dans `C:\Users\HP\Desktop\belchiken\captures-lot3-supplement-nuit\`.
-- [ ] Accord du client, enregistrement Git, sauvegarde Neon, mise en ligne (réglage éteint en production).
+- [x] Accord du client, sauvegarde Neon `sauvegarde-lot3` (faite et vérifiée par le client), enregistrement `79eaccb`,
+  mise en ligne le 9 octobre 2026. Migration `20261009180805_supplement_nuit` passée sur Render : colonnes seulement, aucune
+  donnée écrite (supplément éteint, 0 F partout). Vérifié après la mise en ligne, sans rien écrire en production : serveur
+  et site à jour, menu, paiement, grille des frais sans heures de nuit (réglage éteint), espace équipe protégé.
 
 ### 4. Compte Prestataire
 
