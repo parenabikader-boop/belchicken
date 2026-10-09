@@ -4,6 +4,7 @@ import { staffApi } from '../../api/client.js';
 import { formatPrice, plural } from '../../utils/format.js';
 import { useOrdersFeed } from './OrdersFeed.jsx';
 import AlertsPrompt from '../alerts/AlertsPrompt.jsx';
+import { useAppSettings } from '../settings/useAppSettings.js';
 import { FEE_METHOD_LABEL, feeText, formatTime, HISTORY, HISTORY_FILTERS, isPickup, METHOD_LABEL, STAGES, statusLabel, timeAgo } from './labels.js';
 
 const REFRESH_MS = 5000;
@@ -22,6 +23,8 @@ export default function OrdersList() {
   const etape = params.get('etape');
   const q = params.get('q') || '';
   const [search, setSearch] = useState(q);
+  // Lot 2 : commande reçue par appel ou WhatsApp, saisie par l'agent (réglage du Patron)
+  const { agentOrders } = useAppSettings();
 
   const go = (changes) => {
     const next = new URLSearchParams(params);
@@ -53,6 +56,7 @@ export default function OrdersList() {
     <>
       <div className="st-head">
         <h1 className="st-title">Commandes</h1>
+        {agentOrders && <Link className="btn btn-p st-new-order" to="/equipe/commandes/nouvelle">+ Nouvelle commande</Link>}
         <span className="st-muted st-live"><span className="st-dot" />{feed.updatedAt ? 'Mise à jour automatique' : 'Chargement…'}</span>
       </div>
 

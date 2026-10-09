@@ -51,31 +51,42 @@ const mobileMoney = (method) =>
     payerPhone: phone('Le numéro ayant payé'),
   });
 
-export const createOrderSchema = z
+const orderFields = {
+  customer: z.object({
+    name: z.string().trim().min(2, 'Indiquez votre nom complet.').max(80),
+    phone: phone('Le numéro WhatsApp'),
+  }),
+  // Paiement obligatoire avant livraison : plus d'espèces (ESPECES reste dans l'enum Prisma,
+  // sans migration, mais n'est plus accepté)
+  payment: z.discriminatedUnion('method', [mobileMoney('ORANGE_MONEY'), mobileMoney('MOOV_MONEY'), mobileMoney('TELECEL_MONEY')], {
+    errorMap: (issue, ctx) =>
+      issue.code === z.ZodIssueCode.invalid_union_discriminator
+        ? { message: 'Le paiement se fait uniquement par Orange Money, Moov Money ou Telecel Money.' }
+        : { message: ctx.defaultError },
+  }),
+  location: locationSchema.optional(),
+  // Livraison : quartier choisi, « Autre quartier », et les frais affichés au client (comparés, jamais
+  // utilisés comme prix). Absent = ancienne version du site.
+  delivery: deliveryChoiceSchema.optional(),
+  addressNote: optionalText(300),
+  // Livraison (par défaut, anciennes versions du site) ou à emporter (retrait au restaurant)
+  mode: z.enum(['LIVRAISON', 'A_EMPORTER'], { errorMap: () => ({ message: 'Choisissez livraison ou à emporter.' }) }).default('LIVRAISON'),
+  items: z.array(item).min(1, 'La commande est vide.').max(40),
+};
+
+// Livraison : une position ou des repères. À emporter : rien à demander.
+const hasPlace = [
+  (o) => o.mode === 'A_EMPORTER' || o.location || (o.addressNote && o.addressNote.length >= 5),
+  { message: 'Partagez votre position ou indiquez votre quartier et un repère.', path: ['addressNote'] },
+];
+
+export const createOrderSchema = z.object(orderFields).refine(...hasPlace);
+
+// Commande saisie par un agent (appel, WhatsApp) : les mêmes informations que sur le site, plus la
+// provenance choisie dans la liste du Patron (jamais « Site », vérifié par le serveur)
+export const agentOrderSchema = z
   .object({
-    customer: z.object({
-      name: z.string().trim().min(2, 'Indiquez votre nom complet.').max(80),
-      phone: phone('Le numéro WhatsApp'),
-    }),
-    // Paiement obligatoire avant livraison : plus d'espèces (ESPECES reste dans l'enum Prisma,
-    // sans migration, mais n'est plus accepté)
-    payment: z.discriminatedUnion('method', [mobileMoney('ORANGE_MONEY'), mobileMoney('MOOV_MONEY'), mobileMoney('TELECEL_MONEY')], {
-      errorMap: (issue, ctx) =>
-        issue.code === z.ZodIssueCode.invalid_union_discriminator
-          ? { message: 'Le paiement se fait uniquement par Orange Money, Moov Money ou Telecel Money.' }
-          : { message: ctx.defaultError },
-    }),
-    location: locationSchema.optional(),
-    // Livraison : quartier choisi, « Autre quartier », et les frais affichés au client (comparés, jamais
-    // utilisés comme prix). Absent = ancienne version du site.
-    delivery: deliveryChoiceSchema.optional(),
-    addressNote: optionalText(300),
-    // Livraison (par défaut, anciennes versions du site) ou à emporter (retrait au restaurant)
-    mode: z.enum(['LIVRAISON', 'A_EMPORTER'], { errorMap: () => ({ message: 'Choisissez livraison ou à emporter.' }) }).default('LIVRAISON'),
-    items: z.array(item).min(1, 'La commande est vide.').max(40),
+    ...orderFields,
+    sourceId: z.string({ required_error: 'Choisissez la provenance de la commande.' }).min(1, 'Choisissez la provenance de la commande.').max(40),
   })
-  // Livraison : une position ou des repères. À emporter : rien à demander.
-  .refine((o) => o.mode === 'A_EMPORTER' || o.location || (o.addressNote && o.addressNote.length >= 5), {
-    message: 'Partagez votre position ou indiquez votre quartier et un repère.',
-    path: ['addressNote'],
-  });
+  .refine(...hasPlace);

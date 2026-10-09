@@ -10,17 +10,18 @@ const CartContext = createContext(null);
 
 // Le panier ne garde que des identifiants et des quantités : les noms et les prix
 // affichés viennent toujours du menu chargé depuis l'API.
-function readStorage() {
+function readStorage(key) {
   try {
-    const lines = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const lines = JSON.parse(localStorage.getItem(key));
     return Array.isArray(lines) ? lines.filter((l) => l && l.productId && l.variantId && l.quantity > 0) : [];
   } catch {
     return [];
   }
 }
 
-export function CartProvider({ children }) {
-  const [lines, setLines] = useState(readStorage);
+// storageKey : un autre panier, à part de celui du client (commande saisie par l'agent, espace équipe)
+export function CartProvider({ children, storageKey = STORAGE_KEY }) {
+  const [lines, setLines] = useState(() => readStorage(storageKey));
   const { products, status } = useMenu();
 
   // Une fois le menu chargé, retire les lignes dont le plat ou la formule n'existe plus
@@ -32,11 +33,11 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
+      localStorage.setItem(storageKey, JSON.stringify(lines));
     } catch {
       /* navigation privée ou stockage plein : le panier reste en mémoire */
     }
-  }, [lines]);
+  }, [lines, storageKey]);
 
   const value = useMemo(() => {
     // Même plat, même formule, même choix, mêmes boissons et même note = une seule ligne.

@@ -74,6 +74,19 @@ export const staffApi = {
   // Réglages du logiciel (parcours court…) : lus par l'équipe, changés par le Patron
   settings: () => staffRequest('/reglages').then((d) => d.settings),
   setSettings: (body) => staffRequest('/reglages', { method: 'PUT', body: JSON.stringify(body) }).then((d) => d.settings),
+  // Prise de commande par l'agent (lot 2) : réglage et provenances proposées (jamais « Site »), client
+  // retrouvé par son numéro, commande saisie
+  agentContext: () => staffRequest('/orders/nouvelle'),
+  findCustomer: (phone) => staffRequest(`/orders/client?phone=${encodeURIComponent(phone)}`).then((d) => d.customer),
+  createAgentOrder: (payload) => staffRequest('/orders', { method: 'POST', body: JSON.stringify(payload) }).then((d) => d.order),
+  // Provenances des commandes (Patron) : chaque appel renvoie la liste à jour
+  sources: () => staffRequest('/provenances').then((d) => d.sources),
+  createSource: (body) => staffRequest('/provenances', { method: 'POST', body: JSON.stringify(body) }).then((d) => d.sources),
+  updateSource: (id, body) => staffRequest(`/provenances/${id}`, { method: 'PUT', body: JSON.stringify(body) }).then((d) => d.sources),
+  setSourceActive: (id, isActive) =>
+    staffRequest(`/provenances/${id}/active`, { method: 'PATCH', body: JSON.stringify({ isActive }) }).then((d) => d.sources),
+  reorderSources: (ids) => staffRequest('/provenances/order', { method: 'PUT', body: JSON.stringify({ ids }) }).then((d) => d.sources),
+  deleteSource: (id) => staffRequest(`/provenances/${id}`, { method: 'DELETE' }).then((d) => d.sources),
   // Grille des frais de livraison (Patron) : chaque appel renvoie la grille à jour
   deliveryFees: () => staffRequest('/frais-livraison'),
   createDeliveryZone: (body) => staffRequest('/frais-livraison/zones', { method: 'POST', body: JSON.stringify(body) }),

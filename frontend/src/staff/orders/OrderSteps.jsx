@@ -80,26 +80,19 @@ export function useSteps(order, onChange, onConflict) {
   return { run, busy, error, asking, setAsking };
 }
 
+// Commande arrivée par un WhatsApp du restaurant (lot 2) : l'agent écrit au client depuis ce numéro, à chaque
+// étape. Rien pour une commande du site ou un appel.
+export function SendFrom({ order: o }) {
+  if (!o.sendFrom) return null;
+  return <p className="nt-from" role="note"><b>{o.sendFrom.text}</b></p>;
+}
+
 // Message de l'étape en cours : à envoyer, à confirmer, ou déjà confirmé
 export function Notice({ order: o, steps, onChange }) {
   const n = o.notice;
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   if (!n) return null;
-
-  if (n.auto) {
-    return <p className="nt nt-done">Message « {n.label} » envoyé automatiquement au client sur WhatsApp.</p>;
-  }
-
-  if (!n.required) {
-    const by = n.confirmed?.type === 'CLIENT_APPELE' ? 'par appel' : 'sur WhatsApp';
-    return (
-      <p className="nt nt-done">
-        <span>✓ Client prévenu {by} : « {n.label} »{n.confirmed && <> · {formatTime(n.confirmed.at)}{n.confirmed.by && ` par ${n.confirmed.by}`}</>}</span>
-        {n.url && <a href={n.url} target="_blank" rel="noreferrer" onClick={() => staffApi.logMessage(o.reference, n.key).catch(() => {})}>Renvoyer</a>}
-      </p>
-    );
-  }
 
   const confirm = async (by) => {
     setSending(true);
@@ -112,6 +105,41 @@ export function Notice({ order: o, steps, onChange }) {
     }
     setSending(false);
   };
+
+  if (n.auto) {
+    return <p className="nt nt-done">Message « {n.label} » envoyé automatiquement au client sur WhatsApp.</p>;
+  }
+
+  // Message facultatif pas encore envoyé (« commande à payer » d'une commande saisie par un agent) :
+  // proposé avec son bouton, sans bloquer l'étape suivante
+  if (n.optional && !n.confirmed) {
+    return (
+      <section className="nt nt-todo nt-optional" aria-live="polite">
+        <h2>Envoyer au client (facultatif) : {n.label}</h2>
+        <SendFrom order={o} />
+        <p className="of-bubble">{n.text}</p>
+        <div className="nt-row">
+          <a className="btn btn-wa" href={n.url} target="_blank" rel="noreferrer" onClick={() => staffApi.logMessage(o.reference, n.key).catch(() => {})}>
+            Envoyer au client{o.sendFrom && <small>depuis WhatsApp {o.sendFrom.phone}</small>}
+          </a>
+          <button type="button" className="btn btn-s" disabled={sending} onClick={() => confirm('WHATSAPP')}>C’est envoyé</button>
+        </div>
+        <p className="st-muted">Pas obligatoire : au téléphone, vous pouvez aussi donner le code marchand de vive voix.</p>
+        {error && <p className="st-err">{error}</p>}
+      </section>
+    );
+  }
+
+  if (!n.required) {
+    const by = n.confirmed?.type === 'CLIENT_APPELE' ? 'par appel' : 'sur WhatsApp';
+    return (
+      <p className="nt nt-done">
+        <span>✓ Client prévenu {by} : « {n.label} »{n.confirmed && <> · {formatTime(n.confirmed.at)}{n.confirmed.by && ` par ${n.confirmed.by}`}</>}</span>
+        {o.sendFrom && <span className="nt-from-inline">{o.sendFrom.text}</span>}
+        {n.url && <a href={n.url} target="_blank" rel="noreferrer" onClick={() => staffApi.logMessage(o.reference, n.key).catch(() => {})}>Renvoyer</a>}
+      </p>
+    );
+  }
 
   const openAgain = () => {
     staffApi.logMessage(o.reference, n.key).catch(() => {});
@@ -133,6 +161,7 @@ export function Notice({ order: o, steps, onChange }) {
         <>
           <h2>Avez-vous envoyé le message au client ?</h2>
           <p className="nt-sub">« {n.label} » à {o.customerName} ({formatPhone(o.customerPhone)})</p>
+          <SendFrom order={o} />
           <div className="nt-row">
             <button type="button" className="btn btn-p" disabled={sending} onClick={() => confirm('WHATSAPP')}>Oui, envoyé</button>
             <button type="button" className="btn btn-s" disabled={sending} onClick={() => steps.setAsking(false)}>Pas encore</button>
@@ -141,9 +170,10 @@ export function Notice({ order: o, steps, onChange }) {
       ) : (
         <>
           <h2>Prévenez le client : {n.label}</h2>
+          <SendFrom order={o} />
           <p className="of-bubble">{n.text}</p>
           <div className="nt-row">
-            <a className="btn btn-wa" href={n.url} target="_blank" rel="noreferrer" onClick={openAgain}>Ouvrir WhatsApp avec ce message</a>
+            <a className="btn btn-wa" href={n.url} target="_blank" rel="noreferrer" onClick={openAgain}>Ouvrir WhatsApp avec ce message{o.sendFrom && <small>depuis WhatsApp {o.sendFrom.phone}</small>}</a>
             <button type="button" className="btn btn-s" disabled={sending} onClick={() => confirm('WHATSAPP')}>C’est envoyé</button>
           </div>
         </>
@@ -175,6 +205,8 @@ export function Actions({ order: o, steps }) {
   }, [o.status]);
 
   if (!ACTIVE.includes(o.status)) return null;
+  // Commande arrivée par un WhatsApp du restaurant : chaque message part de ce numéro (lot 2)
+  const fromHint = <SendFrom order={o} />;
 
   const notified = !o.notice?.required;
   const blocked = !notified
@@ -220,6 +252,7 @@ export function Actions({ order: o, steps }) {
           </>
         )}
         {steps.error && <p className="st-err">{steps.error}</p>}
+        {fromHint}
         <div className="st-action-row">
           <button type="submit" className="btn btn-p" disabled={steps.busy || !feeOk}>{steps.busy ? 'Enregistrement…' : next.to === 'EN_PREPARATION' ? 'Oui, paiement reçu : lancer la préparation et prévenir le client' : 'Oui, paiement reçu : prévenir le client'}</button>
           <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
@@ -236,6 +269,7 @@ export function Actions({ order: o, steps }) {
         <CourierPicker value={courierId} onChange={setCourierId} />
         <p className="st-muted">Il reçoit une notification. Le client reçoit le code de remise dans le message « en route ».</p>
         {steps.error && <p className="st-err">{steps.error}</p>}
+        {fromHint}
         <div className="st-action-row">
           <button type="submit" className="btn btn-p" disabled={steps.busy || !courierId}>{steps.busy ? 'Enregistrement…' : 'Partie en livraison : prévenir le client'}</button>
           <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
@@ -259,6 +293,7 @@ export function Actions({ order: o, steps }) {
         )}
         <p className="st-muted">À faire seulement si la commande a bien été remise. Le motif est noté dans l’historique.</p>
         {steps.error && <p className="st-err">{steps.error}</p>}
+        {fromHint}
         <div className="st-action-row">
           <button type="submit" className="btn btn-p" disabled={steps.busy || reason.trim().length < 3 || (needMethod && !feeMethod)}>{steps.busy ? 'Enregistrement…' : 'Valider la livraison et remercier le client'}</button>
           <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
@@ -280,6 +315,7 @@ export function Actions({ order: o, steps }) {
         />
         <p className="st-muted">Code à 4 chiffres reçu sur WhatsApp, dans le message « commande prête ».{o.codeAttempts > 0 && <> Encore <b>{left}</b> essai{left > 1 ? 's' : ''}.</>}</p>
         {steps.error && <p className="st-err">{steps.error}</p>}
+        {fromHint}
         <div className="st-action-row">
           <button type="submit" className="btn btn-p" disabled={steps.busy || digits.length !== 4}>{steps.busy ? 'Vérification…' : 'Valider la remise : remercier le client'}</button>
           <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
@@ -298,6 +334,7 @@ export function Actions({ order: o, steps }) {
         <p>Vérifiez bien que c’est le client : <strong>{o.customerName}</strong>, {formatPhone(o.customerPhone)}, commande <strong>{o.reference}</strong>.</p>
         <p className="st-muted">Le motif est noté dans l’historique.</p>
         {steps.error && <p className="st-err">{steps.error}</p>}
+        {fromHint}
         <div className="st-action-row">
           <button type="submit" className="btn btn-p" disabled={steps.busy || reason.trim().length < 3}>{steps.busy ? 'Enregistrement…' : 'Valider la remise sans code et remercier le client'}</button>
           <button type="button" className="st-text-btn" onClick={() => setMode(o.codeLocked ? null : 'counter')}>Retour</button>
@@ -313,6 +350,7 @@ export function Actions({ order: o, steps }) {
         <textarea id="st-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder="Ex. : paiement non reçu, client injoignable…" autoFocus />
         <p className="st-muted">Le motif est repris dans le message au client.</p>
         {steps.error && <p className="st-err">{steps.error}</p>}
+        {fromHint}
         <div className="st-action-row">
           <button type="submit" className="btn st-btn-danger" disabled={steps.busy || reason.trim().length < 3}>{steps.busy ? 'Annulation…' : 'Annuler et prévenir le client'}</button>
           <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
@@ -358,6 +396,7 @@ export function Actions({ order: o, steps }) {
         </p>
       )}
       {steps.error && !mode && <p className="st-err">{steps.error}</p>}
+      {fromHint}
       <div className="st-action-row">
         {o.status === 'EN_LIVRAISON' ? (
           <button type="button" className="btn btn-s" disabled={steps.busy || Boolean(blocked)} onClick={() => { setReason(''); setFeeMethod(''); setMode('handover'); }}>

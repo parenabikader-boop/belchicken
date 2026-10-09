@@ -14,13 +14,13 @@ export function useAppSettings() {
         last = s;
         if (alive) setSettings(s);
       },
-      () => alive && setSettings({ shortFlow: false, failed: true }),
+      () => alive && setSettings({ shortFlow: false, agentOrders: false, failed: true }),
     );
     return () => {
       alive = false;
     };
   }, []);
-  return settings ? { ...settings, loaded: true } : { shortFlow: false, loaded: false };
+  return settings ? { ...settings, loaded: true } : { shortFlow: false, agentOrders: false, loaded: false };
 }
 
 export const rememberSettings = (s) => {

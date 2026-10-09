@@ -52,9 +52,11 @@ async function sendTo(sub, payload) {
 
 // Alerte toute l'équipe (Patron et Opérateur, pas les livreurs) d'une nouvelle commande.
 // Ne lève jamais d'erreur : un échec d'envoi ne doit pas faire échouer la commande, il est journalisé.
-export async function pushTeamNewOrder(order) {
+// exceptStaffId : l'agent qui vient de saisir la commande (pas d'alerte sur ses propres téléphones).
+export async function pushTeamNewOrder(order, { exceptStaffId = null } = {}) {
   if (!pushEnabled()) return;
-  await pushAndLog(order, { staffUser: { isActive: true, role: { in: ['PATRON', 'OPERATEUR'] } } }, newOrderNotification(order));
+  const where = { staffUser: { isActive: true, role: { in: ['PATRON', 'OPERATEUR'] } }, ...(exceptStaffId && { NOT: { staffUserId: exceptStaffId } }) };
+  await pushAndLog(order, where, newOrderNotification(order));
 }
 
 // Commande livrée : Patron et Opérateurs (pas les livreurs). Ne lève jamais d'erreur.

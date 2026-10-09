@@ -14,6 +14,7 @@ import { staffCoursesRouter } from './staff-courses.routes.js';
 import { staffCashRouter } from './staff-cash.routes.js';
 import { staffDeliveryFeesRouter } from './staff-delivery-fees.routes.js';
 import { staffSettingsRouter } from './staff-settings.routes.js';
+import { staffSourcesRouter } from './staff-sources.routes.js';
 import { ownPasswordSchema } from '../services/team.js';
 import { changeOwnPassword } from '../services/team.service.js';
 
@@ -105,3 +106,4 @@ staffRouter.use('/courses', staffCoursesRouter); // espace livreur
 staffRouter.use('/caisse', staffCashRouter);
 staffRouter.use('/frais-livraison', staffDeliveryFeesRouter); // grille des frais (Patron)
 staffRouter.use('/reglages', staffSettingsRouter); // réglages du logiciel (lus par l'équipe, changés par le Patron)
+staffRouter.use('/provenances', staffSourcesRouter); // provenances des commandes (Patron, lot 2)

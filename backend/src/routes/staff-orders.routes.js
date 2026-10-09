@@ -5,6 +5,9 @@ import {
   changeStatus, confirmNotice, getOrder, listCouriers, listOrders, logMessagePrepared, reassignCourier, setDeliveryFee, setFeeVerified,
 } from '../services/staff-orders.service.js';
 import { MESSAGE_KEYS } from '../services/customer-messages.js';
+import { agentContext, createAgentOrder, findCustomer } from '../services/order-sources.service.js';
+import { agentOrderSchema } from '../validators/order.schema.js';
+import { normalizePhone } from '../utils/phone.js';
 import { FEE_MAX, FEE_METHODS, FEE_MIN, STATUSES } from '../services/order-status.js';
 
 // Commandes de l'espace équipe : Patron et Opérateur
@@ -18,6 +21,36 @@ staffOrdersRouter.get('/', async (req, res, next) => {
     const status = typeof req.query.status === 'string' ? req.query.status : undefined;
     const q = typeof req.query.q === 'string' ? req.query.q.slice(0, 60) : undefined;
     res.json({ ...(await listOrders({ status, q })), serverTime: new Date() });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ─── Prise de commande par l'agent (lot 2, réglage « agentOrders ») ───
+
+// Page « Nouvelle commande » : réglage allumé ou non, et provenances proposées (jamais « Site »)
+staffOrdersRouter.get('/nouvelle', async (req, res, next) => {
+  try {
+    res.json(await agentContext());
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Client retrouvé par son numéro : nom, quartier et repères de sa dernière commande (null = inconnu)
+staffOrdersRouter.get('/client', async (req, res, next) => {
+  try {
+    const phone = normalizePhone(typeof req.query.phone === 'string' ? req.query.phone.slice(0, 30) : '');
+    res.json({ customer: phone ? await findCustomer(phone) : null });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Commande saisie par l'agent : mêmes informations que le site, plus la provenance
+staffOrdersRouter.post('/', async (req, res, next) => {
+  try {
+    res.status(201).json({ order: await createAgentOrder(agentOrderSchema.parse(req.body), req.staff) });
   } catch (e) {
     next(e);
   }

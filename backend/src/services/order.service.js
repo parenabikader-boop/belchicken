@@ -11,7 +11,9 @@ import { INITIAL_STATUS } from './order-status.js';
 import { notifyTeamNewOrder } from './whatsapp.service.js';
 import { pushTeamNewOrder } from './push.service.js';
 
-export async function createOrder(input) {
+// Commande du site, ou saisie par un agent (lot 2) : `agent` = { source, staff } (provenance déjà vérifiée).
+// Même calcul des prix et des frais, même départ « paiement à vérifier », dans les deux cas.
+export async function createOrder(input, agent = null) {
   // Plats et boissons choisies dans les formules
   const productIds = [...new Set(input.items.flatMap((i) => [i.productId, ...(i.drinks || []).map((d) => d.productId)]))];
   const products = await prisma.product.findMany({
@@ -42,7 +44,14 @@ export async function createOrder(input) {
     ...fee,
     items: { create: lines.map(({ drinks, ...l }) => ({ ...l, drinks: { create: drinks } })) },
     // Première ligne de l'historique : commande reçue, paiement à vérifier par l'équipe
-    statusChanges: { create: { toStatus: INITIAL_STATUS } },
+    // (saisie par un agent : à son nom)
+    statusChanges: { create: { toStatus: INITIAL_STATUS, ...(agent && { staffUserId: agent.staff.id, staffName: agent.staff.name }) } },
+    ...(agent && {
+      sourceId: agent.source.id,
+      sourceName: agent.source.name,
+      createdById: agent.staff.id,
+      createdByName: agent.staff.name,
+    }),
   };
 
   // La référence est aléatoire : on réessaie en cas de collision (très improbable)
@@ -62,8 +71,9 @@ export async function createOrder(input) {
 
   // Alertes WhatsApp et téléphones de l'équipe en arrière-plan : le client n'attend pas l'envoi,
   // et un échec n'annule jamais la commande
+  // (saisie par un agent : pas sur ses propres téléphones, il vient de la créer)
   notifyTeamNewOrder(order).catch((e) => console.error('[whatsapp]', e));
-  pushTeamNewOrder(order).catch((e) => console.error('[push]', e));
+  pushTeamNewOrder(order, { exceptStaffId: agent?.staff.id }).catch((e) => console.error('[push]', e));
 
   return order;
 }

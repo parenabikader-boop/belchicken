@@ -19,6 +19,7 @@ import CashPage from './cash/CashPage.jsx';
 import DeliveryFeesPage from './fees/DeliveryFeesPage.jsx';
 import SettingsPage from './settings/SettingsPage.jsx';
 import OrderSlip from './orders/OrderSlip.jsx';
+import NewOrder from './orders/NewOrder.jsx';
 import InstallBanner from '../components/InstallBanner.jsx';
 import './staff.css';
 
@@ -76,6 +77,7 @@ function TeamRoutes() {
       <Route element={<StaffLayout />}>
         <Route index element={<Navigate to="commandes" replace />} />
         <Route path="commandes" element={<OrdersList />} />
+        <Route path="commandes/nouvelle" element={<NewOrder />} />
         <Route path="commandes/:reference" element={<OrderDetail />} />
         <Route path="menu" element={<MenuAdmin />} />
         <Route path="caisse" element={<CashPage />} />

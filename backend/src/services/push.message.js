@@ -7,7 +7,10 @@ export function newOrderNotification(order) {
   const count = order.items.reduce((n, i) => n + i.quantity, 0);
   return {
     title: `Nouvelle commande ${order.reference} · ${formatFcfa(order.itemsTotal)}`,
-    body: `${count} article${count > 1 ? 's' : ''}${order.mode === 'A_EMPORTER' ? ' · à emporter' : ''} · ${PAYMENT_LABELS[order.paymentMethod] || 'Paiement'} à vérifier`,
+    body:
+      `${count} article${count > 1 ? 's' : ''}${order.mode === 'A_EMPORTER' ? ' · à emporter' : ''} · ${PAYMENT_LABELS[order.paymentMethod] || 'Paiement'} à vérifier` +
+      // Saisie par un agent : provenance et agent (jamais le client sur l'écran verrouillé)
+      (order.createdByName ? ` · ${order.sourceName || 'Site'}, saisie par ${order.createdByName}` : ''),
     url: `/equipe/commandes/${encodeURIComponent(order.reference)}`,
     tag: `commande-${order.reference}`, // une seule notification par commande
   };

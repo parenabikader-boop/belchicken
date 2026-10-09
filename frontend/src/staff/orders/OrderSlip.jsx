@@ -14,8 +14,6 @@ const FORMATS = [
   { id: 'a4', label: 'A4', page: '@page{size:A4;margin:14mm}' },
 ];
 const PAID = ['PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE', 'LIVREE'];
-// Provenance de la commande : le site pour l'instant (prise de commande par l'agent : lot 2)
-const SOURCE_LABEL = { SITE: 'Site' };
 
 export default function OrderSlip() {
   const { reference } = useParams();
@@ -64,7 +62,6 @@ export default function OrderSlip() {
 function Slip({ o }) {
   const pickup = isPickup(o);
   const paid = PAID.includes(o.status);
-  const verified = o.history.find((h) => h.toStatus === 'PAYEE');
   const items = o.items.map((i) => ({ ...i, details: [i.variantLabel, i.choice, drinksLabel(i.drinks, i.quantity)].filter(Boolean) }));
 
   return (
@@ -74,7 +71,10 @@ function Slip({ o }) {
         <span className="slip-kind">Bon de commande</span>
         <b className="slip-ref">{o.reference}</b>
         <span>Reçue le {formatDateTime(o.createdAt)}</span>
-        <span>Provenance : {SOURCE_LABEL[o.source] || 'Site'}</span>
+        <span>Provenance : {o.source || 'Site'}</span>
+        {/* Toujours affichés (lot 2) : qui a saisi la commande, qui a vérifié le paiement */}
+        <span>Saisie par : {o.enteredBy || 'le client, sur le site'}</span>
+        <span>Paiement vérifié par : {o.paymentVerified ? `${o.paymentVerified.by || '—'} à ${formatTime(o.paymentVerified.at)}` : 'pas encore vérifié'}</span>
       </header>
 
       <p className={`slip-mode${pickup ? ' slip-emp' : ''}`}>{pickup ? 'À EMPORTER' : 'LIVRAISON'}</p>
@@ -118,7 +118,6 @@ function Slip({ o }) {
       <div className={`slip-paid${paid ? '' : ' todo'}`}>
         <b>{paid ? `PAYÉ – ${METHOD_LABEL[o.paymentMethod]}` : `À VÉRIFIER – ${METHOD_LABEL[o.paymentMethod]}`}</b>
         <span>{formatPrice(o.itemsTotal)}{o.paymentPayerPhone && <> depuis le {formatPhone(o.paymentPayerPhone)}</>}</span>
-        {paid && verified && <small>Vérifié par {verified.by} à {formatTime(verified.at)}</small>}
       </div>
 
       {!pickup && (

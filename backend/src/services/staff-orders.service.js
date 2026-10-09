@@ -9,6 +9,7 @@ import { getAppSettings } from './app-settings.service.js';
 import { customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticeState, THANKS_KEYS, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
 import { pushCourierAssigned, pushCourseCancelled, pushTeamDelivered } from './push.service.js';
+import { enteredBy, paymentVerification, sendFrom, sourceLabel } from './order-sources.js';
 import { checkPickupCode, codeLocked, courierAssignError, generateDeliveryCode, handoverReasonError, MAX_CODE_ATTEMPTS } from './courier.js';
 
 const LIST_LIMIT = 100;
@@ -77,6 +78,9 @@ export async function listOrders({ status, q }) {
       deliveryZoneName: o.deliveryZoneName,
       courierName: o.courierName,
       itemCount: o.items.reduce((n, i) => n + i.quantity, 0),
+      // Lot 2 : provenance et agent qui a saisi (vides = commande passée sur le site)
+      sourceName: o.sourceName,
+      enteredBy: enteredBy(o),
       hasLocation: o.latitude != null,
       toThank: needsThanks(o, { auto }),
     })),
@@ -88,6 +92,8 @@ const DETAIL_INCLUDE = {
   items: { orderBy: { id: 'asc' }, include: { drinks: true } },
   statusChanges: { orderBy: { createdAt: 'asc' } },
   events: { orderBy: { createdAt: 'asc' } },
+  // Provenance WhatsApp : le numéro depuis lequel écrire au client (lot 2)
+  source: { select: { kind: true, phone: true } },
 };
 
 // Motif de la dernière annulation (pour le message au client)
@@ -98,6 +104,8 @@ const notice = (o) => noticeState(o, { auto: customerAutoEnabled() });
 export function toStaffOrder(order) {
   const o = withCancelReason(order);
   const state = notice(o);
+  const from = sendFrom(o);
+  const verified = paymentVerification(o);
   return {
     reference: o.reference,
     status: o.status,
@@ -107,6 +115,12 @@ export function toStaffOrder(order) {
     customerPhone: o.customerPhone,
     paymentMethod: o.paymentMethod,
     paymentPayerPhone: o.paymentPayerPhone,
+    // Lot 2 : provenance (« Site » si vide), agent qui a saisi la commande (null = le client sur le site),
+    // agent qui a vérifié le paiement, et numéro WhatsApp du restaurant depuis lequel écrire au client
+    source: sourceLabel(o),
+    enteredBy: enteredBy(o),
+    paymentVerified: verified && { by: verified.by, at: verified.at },
+    sendFrom: from,
     itemsTotal: o.itemsTotal,
     deliveryFee: o.deliveryFee,
     // Frais payés au livreur à la réception : comment (espèces / mobile money), vérification du mobile money
@@ -166,6 +180,7 @@ export function toStaffOrder(order) {
     // required = l'étape suivante est bloquée tant que l'envoi n'est pas confirmé.
     notice: state && {
       ...customerMessage(o, messageContext()),
+      sendFrom: from,
       required: state.required,
       confirmed: state.confirmed && { type: state.confirmed.type, by: state.confirmed.staffName, at: state.confirmed.createdAt },
       auto: customerAutoEnabled(),
@@ -203,6 +218,7 @@ async function findForRules(tx, reference) {
       id: true, status: true, mode: true, deliveryFee: true, deliveryFeeMethod: true, deliveryFeeVerifiedAt: true, courierId: true,
       cashRemittanceId: true,
       deliveryCode: true, deliveryCodeAttempts: true, shortFlow: true,
+      createdById: true, // commande saisie par un agent : message « à payer » facultatif
       statusChanges: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
       events: { select: { type: true, messageKey: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
     },

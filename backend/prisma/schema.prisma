@@ -149,8 +149,34 @@ model ProductVariant {
 model AppSettings {
   id            Int      @id @default(1)
   shortFlow     Boolean  @default(false) // parcours court : « Paiement vérifié » -> En préparation, un seul message
+  agentOrders   Boolean  @default(false) // lot 2 : prise de commande par l'agent (appel, WhatsApp)
   updatedByName String? // dernier à avoir changé un réglage (copie figée)
   updatedAt     DateTime @updatedAt
+}
+
+// ─── Provenance des commandes (lot 2, src/services/order-sources.js) ───
+
+enum OrderSourceKind {
+  SITE // commandes passées sur le site : jamais proposée à l'agent, ni supprimable ni désactivable
+  APPEL
+  WHATSAPP // phone = numéro WhatsApp depuis lequel l'agent écrit au client
+  AUTRE
+}
+
+// Provenances réglables par le Patron. La migration crée Site, Appel et les deux WhatsApp (si absentes).
+// Jamais supprimées une fois utilisées, seulement désactivées : les commandes gardent le nom copié.
+model OrderSource {
+  id        String          @id @default(cuid())
+  name      String          @unique // « Appel », « WhatsApp +226 05 23 48 48 »…
+  kind      OrderSourceKind
+  phone     String? // WHATSAPP : numéro (+226XXXXXXXX) depuis lequel écrire au client
+  position  Int             @default(0) // ordre dans la liste de l'agent
+  isActive  Boolean         @default(true) // faux = n'apparaît plus dans la liste de l'agent
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  orders    Order[]
+
+  @@index([position])
 }
 
 // ─── Grille des frais de livraison, gérée par le Patron (src/services/delivery-fees.js) ───
@@ -216,6 +242,15 @@ model Order {
   // pour qu'elle garde son message si le réglage change.
   shortFlow Boolean         @default(false)
 
+  // Lot 2 : commande saisie par un agent (appel, WhatsApp). Vide = passée par le client sur le site
+  // (anciennes commandes comprises). sourceName et createdByName sont des copies figées.
+  sourceId      String?
+  source        OrderSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  sourceName    String?
+  createdById   String?
+  createdBy     StaffUser?   @relation("OrdersEntered", fields: [createdById], references: [id], onDelete: SetNull)
+  createdByName String?
+
   paymentMethod     PaymentMethod
   paymentPayerPhone String?
   paymentReference  String? // n° de transaction mobile money
@@ -274,6 +309,8 @@ model Order {
   @@index([createdAt])
   @@index([courierId, status])
   @@index([cashRemittanceId])
+  @@index([customerPhone, createdAt]) // client retrouvé par son numéro (prise de commande par l'agent)
+  @@index([sourceId])
 }
 
 model OrderItem {
@@ -430,6 +467,7 @@ model StaffUser {
   courses           Order[]             @relation("Courses")
   cashRemitted      CashRemittance[]    @relation("CashFromCourier")
   cashReceived      CashRemittance[]    @relation("CashToStaff")
+  ordersEntered     Order[]             @relation("OrdersEntered")
 }
 
 // Une ligne par appareil connecté. Le navigateur garde le jeton dans un cookie httpOnly ;

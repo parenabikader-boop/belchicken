@@ -63,6 +63,10 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
         <div>
           <h1 className="st-title">{o.reference}</h1>
           <p className="st-muted">Reçue le {formatDateTime(o.createdAt)} · {timeAgo(o.createdAt)}</p>
+          {/* Toujours affichés (lot 2) : provenance et qui a saisi la commande */}
+          <p className="st-origin">
+            Provenance : <b>{o.source || 'Site'}</b> · Saisie par : <b>{o.enteredBy || 'le client, sur le site'}</b>
+          </p>
         </div>
         <span className="st-pills">
           {isPickup(o) && <span className="st-pill p-EMPORTER">À emporter</span>}
@@ -101,6 +105,8 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
             <dt>Numéro ayant payé</dt>
             <dd>{o.paymentPayerPhone ? <a href={telHref(o.paymentPayerPhone)}>{formatPhone(o.paymentPayerPhone)}</a> : '—'}</dd>
             <dt>Montant à recevoir</dt><dd><b>{formatPrice(o.itemsTotal)}</b></dd>
+            <dt>Paiement vérifié par</dt>
+            <dd>{o.paymentVerified ? <>{o.paymentVerified.by || '—'}, le {formatDateTime(o.paymentVerified.at)}</> : <span className="st-muted">pas encore vérifié</span>}</dd>
           </dl>
           {isPickup(o) ? (
             <p className="st-note">À emporter : pas de frais de livraison.</p>

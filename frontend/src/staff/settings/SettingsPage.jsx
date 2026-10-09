@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { staffApi } from '../../api/client.js';
 import { formatDateTime } from '../orders/labels.js';
 import { rememberSettings } from './useAppSettings.js';
+import SourcesBox from './SourcesBox.jsx';
 
 // Page « Réglages » (Patron) : les options du logiciel, toutes éteintes par défaut.
 // Éteint = fonctionnement habituel. Le compte Prestataire (lot 4) reprendra ces interrupteurs.
@@ -54,11 +55,31 @@ export default function SettingsPage() {
               <span className="mn-state">{settings.shortFlow ? 'Allumé' : 'Éteint'}</span>
             </label>
           </div>
+          <div className="rg-row rg-sep">
+            <div className="rg-text">
+              <h2>Prise de commande par l’agent</h2>
+              <p>
+                Un bouton <b>« Nouvelle commande »</b> sur la page Commandes : l’agent saisit une commande reçue
+                <b> par appel ou sur WhatsApp</b>, avec sa provenance. Elle suit ensuite le même parcours que le site (paiement vérifié avant).
+              </p>
+              <ul className="rg-list">
+                <li><b>Éteint</b> : seules les commandes du site arrivent, comme aujourd’hui.</li>
+                <li>Le détail et le bon indiquent toujours la provenance, « Saisie par » et « Paiement vérifié par ».</li>
+                <li>Provenance WhatsApp : l’agent voit à chaque étape depuis quel numéro écrire au client.</li>
+              </ul>
+            </div>
+            <label className={`mn-switch${saving ? ' saving' : ''}`}>
+              <input type="checkbox" role="switch" checked={settings.agentOrders} disabled={saving} onChange={() => toggle('agentOrders')} aria-label="Prise de commande par l’agent" />
+              <span className="mn-track" aria-hidden="true" />
+              <span className="mn-state">{settings.agentOrders ? 'Allumé' : 'Éteint'}</span>
+            </label>
+          </div>
           {settings.updatedByName && (
             <p className="st-muted rg-who">Dernier changement : {settings.updatedByName}, le {formatDateTime(settings.updatedAt)}.</p>
           )}
         </section>
       )}
+      {settings && <SourcesBox />}
     </div>
   );
 }

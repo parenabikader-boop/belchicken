@@ -791,3 +791,44 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
   .f-80 .slip{width:100%}
   .f-a4 .slip{max-width:none}
 }
+
+/* Lot 2 : prise de commande par l'agent */
+.st-origin{margin:4px 0 0;font-size:14px}
+.st-new-order{margin-left:auto;padding:9px 14px;font-size:15px}
+.nt-from{margin:0;background:#e7f7ea;border:1px solid #1f9e55;color:#145c33;border-radius:var(--r);padding:8px 12px;font-size:15px}
+.nt-from-inline{font-weight:700}
+.nt-row .btn:has(small){flex-direction:column;gap:2px}
+.nt-row .btn small{display:block;font-size:12px;font-weight:600;opacity:.9}
+.st-action .nt-from{margin-bottom:8px}
+.no{max-width:860px;display:grid;gap:12px}
+.no-intro{margin:-6px 0 2px}
+.no-sec{display:grid;gap:10px}
+.no-opts{display:flex;flex-wrap:wrap;gap:8px}
+.no-opt{border:1px solid var(--line-2);background:var(--panel);border-radius:999px;padding:10px 16px;font-size:15px;font-weight:600;cursor:pointer;color:var(--text)}
+.no-opt.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.no-known{color:#145c33 !important;font-weight:600}
+.no-payer{display:flex;gap:8px;flex-wrap:wrap}
+.no-payer input{flex:1 1 200px}
+.no-dishes{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:360px;overflow:auto}
+.no-dishes button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;border:1px solid #f1dcb4;background:var(--panel);border-radius:var(--r);padding:10px 12px;font-size:15px;cursor:pointer;color:var(--text)}
+.no-dishes button:disabled{opacity:.5;cursor:not-allowed}
+.no-dishes small{display:block;color:var(--bad);font-size:12px}
+.no-price{white-space:nowrap;font-weight:700}
+.no-basket h3{margin:6px 0}
+.no-basket ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.no-basket li{display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center;border-top:1px solid #f1dcb4;padding-top:8px}
+.no-line small{display:block;color:var(--muted);font-size:13px}
+.no-amount{font-weight:700;white-space:nowrap}
+.no-total{margin:8px 0 0 !important;font-size:16px}
+.no-submit{display:grid;gap:8px;position:sticky;bottom:0;background:var(--bg,#fff8ec);padding:12px 0}
+.no-submit .btn{font-size:17px;padding:14px}
+@media (max-width:640px){.no-basket li{grid-template-columns:1fr auto auto}.no-basket li .st-text-btn{grid-column:1/-1;justify-self:start;padding-left:0}.fields{grid-template-columns:1fr}}
+.rg-sep{border-top:1px solid #f1dcb4;margin-top:16px;padding-top:16px}
+.rg-src{margin-top:14px;display:grid;gap:10px}
+.rg-src-t{font-size:20px !important;text-transform:none !important;letter-spacing:0 !important;color:var(--text) !important;font-family:var(--display) !important}
+.rg-src-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.rg-src-list li{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;border:1px solid #f1dcb4;border-radius:var(--r);padding:10px 12px}
+.rg-src-list li.off{opacity:.6}
+.rg-src-n small{display:block;color:var(--muted);font-size:13px}
+.rg-src-act{display:flex;flex-wrap:wrap;gap:4px}
+.rg-src-form{display:grid;gap:10px;width:100%}

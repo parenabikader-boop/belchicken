@@ -3,14 +3,17 @@
 import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 
-export const DEFAULT_SETTINGS = { shortFlow: false };
+export const DEFAULT_SETTINGS = { shortFlow: false, agentOrders: false };
 
 export const settingsSchema = z.object({
   shortFlow: z.boolean().optional(),
+  // Lot 2 : prise de commande par l'agent (appel, WhatsApp)
+  agentOrders: z.boolean().optional(),
 });
 
 const toPublic = (row) => ({
   shortFlow: row?.shortFlow ?? DEFAULT_SETTINGS.shortFlow,
+  agentOrders: row?.agentOrders ?? DEFAULT_SETTINGS.agentOrders,
   updatedByName: row?.updatedByName ?? null,
   updatedAt: row?.updatedAt ?? null,
 });
