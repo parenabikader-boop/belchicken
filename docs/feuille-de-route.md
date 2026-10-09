@@ -24,7 +24,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | Lot | Sujet | État |
 |-----|-------|------|
 | 1 | Parcours court (option) + bon de commande imprimable | En ligne depuis le 8 octobre 2026 (réglage « Parcours court » éteint en production) |
-| 2 | Prise de commande par l'agent (appel, WhatsApp) | En cours, sur dev seulement |
+| 2 | Prise de commande par l'agent (appel, WhatsApp) | En ligne depuis le 9 octobre 2026 (réglage « Prise de commande par l'agent » éteint en production) |
 | 3 | Supplément de nuit dans la grille des frais | À faire |
 | 4 | Compte Prestataire au-dessus du Patron | À faire |
 | 5 | Livraison en deux modes (Restaurant / Prestataire) | À faire |
@@ -55,7 +55,13 @@ de remise ni le code de retrait. Migration `20261008121039_parcours_court` (stru
 - Provenance choisie dans une liste réglable : Site, Appel, WhatsApp 05 23 48 48, WhatsApp 50 62 70 70.
 - L'agent qui saisit est enregistré. Ensuite, même parcours que le site (paiement mobile money avant).
 
-**Avancement (sur dev seulement, rien en ligne, rien enregistré dans Git)** — tenu à jour en cas de coupure :
+Fait, en ligne depuis le 9 octobre 2026 (enregistrement `e1a2341`, réglage éteint en production, sauvegarde Neon
+`sauvegarde-lot2` faite avant). Migration `20261008184021_prise_de_commande_agent` passée sur Render : structure, et les
+4 provenances de départ (Site, Appel, WhatsApp +226 05 23 48 48, WhatsApp +226 50 62 70 70 (Telmob)), créées seulement si
+absentes (`ON CONFLICT DO NOTHING`). Vérifié après la mise en ligne, sans rien écrire en production : serveur et site à jour,
+menu, paiement, livraison, suivi et validation d'une commande du site comme avant.
+
+**Avancement** :
 
 - [x] Base : table `OrderSource`, `Order.sourceId/sourceName/createdById/createdByName`, `AppSettings.agentOrders`.
   Migration `20261008184021_prise_de_commande_agent` (avec les 4 provenances de départ, accord du 8 octobre),
@@ -78,7 +84,7 @@ de remise ni le code de retrait. Migration `20261008121039_parcours_court` (stru
 - [x] Essai de bout en bout avec « Awa (essai) », réglage allumé puis éteint (9 octobre, dev) : 19 vérifications sur 19,
   commandes d'essai supprimées, mot de passe d'Awa remis, Patron d'essai supprimé, aucune ligne `AppSettings` laissée.
 - [x] Captures (16) dans `C:\Users\HP\Desktop\belchiken\captures-lot2-prise-commande\`.
-- [ ] STOP : accord du client, enregistrement Git, puis mise en ligne (migration sur Render, réglage éteint).
+- [x] Accord du client, enregistrement Git, mise en ligne (9 octobre 2026), réglage éteint en production.
 
 ### 3. Supplément de nuit
 
