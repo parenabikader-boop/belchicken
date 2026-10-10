@@ -545,6 +545,36 @@ sa page Équipe (« Compte Prestataire », sans numéro ni action), et `npm run 
 - Migration `20261009220000_compte_prestataire` : structure seulement (rôle, colonnes, 4 tables, règle du journal), aucune donnée.
   Sans compte Prestataire et sans ligne `FeatureSwitch`, tout fonctionne comme avant.
 
+## Équipes de livraison et disponibilité (lot 5b)
+
+Suite du mode de livraison (5a, `Order.deliveryOperator`). Règles : `backend/src/services/courier-team.js`, base :
+`courier-team.service.js`, caisse : `cash.js`.
+
+- **Deux équipes de livreurs** (`StaffUser.courierTeam`) : `RESTAURANT` (tous les livreurs d'avant, créés par le Patron) et
+  `PRESTATAIRE` (notre équipe). Une commande ne part qu'avec un livreur de son mode (refusé par le serveur), et
+  `GET /api/staff/orders/livreurs?reference=…` ne propose que ceux-là.
+- **Disponibilité** (`StaffUser.availability` : `DISPONIBLE` / `EN_PAUSE`) ; « En course » est calculé (au moins une commande
+  `EN_LIVRAISON`). Un livreur en pause est refusé au départ d'une commande. Notre équipe : toujours active. Livreurs du
+  restaurant : seulement avec le réglage du Patron « Tournées et disponibilité » (`AppSettings.restaurantDispatch`, éteint par
+  défaut, interrupteur du Prestataire `TOURNEES_RESTAURANT`). Éteint : comme avant, aucun bouton, tous les livreurs proposés.
+  Chaque changement est noté (`CourierAvailabilityChange`, preuves pour le relevé de 5d).
+  - le livreur : `PUT /api/staff/courses/disponibilite { availability }` (et `availability` dans `GET /api/staff/courses`) ;
+  - Patron, Opérateur : `PUT /api/staff/orders/livreurs/:id/disponibilite` (livreurs du restaurant) ;
+  - Responsable livraison, Prestataire : `PUT /api/staff/livraison/livreurs/:id/disponibilite` (nos livreurs).
+- **Rôle `RESPONSABLE_LIVRAISON`** : créé seulement par le Prestataire. Il crée, désactive, réactive nos livreurs et leur donne un
+  mot de passe provisoire, jamais d'autres responsables ; chaque action notée au journal de sécurité (`COMPTE_LIVRAISON`). Il
+  n'a accès qu'à `/api/staff/livraison/*`, `GET /api/staff/me` et `POST /api/staff/password` : il ne voit **jamais** les ventes
+  de Belchicken (ni plats, ni totaux, ni paiement des plats, ni code de remise). `backend/test/route-access.test.js` parcourt
+  toutes les adresses de `/api/staff` et échoue si une adresse lui est ouverte par erreur ou n'est pas protégée.
+- **Page Livraison** `/equipe/livraison` (Responsable livraison et Prestataire) : `GET /api/staff/livraison` (nos livreurs et
+  nos courses en cours, frais de livraison seulement), `GET/POST /api/staff/livraison/equipe`,
+  `POST …/equipe/:id/password|deactivate|reactivate`, `GET /api/staff/livraison/caisse`, `POST …/caisse/remises`,
+  `POST …/caisse/:reference/verifie { verified }`. Sur la page Équipe du Patron, notre équipe apparaît sans numéro ni action.
+- **Caisse séparée** : la page Caisse (Patron, Opérateur) ne montre que les commandes en mode Restaurant ; celles en mode
+  Prestataire sont dans notre caisse (page Livraison). Une vérification ou une remise est refusée dans la mauvaise caisse
+  (`CashRemittance.operator`). Tableau de bord : frais de notre partenaire comptés à part (`partnerFees`), jamais dans ceux du restaurant.
+- Migration `20261010180000_livraison_equipes_5b` : structure seulement, aucune ligne écrite.
+
 ## Parcours court et bon de commande (lot 1)
 
 - Réglages du logiciel : table `AppSettings` (une ligne, id = 1 ; pas de ligne = tout éteint), `GET /api/staff/reglages`

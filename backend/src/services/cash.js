@@ -4,6 +4,18 @@
 // - Mobile money (code marchand) : l'équipe le vérifie sur le téléphone marchand (« Frais à vérifier »).
 // - Espèces : le livreur les garde jusqu'à ce qu'il les remette au restaurant. « Espèces remises »
 //   regroupe toutes les courses payées en espèces qu'il avait encore sur lui (CashRemittance).
+// - Lot 5b : deux caisses, jamais mélangées, selon le mode de la commande (Order.deliveryOperator) :
+//   RESTAURANT (page Caisse, Patron et Opérateur) et PRESTATAIRE (page Livraison, notre Responsable
+//   livraison et le Prestataire). Les commandes d'avant le lot 5 sont toutes RESTAURANT.
+export const CASH_OPERATORS = ['RESTAURANT', 'PRESTATAIRE'];
+
+// La commande est-elle dans la caisse de cette page ? Renvoie null si oui, sinon le message.
+export function feeOperatorError(order, operator) {
+  if ((order.deliveryOperator || 'RESTAURANT') === operator) return null;
+  return operator === 'RESTAURANT'
+    ? 'Frais payés sur les codes de notre partenaire de livraison : c’est son responsable qui les vérifie.'
+    : 'Cette commande est livrée par le restaurant : ses frais sont dans la caisse du restaurant.';
+}
 
 // Début du jour (minuit, heure du Burkina = UTC)
 const startOfDay = (now) => Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
@@ -29,11 +41,14 @@ export function cashByCourier(orders, couriers = [], now = new Date()) {
 
 // « Espèces remises » : l'agent confirme les courses qu'il voyait à l'écran (references).
 // orders : ces commandes lues en base. Renvoie null si permis, sinon le message.
-export function remitError(orders, courierId, references) {
+// operator (lot 5b) : caisse de la page ; une remise ne mélange jamais les deux caisses.
+export function remitError(orders, courierId, references, operator = 'RESTAURANT') {
   if (!courierId) return 'Choisissez le livreur.';
   if (!references?.length) return 'Ce livreur n’a pas d’espèces à remettre.';
   if (orders.length !== new Set(references).size) return 'Une course a changé. La page est mise à jour.';
   for (const o of orders) {
+    const wrongCash = feeOperatorError(o, operator);
+    if (wrongCash) return `Commande ${o.reference} : ${wrongCash.charAt(0).toLowerCase()}${wrongCash.slice(1)}`;
     if (o.courierId !== courierId) return `La commande ${o.reference} n’a pas été livrée par ce livreur.`;
     if (o.status !== 'LIVREE' || o.deliveryFeeMethod !== 'ESPECES') return `La commande ${o.reference} n’a pas été payée en espèces.`;
     if (o.cashRemittanceId) return `Les espèces de la commande ${o.reference} sont déjà remises. La page est mise à jour.`;

@@ -17,6 +17,7 @@ const TYPE_LABEL = {
   SCRIPT: 'Script (ordinateur)',
   MOT_DE_PASSE: 'Mot de passe changé', // lot 5
   LIVRAISON: 'Mode de livraison', // lot 5 : mode, société ou codes marchands
+  COMPTE_LIVRAISON: 'Équipe de livraison', // lot 5b : comptes du Responsable livraison et de nos livreurs
 };
 
 // Navigateur lisible : « Chrome sur Android », sinon le début du texte

@@ -298,7 +298,7 @@ export function Actions({ order: o, steps }) {
     return (
       <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'EN_LIVRAISON', courierId })); }}>
         <b>Quel livreur part avec la commande ?</b>
-        <CourierPicker value={courierId} onChange={setCourierId} />
+        <CourierPicker reference={o.reference} value={courierId} onChange={setCourierId} />
         <p className="st-muted">Il reçoit une notification. Le client reçoit le code de remise dans le message « en route ».</p>
         {steps.error && <p className="st-err">{steps.error}</p>}
         {fromHint}
@@ -473,6 +473,7 @@ export function DeliveryFee({ order: o, steps }) {
   const newNight = toNight(night);
   const same = newAmount === o.deliveryFee && (newNight || null) === (o.deliveryNightFee || null);
   const paid = o.status === 'LIVREE' && method;
+  const partner = o.deliveryOperator === 'PRESTATAIRE'; // lot 5b : caisse de notre partenaire de livraison
   const ok = paid && (method === 'ESPECES' ? o.cashRemitted : Boolean(o.deliveryFeeVerifiedAt));
 
   return (
@@ -523,10 +524,21 @@ export function DeliveryFee({ order: o, steps }) {
       {paid && method === 'ESPECES' && (
         <p className={`of-paid${o.cashRemitted ? ' done' : ''}`}>
           <b>Payés en espèces au livreur</b>
-          <small>{o.cashRemitted ? 'Espèces remises au restaurant.' : `Encore chez ${o.courier?.name || 'le livreur'} : à remettre (page Caisse).`}</small>
+          <small>
+            {partner
+              ? o.cashRemitted ? 'Espèces remises à notre partenaire de livraison.' : `Encore chez ${o.courier?.name || 'le livreur'} : à remettre à son responsable.`
+              : o.cashRemitted ? 'Espèces remises au restaurant.' : `Encore chez ${o.courier?.name || 'le livreur'} : à remettre (page Caisse).`}
+          </small>
         </p>
       )}
-      {paid && method === 'MOBILE_MONEY' && (
+      {/* Lot 5b : frais payés sur les codes de notre partenaire, vérifiés par son responsable (caisse séparée) */}
+      {paid && method === 'MOBILE_MONEY' && partner && (
+        <p className={`of-paid${o.deliveryFeeVerifiedAt ? ' done' : ''}`}>
+          <b>Payés par mobile money sur les codes de notre partenaire</b>
+          <small>{o.deliveryFeeVerifiedAt ? `Vérifiés par son responsable à ${formatTime(o.deliveryFeeVerifiedAt)}.` : 'Vérifiés par le responsable livraison de notre partenaire.'}</small>
+        </p>
+      )}
+      {paid && method === 'MOBILE_MONEY' && !partner && (
         <label className="of-check">
           <input
             type="checkbox"
@@ -566,33 +578,79 @@ export function FeeMethodPicker({ fee, value, onChange, big = false }) {
   );
 }
 
-// Liste des livreurs actifs, avec leurs courses en cours
-function CourierPicker({ value, onChange, exclude }) {
-  const [couriers, setCouriers] = useState(null);
+// Liste des livreurs actifs, avec leurs courses en cours. Lot 5b : seulement ceux de l'équipe du mode
+// de la commande ; avec la disponibilité active, leur état (En pause : refusé par le serveur) et, pour les
+// livreurs du restaurant, un bouton pour les mettre en pause ou les rendre disponibles.
+function CourierPicker({ reference, value, onChange, exclude }) {
+  const [data, setData] = useState(null);
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState('');
 
   useEffect(() => {
-    staffApi.couriers().then(setCouriers, (e) => setError(e.message));
-  }, []);
+    staffApi.couriers(reference).then(setData, (e) => setError(e.message));
+  }, [reference]);
 
-  if (error) return <p className="st-err">{error}</p>;
-  if (!couriers) return <p className="st-muted">Chargement des livreurs…</p>;
-  const list = couriers.filter((c) => c.id !== exclude);
-  if (list.length === 0) {
-    return <p className="st-verify-hint">Aucun autre compte livreur actif. Le Patron les crée sur la page Équipe.</p>;
+  async function toggle(c) {
+    setBusy(c.id);
+    setError('');
+    try {
+      await staffApi.setRestaurantAvailability(c.id, c.availability === 'EN_PAUSE' ? 'DISPONIBLE' : 'EN_PAUSE');
+      setData(await staffApi.couriers(reference));
+      if (value === c.id) onChange('');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy('');
+    }
   }
+
+  if (!data) return error ? <p className="st-err">{error}</p> : <p className="st-muted">Chargement des livreurs…</p>;
+  const partner = data.team === 'PRESTATAIRE';
+  const list = data.couriers.filter((c) => c.id !== exclude);
+  if (list.length === 0) {
+    return (
+      <p className="st-verify-hint">
+        {partner
+          ? 'Aucun livreur de notre partenaire n’est actif. Appelez son responsable livraison.'
+          : 'Aucun autre compte livreur actif. Le Patron les crée sur la page Équipe.'}
+      </p>
+    );
+  }
+  const courses = (n) => `${n} course${n > 1 ? 's' : ''} en cours`;
+  const detail = (c) => {
+    if (c.state === 'EN_PAUSE') return 'En pause';
+    if (c.state === 'EN_COURSE') return `En course · ${courses(c.activeCourses)}`;
+    if (c.state === 'DISPONIBLE') return 'Disponible';
+    return c.activeCourses ? courses(c.activeCourses) : 'disponible'; // disponibilité pas active : comme avant
+  };
   return (
-    <div className="cr-pick" role="radiogroup" aria-label="Livreur">
-      {list.map((c) => (
-        <label key={c.id} className="cr-opt">
-          <input type="radio" name="livreur" value={c.id} checked={value === c.id} onChange={() => onChange(c.id)} />
-          <span>
-            <b>{c.name}</b>
-            <small>{formatPhone(c.phone)} · {c.activeCourses ? `${c.activeCourses} course${c.activeCourses > 1 ? 's' : ''} en cours` : 'disponible'}</small>
-          </span>
-        </label>
-      ))}
-    </div>
+    <>
+      {partner && <p className="st-verify-hint">Livraison Prestataire : seuls les livreurs de notre partenaire sont proposés.</p>}
+      {error && <p className="st-err">{error}</p>}
+      <div className="cr-pick" role="radiogroup" aria-label="Livreur">
+        {list.map((c) => {
+          const paused = c.state === 'EN_PAUSE';
+          return (
+            <div key={c.id} className={`cr-row${paused ? ' paused' : ''}`}>
+              <label className="cr-opt">
+                <input type="radio" name="livreur" value={c.id} checked={value === c.id} disabled={paused} onChange={() => onChange(c.id)} />
+                <span>
+                  <b>{c.name}</b>
+                  <small>
+                    {formatPhone(c.phone)} · {c.state ? <span className={`cr-state ${c.state.toLowerCase()}`}>{detail(c)}</span> : detail(c)}
+                  </small>
+                </span>
+              </label>
+              {!partner && data.availabilityActive && (
+                <button type="button" className="btn btn-s btn-sm" disabled={busy === c.id} onClick={() => toggle(c)}>
+                  {paused ? 'Disponible' : 'En pause'}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
@@ -637,7 +695,7 @@ export function CourierBox({ order: o, onChange }) {
       )}
       {o.status === 'EN_LIVRAISON' && (editing ? (
         <form onSubmit={save}>
-          <CourierPicker value={courierId} onChange={setCourierId} exclude={o.courier.id} />
+          <CourierPicker reference={o.reference} value={courierId} onChange={setCourierId} exclude={o.courier.id} />
           {error && <p className="st-err">{error}</p>}
           <div className="cr-actions">
             <button type="submit" className="btn btn-p" disabled={busy || !courierId}>{busy ? 'Enregistrement…' : 'Confier à ce livreur'}</button>

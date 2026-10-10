@@ -54,7 +54,7 @@ export function StaffProvider({ children }) {
 
 export const useStaff = () => useContext(StaffContext);
 
-export const ROLE_LABEL = { PATRON: 'Patron', OPERATEUR: 'Opérateur', LIVREUR: 'Livreur', PRESTATAIRE: 'Prestataire' };
+export const ROLE_LABEL = { PATRON: 'Patron', OPERATEUR: 'Opérateur', LIVREUR: 'Livreur', PRESTATAIRE: 'Prestataire', RESPONSABLE_LIVRAISON: 'Responsable livraison' };
 
 // Lot 4 : le Prestataire fait tout ce que fait le Patron (même règle que l'API, roles.js)
 export const isPatronLevel = (role) => role === 'PATRON' || role === 'PRESTATAIRE';

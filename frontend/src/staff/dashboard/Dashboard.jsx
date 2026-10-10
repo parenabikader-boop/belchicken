@@ -284,6 +284,13 @@ export default function Dashboard() {
                 <dd><b>{formatPrice(s.deliveryMobile)}</b> <small className="st-muted">{plural(s.deliveryMobileCount, 'commande')}</small></dd>
               </dl>
               <p className="st-muted db-note">Payés au livreur à la réception, sauf commande annulée. À part du chiffre des plats.</p>
+              {/* Lot 5b : frais des commandes livrées par notre partenaire, payés sur ses codes : pas des recettes du restaurant */}
+              {s.partnerFeesCount > 0 && (
+                <p className="st-muted db-note">
+                  Livraisons par notre partenaire : {plural(s.partnerFeesCount, 'commande')}, {formatPrice(s.partnerFees)} de frais
+                  payés sur ses codes, non comptés ci-dessus.
+                </p>
+              )}
               {data.cashWithCouriers && (
                 <Link to="/equipe/caisse?onglet=livreurs" className={`db-cash${data.cashWithCouriers.amount ? ' has' : ''}`}>
                   <span>Espèces encore chez les livreurs</span>

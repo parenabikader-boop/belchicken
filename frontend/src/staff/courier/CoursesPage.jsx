@@ -23,10 +23,12 @@ export default function CoursesPage() {
   const [error, setError] = useState(null);
   const known = useRef(null); // références déjà vues : une nouvelle course sonne
   const [success, setSuccess] = useState(null); // course qui vient d'être remise
+  const [availability, setAvailability] = useState(null); // lot 5b : Disponible / En pause (si active pour son équipe)
 
   const load = useCallback(async () => {
     try {
-      const { courses: list } = await staffApi.courses();
+      const { courses: list, availability: mine } = await staffApi.courses();
+      setAvailability(mine || null);
       const active = list.filter((c) => c.status === 'EN_LIVRAISON').map((c) => c.reference);
       if (known.current && active.some((r) => !known.current.has(r))) play();
       known.current = new Set(active);
@@ -73,6 +75,7 @@ export default function CoursesPage() {
         <h1 className="st-title">Mes courses</h1>
         <span className="st-muted">{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
       </div>
+      {availability?.active && <AvailabilitySwitch value={availability} onChange={setAvailability} />}
       <AlertsPrompt what="course" />
       {!soundReady && active.length === 0 && <p className="st-muted lv-sound">Touchez l’écran une fois : un son vous prévient de chaque nouvelle course.</p>}
       {error && <div className="alert err" role="alert" style={{ marginBottom: 12 }}><span>{error.message}</span></div>}
@@ -253,5 +256,39 @@ function Handover({ course: c, onDelivered, onRefresh }) {
       </div>
       {error && <p className="st-err" role="alert">{error}</p>}
     </form>
+  );
+}
+
+// Lot 5b : le livreur se met Disponible ou En pause. En pause : l'équipe ne peut plus lui confier de course.
+// « En course » est calculé par le serveur dès qu'il a une course en cours.
+function AvailabilitySwitch({ value, onChange }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const paused = value.availability === 'EN_PAUSE';
+
+  async function set(next) {
+    if (next === value.availability) return;
+    setBusy(true);
+    setError('');
+    try {
+      onChange(await staffApi.setMyAvailability(next));
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="st-box" aria-label="Ma disponibilité">
+      <b>Ma disponibilité</b>
+      {value.state && <> · <span className={`av-pill ${value.state.toLowerCase()}`}>{value.stateLabel}</span></>}
+      <div className="av-switch">
+        <button type="button" className="on" aria-pressed={!paused} disabled={busy} onClick={() => set('DISPONIBLE')}>Disponible</button>
+        <button type="button" className="off" aria-pressed={paused} disabled={busy} onClick={() => set('EN_PAUSE')}>En pause</button>
+      </div>
+      <small className="st-muted">{paused ? 'En pause : l’équipe ne vous confie plus de nouvelle course.' : 'L’équipe peut vous confier des courses.'}</small>
+      {error && <p className="st-err">{error}</p>}
+    </section>
   );
 }

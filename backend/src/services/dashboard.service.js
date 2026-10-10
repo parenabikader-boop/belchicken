@@ -13,6 +13,7 @@ export async function getDashboard({ period, offset }) {
       itemsTotal: true,
       deliveryFee: true,
       deliveryFeeMethod: true,
+      deliveryOperator: true,
       courierId: true,
       courierName: true,
       customerName: true,
@@ -46,9 +47,10 @@ export async function getDashboard({ period, offset }) {
       withoutCode: Boolean(delivered?.reason), // validée par l'agent, avec un motif
     };
   });
-  // Espèces encore chez les livreurs, aujourd'hui (quelle que soit la période affichée)
+  // Espèces encore chez les livreurs du restaurant, aujourd'hui (quelle que soit la période affichée).
+  // Lot 5b : jamais celles de notre équipe (caisse séparée).
   const cash = await prisma.order.aggregate({
-    where: { status: 'LIVREE', deliveryFeeMethod: 'ESPECES', cashRemittanceId: null },
+    where: { status: 'LIVREE', deliveryOperator: 'RESTAURANT', deliveryFeeMethod: 'ESPECES', cashRemittanceId: null },
     _sum: { deliveryFee: true },
     _count: { _all: true },
   });

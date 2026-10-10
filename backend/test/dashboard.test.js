@@ -61,7 +61,7 @@ test('chiffre d\'affaires : seules les commandes payées et au-delà comptent', 
   ];
   const d = buildDashboard(orders, range);
   // revenue = plats seulement ; frais de livraison à part, une fois reçus, hors commandes annulées
-  assert.deepEqual(d.summary, { received: 6, paid: 3, revenue: 12000, deliveryRevenue: 2000, deliveryPaid: 2, deliveryCash: 1500, deliveryCashCount: 1, deliveryMobile: 500, deliveryMobileCount: 1, avgBasket: 4000, cancelled: 2, toVerify: 1 });
+  assert.deepEqual(d.summary, { received: 6, paid: 3, revenue: 12000, deliveryRevenue: 2000, deliveryPaid: 2, deliveryCash: 1500, deliveryCashCount: 1, deliveryMobile: 500, deliveryMobileCount: 1, partnerFees: 0, partnerFeesCount: 0, avgBasket: 4000, cancelled: 2, toVerify: 1 });
   assert.equal(d.previous.revenue, 6000);
   assert.equal(d.timeline.length, 24);
   assert.equal(d.timeline[12].revenue, 7000);

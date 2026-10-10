@@ -210,11 +210,11 @@ test('parcours court et prise de commande fermés : comme si le Patron les avait
   const open = await getAppSettings(fakeDb({ app }));
   assert.equal(open.shortFlow, true);
   assert.equal(open.agentOrders, true);
-  assert.deepEqual(open.included, { shortFlow: true, agentOrders: true });
+  assert.deepEqual(open.included, { shortFlow: true, agentOrders: true, restaurantDispatch: true });
   const closed = await getAppSettings(fakeDb({ app, closed: ['PARCOURS_COURT'] }));
   assert.equal(closed.shortFlow, false);
   assert.equal(closed.agentOrders, true);
-  assert.deepEqual(closed.included, { shortFlow: false, agentOrders: true });
+  assert.deepEqual(closed.included, { shortFlow: false, agentOrders: true, restaurantDispatch: true });
   // Sans réglage enregistré : tout éteint, comme avant
   assert.equal((await getAppSettings(fakeDb())).shortFlow, false);
 });

@@ -61,6 +61,13 @@ enum DeliveryOperator {
   PRESTATAIRE
 }
 
+// Lot 5b : disponibilité d'un livreur, choisie par lui (page Courses) ou par l'équipe. « En course » n'est
+// jamais stocké : calculé (au moins une commande EN_LIVRAISON). Règles dans src/services/courier-team.js.
+enum CourierAvailability {
+  DISPONIBLE
+  EN_PAUSE
+}
+
 enum NotificationStatus {
   ENVOYEE
   ECHEC
@@ -155,11 +162,14 @@ model ProductVariant {
 // éteint (la migration n'écrit rien). Chaque nouveauté de la feuille de route (docs/feuille-de-route.md)
 // y ajoute son interrupteur, éteint par défaut.
 model AppSettings {
-  id            Int      @id @default(1)
-  shortFlow     Boolean  @default(false) // parcours court : « Paiement vérifié » -> En préparation, un seul message
-  agentOrders   Boolean  @default(false) // lot 2 : prise de commande par l'agent (appel, WhatsApp)
-  updatedByName String? // dernier à avoir changé un réglage (copie figée)
-  updatedAt     DateTime @updatedAt
+  id                 Int      @id @default(1)
+  shortFlow          Boolean  @default(false) // parcours court : « Paiement vérifié » -> En préparation, un seul message
+  agentOrders        Boolean  @default(false) // lot 2 : prise de commande par l'agent (appel, WhatsApp)
+  // Lot 5b : tournées et disponibilité des livreurs du restaurant (mode Restaurant). Éteint = comme avant.
+  // Inclus ou non par le Prestataire (interrupteur TOURNEES_RESTAURANT). Nos livreurs : toujours actif.
+  restaurantDispatch Boolean  @default(false)
+  updatedByName      String? // dernier à avoir changé un réglage (copie figée)
+  updatedAt          DateTime @updatedAt
 }
 
 // ─── Provenance des commandes (lot 2, src/services/order-sources.js) ───
@@ -267,11 +277,11 @@ model Order {
   customerPhone String // normalisé +226XXXXXXXX
 
   // À emporter : ni position, ni frais de livraison, ni livreur. PRETE puis LIVREE (« Retirée »).
-  mode      FulfillmentMode @default(LIVRAISON)
+  mode             FulfillmentMode  @default(LIVRAISON)
   // Parcours court (réglage AppSettings.shortFlow) : « Paiement vérifié » a fait passer la commande de
   // PAIEMENT_A_VERIFIER directement à EN_PREPARATION, avec un seul message au client. Noté sur la commande
   // pour qu'elle garde son message si le réglage change.
-  shortFlow Boolean         @default(false)
+  shortFlow        Boolean          @default(false)
   // Lot 5 : qui livre et encaisse les frais, figé à la création (mode de DeliveryCompany à ce moment).
   // Changer de mode ne touche pas les commandes déjà passées. Anciennes commandes : RESTAURANT.
   deliveryOperator DeliveryOperator @default(RESTAURANT)
@@ -444,20 +454,23 @@ model OrderEvent {
 // Une remise regroupe toutes les commandes payées en espèces que le livreur avait encore sur lui.
 // Les noms sont des copies figées, comme dans l'historique des commandes.
 model CashRemittance {
-  id             String     @id @default(cuid())
+  id             String           @id @default(cuid())
   courierId      String?
-  courier        StaffUser? @relation("CashFromCourier", fields: [courierId], references: [id], onDelete: SetNull)
+  courier        StaffUser?       @relation("CashFromCourier", fields: [courierId], references: [id], onDelete: SetNull)
   courierName    String
   amount         Int // total remis, en F
   orderCount     Int
   receivedById   String?
-  receivedBy     StaffUser? @relation("CashToStaff", fields: [receivedById], references: [id], onDelete: SetNull)
+  receivedBy     StaffUser?       @relation("CashToStaff", fields: [receivedById], references: [id], onDelete: SetNull)
   receivedByName String
+  // Lot 5b : caisse du restaurant (commandes en mode Restaurant) ou la nôtre (mode Prestataire), jamais mélangées
+  operator       DeliveryOperator @default(RESTAURANT)
   orders         Order[]
-  createdAt      DateTime   @default(now())
+  createdAt      DateTime         @default(now())
 
   @@index([courierId, createdAt])
   @@index([createdAt])
+  @@index([operator, createdAt])
 }
 
 model NotificationLog {
@@ -484,38 +497,64 @@ enum StaffRole {
   // Lot 4 : tout ce que fait le Patron, plus les interrupteurs des fonctions. Créé seulement par
   // npm run equipe:prestataire, jamais depuis une page ; le Patron ne peut pas le modifier.
   PRESTATAIRE
+  // Lot 5b : responsable de notre équipe de livraison. Créé seulement par le Prestataire. Gère nos livreurs
+  // et notre caisse ; ne voit JAMAIS les ventes de Belchicken (plats, totaux, paiement des plats).
+  RESPONSABLE_LIVRAISON
 }
 
 model StaffUser {
-  id                 String    @id @default(cuid())
-  name               String
-  phone              String    @unique // normalisé +226XXXXXXXX, sert d'identifiant de connexion
-  role               StaffRole
-  passwordHash       String // scrypt, voir src/services/staff-auth.js
-  isActive           Boolean   @default(true) // faux = compte désactivé (agent parti) : plus de connexion possible
+  id                    String              @id @default(cuid())
+  name                  String
+  phone                 String              @unique // normalisé +226XXXXXXXX, sert d'identifiant de connexion
+  role                  StaffRole
+  passwordHash          String // scrypt, voir src/services/staff-auth.js
+  isActive              Boolean             @default(true) // faux = compte désactivé (agent parti) : plus de connexion possible
   // Vrai après la création du compte ou une réinitialisation par le Patron : le mot de passe est
   // provisoire, rien n'est accessible tant que le membre ne l'a pas remplacé par le sien.
-  mustChangePassword Boolean   @default(false)
-  lastLoginAt        DateTime?
+  mustChangePassword    Boolean             @default(false)
+  lastLoginAt           DateTime?
   // Lot 4, Prestataire seulement (vides pour les autres comptes) : code de Google Authenticator
   // et blocage après des essais ratés, gardé en base (survit aux redémarrages du serveur)
-  totpSecretEnc      String? // clé du code à 6 chiffres, chiffrée (AES-256-GCM, clé PRESTATAIRE_TOTP_KEY)
-  totpLastStep       Int? // période du dernier code accepté : un même code ne sert pas deux fois
-  failedLogins       Int       @default(0) // essais ratés d'affilée (mot de passe ou code)
-  lockedUntil        DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  totpSecretEnc         String? // clé du code à 6 chiffres, chiffrée (AES-256-GCM, clé PRESTATAIRE_TOTP_KEY)
+  totpLastStep          Int? // période du dernier code accepté : un même code ne sert pas deux fois
+  failedLogins          Int                 @default(0) // essais ratés d'affilée (mot de passe ou code)
+  lockedUntil           DateTime?
+  // Lot 5b, livreurs seulement : équipe du restaurant (tous les livreurs d'avant) ou la nôtre, créée par le
+  // Prestataire ou le Responsable livraison. Une commande ne part qu'avec un livreur de son mode.
+  courierTeam           DeliveryOperator    @default(RESTAURANT)
+  availability          CourierAvailability @default(DISPONIBLE)
+  availabilityChangedAt DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
 
-  recoveryCodes     StaffRecoveryCode[]
-  loginChallenges   StaffLoginChallenge[]
-  sessions          StaffSession[]
-  statusChanges     OrderStatusChange[]
-  orderEvents       OrderEvent[]
-  pushSubscriptions PushSubscription[]
-  courses           Order[]             @relation("Courses")
-  cashRemitted      CashRemittance[]    @relation("CashFromCourier")
-  cashReceived      CashRemittance[]    @relation("CashToStaff")
-  ordersEntered     Order[]             @relation("OrdersEntered")
+  recoveryCodes       StaffRecoveryCode[]
+  loginChallenges     StaffLoginChallenge[]
+  sessions            StaffSession[]
+  statusChanges       OrderStatusChange[]
+  orderEvents         OrderEvent[]
+  pushSubscriptions   PushSubscription[]
+  courses             Order[]                     @relation("Courses")
+  cashRemitted        CashRemittance[]            @relation("CashFromCourier")
+  cashReceived        CashRemittance[]            @relation("CashToStaff")
+  ordersEntered       Order[]                     @relation("OrdersEntered")
+  availabilityChanges CourierAvailabilityChange[]
+}
+
+// Lot 5b : chaque passage Disponible / En pause d'un livreur (preuves pour le relevé du sous-lot 5d).
+// Noms copiés, comme dans l'historique des commandes.
+model CourierAvailabilityChange {
+  id          String              @id @default(cuid())
+  courierId   String?
+  courier     StaffUser?          @relation(fields: [courierId], references: [id], onDelete: SetNull)
+  courierName String
+  team        DeliveryOperator // équipe du livreur au moment du changement
+  from        CourierAvailability
+  to          CourierAvailability
+  byName      String // le livreur lui-même ou l'agent (copie figée)
+  createdAt   DateTime            @default(now())
+
+  @@index([courierId, createdAt])
+  @@index([createdAt])
 }
 
 // Une ligne par appareil connecté. Le navigateur garde le jeton dans un cookie httpOnly ;
@@ -577,6 +616,7 @@ enum SecurityLogType {
   SCRIPT // npm run equipe:prestataire : création, téléphone perdu, mot de passe, déblocage
   MOT_DE_PASSE // lot 5 : le Prestataire a changé son mot de passe dans l'application
   LIVRAISON // lot 5 : mode de livraison, société ou codes marchands du Prestataire changés (avant -> après dans detail)
+  COMPTE_LIVRAISON // lot 5b : compte Responsable livraison ou livreur de notre équipe créé, désactivé, réactivé, mot de passe provisoire
 }
 
 // Lot 4 : journal de sécurité. Aucune adresse ne le modifie, et la base refuse toute modification ou

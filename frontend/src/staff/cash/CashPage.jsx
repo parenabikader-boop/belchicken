@@ -11,20 +11,38 @@ const REFRESH_MS = 15000;
 //   - Frais à vérifier : payés par mobile money (code marchand), à cocher après vérification.
 //   - Caisse livreurs : espèces encore chez chaque livreur, bouton « Espèces remises », historique.
 // Adresse : ?onglet=verifier|livreurs
+// Lot 5b : seulement les commandes livrées par le restaurant ; celles de notre partenaire de livraison sont
+// dans sa caisse (page Livraison, même écran).
+const RESTAURANT_CASH = { load: staffApi.cash, verify: staffApi.setFeeVerified, remit: staffApi.remitCash };
+
 export default function CashPage() {
   const [params, setParams] = useSearchParams();
   const tab = params.get('onglet') === 'livreurs' ? 'livreurs' : 'verifier';
+  return (
+    <>
+      <div className="st-head">
+        <h1 className="st-title">Caisse</h1>
+        <span className="st-muted">Frais de livraison payés au livreur</span>
+      </div>
+      <CashBoard tab={tab} onTab={(t) => setParams(t === 'livreurs' ? { onglet: 'livreurs' } : {})} cashApi={RESTAURANT_CASH} />
+    </>
+  );
+}
+
+// Les deux onglets de la caisse. partner (lot 5b) : caisse de notre équipe de livraison (page Livraison) :
+// les références ne mènent pas au détail des commandes, que le Responsable livraison ne voit jamais.
+export function CashBoard({ tab, onTab, cashApi, partner = false }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     try {
-      setData(await staffApi.cash());
+      setData(await cashApi.load());
       setError('');
     } catch (e) {
       setError(e.message);
     }
-  }, []);
+  }, [cashApi]);
 
   useEffect(() => {
     load();
@@ -34,18 +52,14 @@ export default function CashPage() {
 
   const cashTotal = data ? data.couriers.reduce((s, c) => s + c.amount, 0) : 0;
 
+  const ctx = { cashApi, partner };
   return (
     <>
-      <div className="st-head">
-        <h1 className="st-title">Caisse</h1>
-        <span className="st-muted">Frais de livraison payés au livreur</span>
-      </div>
-
       <nav className="od-tabs" aria-label="Caisse">
-        <button type="button" className={`od-tab${tab === 'verifier' ? ' on' : ''}${data?.toVerify.length ? ' has warn' : ''}`} aria-pressed={tab === 'verifier'} onClick={() => setParams({})}>
+        <button type="button" className={`od-tab${tab === 'verifier' ? ' on' : ''}${data?.toVerify.length ? ' has warn' : ''}`} aria-pressed={tab === 'verifier'} onClick={() => onTab('verifier')}>
           Frais à vérifier <span>{data ? data.toVerify.length : '…'}</span>
         </button>
-        <button type="button" className={`od-tab${tab === 'livreurs' ? ' on' : ''}${cashTotal ? ' has' : ''}`} aria-pressed={tab === 'livreurs'} onClick={() => setParams({ onglet: 'livreurs' })}>
+        <button type="button" className={`od-tab${tab === 'livreurs' ? ' on' : ''}${cashTotal ? ' has' : ''}`} aria-pressed={tab === 'livreurs'} onClick={() => onTab('livreurs')}>
           Caisse livreurs <span>{data ? formatPrice(cashTotal) : '…'}</span>
         </button>
       </nav>
@@ -54,34 +68,34 @@ export default function CashPage() {
       {!data ? (
         !error && <p className="st-muted">Chargement de la caisse…</p>
       ) : tab === 'verifier' ? (
-        <ToVerify data={data} onChange={load} />
+        <ToVerify data={data} onChange={load} ctx={ctx} />
       ) : (
-        <Couriers data={data} onChange={load} />
+        <Couriers data={data} onChange={load} ctx={ctx} />
       )}
     </>
   );
 }
 
 // ─────────── Frais à vérifier (mobile money) ───────────
-function ToVerify({ data, onChange }) {
+function ToVerify({ data, onChange, ctx }) {
   return (
     <>
       <p className="od-hint ca-hint">
-        Frais payés par Orange Money, Moov Money ou Telecel Money (code marchand), à la réception. Vérifiez sur le téléphone marchand que le montant est
+        Frais payés par Orange Money, Moov Money ou Telecel Money (code marchand), à la réception. Vérifiez sur {ctx.partner ? 'notre' : 'le'} téléphone marchand que le montant est
         bien arrivé, puis cochez.
       </p>
       {data.toVerify.length === 0 ? (
         <p className="od-empty">Aucuns frais à vérifier.</p>
       ) : (
         <ul className="ca-list">
-          {data.toVerify.map((o) => <FeeRow key={o.reference} row={o} onChange={onChange} />)}
+          {data.toVerify.map((o) => <FeeRow key={o.reference} row={o} onChange={onChange} ctx={ctx} />)}
         </ul>
       )}
       {data.verified.length > 0 && (
         <section className="ca-sec">
           <h2>Vérifiés ces dernières 24 h</h2>
           <ul className="ca-list">
-            {data.verified.map((o) => <FeeRow key={o.reference} row={o} onChange={onChange} />)}
+            {data.verified.map((o) => <FeeRow key={o.reference} row={o} onChange={onChange} ctx={ctx} />)}
           </ul>
         </section>
       )}
@@ -89,7 +103,13 @@ function ToVerify({ data, onChange }) {
   );
 }
 
-function FeeRow({ row: o, onChange }) {
+// Référence d'une commande : lien vers son détail, sauf pour notre équipe de livraison
+function Ref({ reference, partner, className }) {
+  if (partner) return <span className={className}>{reference}</span>;
+  return <Link to={`/equipe/commandes/${reference}`} className={className}>{reference}</Link>;
+}
+
+function FeeRow({ row: o, onChange, ctx }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const verified = Boolean(o.verifiedAt);
@@ -97,7 +117,7 @@ function FeeRow({ row: o, onChange }) {
     setBusy(true);
     setError('');
     try {
-      await staffApi.setFeeVerified(o.reference, value);
+      await ctx.cashApi.verify(o.reference, value);
       await onChange();
     } catch (e) {
       setError(e.message);
@@ -107,7 +127,7 @@ function FeeRow({ row: o, onChange }) {
   return (
     <li className={`ca-row${verified ? ' done' : ''}`}>
       <div className="ca-main">
-        <Link to={`/equipe/commandes/${o.reference}`} className="st-ref">{o.reference}</Link>
+        <Ref reference={o.reference} partner={ctx.partner} className="st-ref" />
         <span>{o.customerName} · {formatPhone(o.customerPhone)}</span>
         <small className="st-muted">
           Livrée{o.courierName && ` par ${o.courierName}`}{o.deliveredAt && ` ${timeAgo(o.deliveredAt)}`}
@@ -128,18 +148,18 @@ function FeeRow({ row: o, onChange }) {
 }
 
 // ─────────── Caisse livreurs (espèces) ───────────
-function Couriers({ data, onChange }) {
+function Couriers({ data, onChange, ctx }) {
   return (
     <>
       <p className="od-hint ca-hint">
-        Espèces encaissées par chaque livreur et pas encore remises au restaurant. Comptez l’argent avec le livreur, puis appuyez sur « Espèces
+        Espèces encaissées par chaque livreur et pas encore remises {ctx.partner ? 'au responsable livraison' : 'au restaurant'}. Comptez l’argent avec le livreur, puis appuyez sur « Espèces
         remises ».
       </p>
       {data.couriers.length === 0 ? (
-        <p className="od-empty">Aucun compte livreur actif. Le Patron les crée sur la page Équipe.</p>
+        <p className="od-empty">{ctx.partner ? 'Aucun livreur actif dans notre équipe.' : 'Aucun compte livreur actif. Le Patron les crée sur la page Équipe.'}</p>
       ) : (
         <div className="ca-couriers">
-          {data.couriers.map((c) => <CourierCash key={c.courierId || c.courierName} cash={c} onChange={onChange} />)}
+          {data.couriers.map((c) => <CourierCash key={c.courierId || c.courierName} cash={c} onChange={onChange} ctx={ctx} />)}
         </div>
       )}
 
@@ -165,7 +185,7 @@ function Couriers({ data, onChange }) {
   );
 }
 
-function CourierCash({ cash: c, onChange }) {
+function CourierCash({ cash: c, onChange, ctx }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -175,7 +195,7 @@ function CourierCash({ cash: c, onChange }) {
     setBusy(true);
     setError('');
     try {
-      const { remittance } = await staffApi.remitCash(c.courierId, c.orders.map((o) => o.reference));
+      const { remittance } = await ctx.cashApi.remit(c.courierId, c.orders.map((o) => o.reference));
       await onChange(); // montants et historique à jour avant la confirmation
       setDone(remittance);
       setConfirming(false);
@@ -203,7 +223,7 @@ function CourierCash({ cash: c, onChange }) {
           <ul className="ca-orders">
             {c.orders.map((o) => (
               <li key={o.reference}>
-                <Link to={`/equipe/commandes/${o.reference}`}>{o.reference}</Link>
+                <Ref reference={o.reference} partner={ctx.partner} />
                 <span>{o.customerName}</span>
                 <small className="st-muted">{o.deliveredAt && formatDateTime(o.deliveredAt)}{o.deliveryZoneName && ` · ${o.deliveryZoneName}`}{o.deliveryNightFee > 0 && ` · ${nightLine(o.deliveryNightFee)}`}</small>
                 <b>{formatPrice(o.deliveryFee)}</b>

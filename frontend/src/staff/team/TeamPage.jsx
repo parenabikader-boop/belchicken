@@ -48,13 +48,22 @@ function Handover({ info, onClose }) {
 }
 
 // Rôles créés depuis cette page (les comptes Patron : npm run equipe:patron)
-const NEW_ROLES = [
+export const NEW_ROLES = [
   { role: 'OPERATEUR', help: 'Voit et fait avancer les commandes, rend un plat disponible ou non. Ni chiffres, ni prix, ni comptes.' },
   { role: 'LIVREUR', help: 'Voit seulement ses courses du jour (client, adresse, plats et frais de livraison à encaisser, sans autre montant) et valide la remise avec le code du client.' },
 ];
 
-function NewMember({ onCreated, onCancel }) {
-  const [form, setForm] = useState({ role: 'OPERATEUR', name: '', phone: '', password: provisionalPassword() });
+// Actions de la page Équipe du Patron (lot 5b : la page Livraison a les siennes, mêmes écrans)
+const PATRON_ACTIONS = {
+  list: staffApi.team,
+  create: staffApi.createMember,
+  reset: staffApi.resetMemberPassword,
+  deactivate: staffApi.deactivateMember,
+  reactivate: staffApi.reactivateMember,
+};
+
+function NewMember({ roles, actions, onCreated, onCancel }) {
+  const [form, setForm] = useState({ role: roles[0].role, name: '', phone: '', password: provisionalPassword() });
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
   const set = (field) => (value) => setForm((f) => ({ ...f, [field]: value }));
@@ -67,7 +76,7 @@ function NewMember({ onCreated, onCancel }) {
     setError('');
     setSending(true);
     try {
-      const member = await staffApi.createMember(form);
+      const member = await actions.create(form);
       onCreated(member, form.password);
     } catch (err) {
       setError(err.message);
@@ -79,7 +88,7 @@ function NewMember({ onCreated, onCancel }) {
     <form className="st-box tm-new" onSubmit={submit} noValidate>
       <h2>Nouveau compte</h2>
       <div className="cr-pick" role="radiogroup" aria-label="Rôle">
-        {NEW_ROLES.map((r) => (
+        {roles.map((r) => (
           <label key={r.role} className="cr-opt">
             <input type="radio" name="tm-role" value={r.role} checked={form.role === r.role} onChange={() => set('role')(r.role)} />
             <span><b>{ROLE_LABEL[r.role]}</b><small>{r.help}</small></span>
@@ -132,7 +141,22 @@ function PrestataireLine({ m }) {
   );
 }
 
-function Member({ m, me, onChange }) {
+// Lot 5b : notre équipe de livraison, visible par le Patron sans numéro ni action (gérée par le Prestataire)
+function DeliveryTeamLine({ m }) {
+  return (
+    <li className={`st-box tm-member tm-presta${m.isActive ? '' : ' off'}`}>
+      <div className="tm-top">
+        <b className="tm-name">{m.name}</b>
+        <span className={`tm-role r-${m.role}`}>{ROLE_LABEL[m.role]}</span>
+        <span className="dl-team-tag">Partenaire de livraison</span>
+        {!m.isActive && <span className="tm-off">Désactivé</span>}
+      </div>
+      <p className="tm-line st-muted">Équipe de livraison de notre partenaire. Ce compte se gère depuis son espace, pas depuis cette page.</p>
+    </li>
+  );
+}
+
+function Member({ m, me, onChange, actions }) {
   // null, 'reset', 'reactivate' ou 'deactivate' : l'action ouverte sous la fiche
   const [open, setOpen] = useState(null);
   const [password, setPassword] = useState('');
@@ -153,9 +177,9 @@ function Member({ m, me, onChange }) {
     setError('');
     setSending(true);
     try {
-      if (open === 'deactivate') onChange(await staffApi.deactivateMember(m.id));
-      else if (open === 'reset') onChange(await staffApi.resetMemberPassword(m.id, password), { title: `Mot de passe de ${m.name} réinitialisé`, password });
-      else onChange(await staffApi.reactivateMember(m.id, password), { title: `Compte de ${m.name} réactivé`, password });
+      if (open === 'deactivate') onChange(await actions.deactivate(m.id));
+      else if (open === 'reset') onChange(await actions.reset(m.id, password), { title: `Mot de passe de ${m.name} réinitialisé`, password });
+      else onChange(await actions.reactivate(m.id, password), { title: `Compte de ${m.name} réactivé`, password });
       setOpen(null);
     } catch (err) {
       setError(err.message);
@@ -221,6 +245,19 @@ function Member({ m, me, onChange }) {
 
 // /equipe/equipe (Patron) : comptes de l'équipe. L'API refuse aussi ces actions à l'Opérateur.
 export default function TeamPage() {
+  return (
+    <TeamManager
+      title="Équipe"
+      intro="Les comptes de l’espace équipe. Chacun se connecte avec son numéro et son propre mot de passe."
+      roles={NEW_ROLES}
+      actions={PATRON_ACTIONS}
+    />
+  );
+}
+
+// Liste des comptes, création, mot de passe oublié, désactivation, réactivation.
+// Lot 5b : aussi pour notre équipe de livraison (page Livraison et page Prestataire), avec ses propres actions.
+export function TeamManager({ title, intro, roles, actions, heading = 'h1' }) {
   const { user } = useStaff();
   const [members, setMembers] = useState(null);
   const [error, setError] = useState(null);
@@ -229,7 +266,7 @@ export default function TeamPage() {
 
   const load = () => {
     setError(null);
-    staffApi.team().then(setMembers, setError);
+    actions.list().then(setMembers, setError);
   };
   useEffect(load, []);
 
@@ -255,17 +292,26 @@ export default function TeamPage() {
     if (info) show({ ...info, phone: member.phone });
   };
 
+  const Heading = heading;
+  const line = (m) => {
+    if (m.role === 'PRESTATAIRE') return <PrestataireLine key={m.id} m={m} />;
+    if (m.deliveryTeam) return <DeliveryTeamLine key={m.id} m={m} />;
+    return <Member key={m.id} m={m} me={user} onChange={update} actions={actions} />;
+  };
+
   return (
     <div className="tm">
       <div className="st-head">
-        <h1 className="st-title">Équipe</h1>
+        <Heading className="st-title">{title}</Heading>
         {!adding && <button type="button" className="btn btn-p mn-btn" onClick={() => { setAdding(true); setHandover(null); }}>+ Nouveau compte</button>}
       </div>
-      <p className="st-muted tm-intro">Les comptes de l’espace équipe. Chacun se connecte avec son numéro et son propre mot de passe.</p>
+      <p className="st-muted tm-intro">{intro}</p>
 
       {handover && <Handover info={handover} onClose={() => setHandover(null)} />}
       {adding && (
         <NewMember
+          roles={roles}
+          actions={actions}
           onCancel={() => setAdding(false)}
           onCreated={(member, password) => {
             setMembers((list) => [...list, member]);
@@ -277,14 +323,14 @@ export default function TeamPage() {
 
       <h2 className="mn-section">Actifs <span>{plural(active.length, 'compte')}</span></h2>
       <ul className="tm-list">
-        {active.map((m) => (m.role === 'PRESTATAIRE' ? <PrestataireLine key={m.id} m={m} /> : <Member key={m.id} m={m} me={user} onChange={update} />))}
+        {active.map(line)}
       </ul>
 
       {inactive.length > 0 && (
         <>
           <h2 className="mn-section">Désactivés <span>{plural(inactive.length, 'compte')}</span></h2>
           <ul className="tm-list">
-            {inactive.map((m) => (m.role === 'PRESTATAIRE' ? <PrestataireLine key={m.id} m={m} /> : <Member key={m.id} m={m} me={user} onChange={update} />))}
+            {inactive.map(line)}
           </ul>
         </>
       )}

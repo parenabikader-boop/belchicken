@@ -22,6 +22,7 @@ import SettingsPage from './settings/SettingsPage.jsx';
 import OrderSlip from './orders/OrderSlip.jsx';
 import NewOrder from './orders/NewOrder.jsx';
 import PrestatairePage from './prestataire/PrestatairePage.jsx';
+import DeliveryPage from './delivery/DeliveryPage.jsx';
 import InstallBanner from '../components/InstallBanner.jsx';
 import './staff.css';
 
@@ -54,10 +55,25 @@ export default function StaffApp() {
   );
 }
 
-// Le livreur a ses propres pages : toute autre adresse le ramène à ses courses (l'API refuse aussi)
+// Le livreur a ses propres pages : toute autre adresse le ramène à ses courses (l'API refuse aussi).
+// Lot 5b : le Responsable livraison aussi, avec seulement la page Livraison et son mot de passe.
 function RoleRoutes() {
   const { user } = useStaff();
-  return user.role === 'LIVREUR' ? <CourierRoutes /> : <TeamRoutes />;
+  if (user.role === 'LIVREUR') return <CourierRoutes />;
+  if (user.role === 'RESPONSABLE_LIVRAISON') return <DeliveryManagerRoutes />;
+  return <TeamRoutes />;
+}
+
+function DeliveryManagerRoutes() {
+  return (
+    <Routes>
+      <Route element={<CourierShell home="/equipe/livraison" homeLabel="Livraison" subtitle="Équipe de livraison" alerts={false} />}>
+        <Route path="livraison" element={<DeliveryPage />} />
+        <Route path="mot-de-passe" element={<PasswordPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/equipe/livraison" replace />} />
+    </Routes>
+  );
 }
 
 function CourierRoutes() {
@@ -98,6 +114,7 @@ function TeamRoutes() {
         </Route>
         <Route element={<RequirePrestataire />}>
           <Route path="prestataire" element={<PrestatairePage />} />
+          <Route path="livraison" element={<DeliveryPage />} />
         </Route>
       </Route>
       {/* Bon de commande à imprimer : page seule, sans l'en-tête de l'espace équipe */}
@@ -107,8 +124,9 @@ function TeamRoutes() {
   );
 }
 
-// En-tête du livreur : ses courses, ses alertes, son mot de passe
-function CourierShell() {
+// En-tête du livreur : ses courses, ses alertes, son mot de passe.
+// Lot 5b : aussi celui du Responsable livraison (page Livraison, sans alertes).
+function CourierShell({ home = '/equipe/courses', homeLabel = 'Mes courses', subtitle = 'Espace livreur', alerts = true }) {
   const { user, logout } = useStaff();
   const { pathname } = useLocation();
   useEffect(() => {
@@ -119,23 +137,25 @@ function CourierShell() {
     <div className="st-app">
       <header className="st-top">
         <div className="st-wrap">
-          <Link to="/equipe/courses" className="st-brand" style={{ color: 'inherit', textDecoration: 'none' }}>
-            <span className="mark"><span>B</span></span><span><b>Belchicken</b><small>Espace livreur</small></span>
+          <Link to={home} className="st-brand" style={{ color: 'inherit', textDecoration: 'none' }}>
+            <span className="mark"><span>B</span></span><span><b>Belchicken</b><small>{subtitle}</small></span>
           </Link>
           <div className="st-user">
             <NavLink to="/equipe/mot-de-passe" className="st-name" title="Mon mot de passe">{user.name}<small>{ROLE_LABEL[user.role]}</small></NavLink>
             <NavLink to="/equipe/mot-de-passe" className="st-out st-bell st-sm-only" aria-label="Mon mot de passe">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
             </NavLink>
-            <NavLink to="/equipe/alertes" className="st-out st-bell" aria-label="Alertes sur ce téléphone">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-            </NavLink>
+            {alerts && (
+              <NavLink to="/equipe/alertes" className="st-out st-bell" aria-label="Alertes sur ce téléphone">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+              </NavLink>
+            )}
             <button type="button" className="st-out" onClick={logout}>Déconnexion</button>
           </div>
         </div>
       </header>
       <main className="st-wrap st-main">
-        {pathname !== '/equipe/courses' && <Link className="st-back" to="/equipe/courses">‹ Mes courses</Link>}
+        {pathname !== home && <Link className="st-back" to={home}>‹ {homeLabel}</Link>}
         <InstallBanner app="equipe" />
         <Outlet />
       </main>
@@ -214,6 +234,7 @@ function StaffShell() {
             {patron && <NavLink to="/equipe/equipe">Équipe</NavLink>}
             {patron && hasFeature('REGLAGES') && <NavLink to="/equipe/reglages">Réglages</NavLink>}
             {prestataire && <NavLink to="/equipe/prestataire">Prestataire</NavLink>}
+            {prestataire && <NavLink to="/equipe/livraison">Livraison</NavLink>}
           </nav>
           <div className="st-user">
             <NavLink to="/equipe/mot-de-passe" className="st-name" title="Mon mot de passe">{user.name}<small>{ROLE_LABEL[user.role]}</small></NavLink>

@@ -30,7 +30,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 2 | Prise de commande par l'agent (appel, WhatsApp) | En ligne depuis le 9 octobre 2026 (réglage « Prise de commande par l'agent » éteint en production) |
 | 3 | Supplément de nuit dans la grille des frais | En ligne depuis le 9 octobre 2026 (réglage « Supplément de nuit » éteint en production) |
 | 4 | Compte Prestataire au-dessus du Patron | En ligne depuis le 10 octobre 2026 (aucun compte Prestataire en production, tout ouvert) |
-| 5 | Livraison en deux modes (Restaurant / Prestataire) | En cours : 5a en ligne depuis le 10 octobre 2026 (mode Restaurant en production) ; 5b, 5c, 5d à faire |
+| 5 | Livraison en deux modes (Restaurant / Prestataire) | En cours : 5a en ligne depuis le 10 octobre 2026 (mode Restaurant en production) ; 5b prêt sur dev, en attente de mise en ligne ; 5c, 5d à faire |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | À faire |
 | 7 | Avis des clients | À faire |
 | 8 | Langue FR/EN sur le site client | À faire |
@@ -186,7 +186,7 @@ Mode figé sur chaque commande à sa création (`Order.deliveryOperator`). Quatr
 | Sous-lot | Contenu | État |
 |----------|---------|------|
 | 5a | Fondations : mode Restaurant / Prestataire, notre société et nos codes (page Prestataire), codes des frais selon le mode de la commande, journal `MOT_DE_PASSE` et `LIVRAISON` | En ligne depuis le 10 octobre 2026 (enregistrement `c8b4b78`), mode Restaurant en production |
-| 5b | Disponibilité des livreurs, livreurs du restaurant ou de notre équipe, rôle `RESPONSABLE_LIVRAISON`, caisse séparée | À faire |
+| 5b | Disponibilité des livreurs, livreurs du restaurant ou de notre équipe, rôle `RESPONSABLE_LIVRAISON`, caisse séparée | Prêt sur dev (10 octobre 2026), STOP avant la mise en ligne |
 | 5c | « Prête pour livraison », « Commande récupérée », tournées, preuves horaires | À faire |
 | 5d | Conditions du contrat (versions datées), relevé par période, PDF et Excel, interrupteur `RELEVE` | À faire |
 
@@ -225,6 +225,45 @@ Mode figé sur chaque commande à sa création (`Order.deliveryOperator`). Quatr
   Vérifié après la mise en ligne, sans rien écrire en production : site Vercel à jour (nouvelle phrase présente dans son code),
   serveur en bonne santé, menu (10 catégories, 51 plats), codes ECOFOOD, grille des frais, suivi, espace équipe protégé
   (401 sans connexion, y compris la nouvelle adresse du mode de livraison), connexion de l'équipe qui répond comme avant.
+- [ ] **Non vérifié dans Render** : le client n'a pas pu regarder lui-même le tableau de bord de Render (journal du
+  déploiement, migration `20261010120000_livraison_mode_5a` appliquée). La mise en ligne n'a été constatée que de l'extérieur
+  (site, serveur, adresses ci-dessus). À regarder dans Render dès que possible.
+
+**Plan 5b** accepté par le client le 10 octobre 2026, avec ces réponses : le Prestataire seul crée le compte du
+Responsable livraison ; le Responsable livraison crée, désactive, réactive nos livreurs et leur donne un mot de passe
+provisoire (jamais d'autres responsables), chaque action notée au journal (`COMPTE_LIVRAISON`), le Prestataire peut
+tout faire ; une commande ne part qu'avec un livreur de son mode ; notre caisse invisible pour le Patron jusqu'au
+relevé (5d) ; en 5b, l'agent choisit toujours le livreur ; livreur « En pause » refusé par le serveur.
+
+**Avancement 5b** :
+
+- [x] Schéma : rôle `RESPONSABLE_LIVRAISON`, enum `CourierAvailability`, `StaffUser.courierTeam/availability/availabilityChangedAt`,
+  table `CourierAvailabilityChange`, `AppSettings.restaurantDispatch`, `CashRemittance.operator`, journal `COMPTE_LIVRAISON`.
+  Migration `20261010180000_livraison_equipes_5b` écrite sans aucune base (`prisma migrate diff` entre deux fichiers de schéma).
+- [x] Migration relue et acceptée par le client (10 octobre), passée sur dev (`npm run db:deploy`, serveur revérifié juste
+  avant) : 21 migrations, base identique au schéma, données d'avant identiques (tous les livreurs = équipe Restaurant, Disponible).
+- [x] Serveur : règles `courier-team.js` (équipes, disponibilité, « En course » calculé, comptes de notre équipe, ce que voit le
+  Responsable livraison), `courier-team.service.js`, livreur de la bonne équipe et pas en pause au départ (`courierAssignError`),
+  adresses `/api/staff/livraison/*` (Responsable livraison et Prestataire), `PUT /api/staff/courses/disponibilite`,
+  `PUT /api/staff/orders/livreurs/:id/disponibilite`, `GET /api/staff/orders/livreurs?reference=`, réglage `restaurantDispatch`
+  et interrupteur `TOURNEES_RESTAURANT`, caisse séparée (`feeOperatorError`, `CashRemittance.operator`), frais de notre partenaire
+  à part sur le tableau de bord, journal `COMPTE_LIVRAISON`, page Équipe du Patron en lecture seule pour notre équipe.
+- [x] Pages : Courses (Disponible / En pause), nouvelle page Livraison (Livreurs, Caisse, Comptes), seule page du Responsable
+  livraison, lien « Livraison » du Prestataire, choix du livreur avec l'état et le bouton pause (livreurs du restaurant, réglage
+  allumé), Réglages, détail d'une commande Prestataire (frais vérifiés par notre responsable), tableau de bord, journal. Compilé.
+- [x] Tests : `courier-team.test.js` (13) et `route-access.test.js` (6, parcourt les 82 adresses de `/api/staff` : le Responsable
+  livraison est refusé partout sauf sur les 12 de sa liste), 215 au total, tous passent.
+- [x] Essai de bout en bout sur dev (10 octobre), serveur local avec WhatsApp coupé, comptes d'essai à part (« Essai5b … »),
+  codes calculés par le script, jamais affichés : 74 vérifications bonnes sur 75 (la seule « ratée » comptait aussi les 6 lignes
+  de journal d'un premier passage interrompu par la connexion internet ; 6 lignes par passage, comme prévu). Refus du Responsable
+  livraison vérifié aussi en vrai sur les 67 autres adresses (403). Depuis ce PC, chaque requête vers Neon prend ~300 ms : le
+  changement « Paiement vérifié » a dépassé le délai de 5 s des transactions ; pour l'essai seulement, serveur lancé avec un délai
+  plus long (code du projet non modifié). Sur Render, la base est proche : rien à changer a priori.
+- [x] dev remise comme avant : commandes, comptes, sessions, remises, disponibilités, réglages (`AppSettings` remis à l'identique),
+  société de livraison, interrupteur. Seules restent 35 lignes du journal de sécurité (la base refuse de les effacer, voulu).
+- [x] Captures (18 images) dans `C:\Users\HP\Desktop\belchiken\captures-lot5b-equipes\`.
+- [ ] Accord du client sur les captures, sauvegarde Neon `sauvegarde-lot5b`, mise en ligne (migration
+  `20261010180000_livraison_equipes_5b` : structure seulement, relue : aucun `INSERT`, `UPDATE` ni `DELETE`).
 
 ### 6. Ventes
 

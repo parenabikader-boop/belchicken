@@ -1,4 +1,5 @@
-// Caisse : frais de livraison à vérifier (mobile money) et espèces chez les livreurs (règles dans cash.js)
+// Caisse : frais de livraison à vérifier (mobile money) et espèces chez les livreurs (règles dans cash.js).
+// Lot 5b : operator = caisse affichée (RESTAURANT : page Caisse ; PRESTATAIRE : page Livraison).
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { cashByCourier, remitError, remitTotal } from './cash.js';
@@ -8,27 +9,27 @@ const REMITTANCES_SHOWN = 30;
 const deliveredAt = (o) => o.statusChanges.findLast((h) => h.toStatus === 'LIVREE')?.createdAt || null;
 const DELIVERED = { statusChanges: { where: { toStatus: 'LIVREE' }, select: { toStatus: true, createdAt: true } } };
 
-export async function getCash(now = new Date()) {
+export async function getCash(operator = 'RESTAURANT', now = new Date()) {
   const [toVerify, verified, cash, couriers, remittances] = await Promise.all([
     // Mobile money pas encore vérifié, le plus ancien en premier
     prisma.order.findMany({
-      where: { status: 'LIVREE', deliveryFeeMethod: 'MOBILE_MONEY', deliveryFeeVerifiedAt: null },
+      where: { status: 'LIVREE', deliveryOperator: operator, deliveryFeeMethod: 'MOBILE_MONEY', deliveryFeeVerifiedAt: null },
       include: DELIVERED,
       orderBy: { updatedAt: 'asc' },
     }),
     // Vérifiés ces dernières 24 h : pour corriger une erreur de manipulation
     prisma.order.findMany({
-      where: { status: 'LIVREE', deliveryFeeMethod: 'MOBILE_MONEY', deliveryFeeVerifiedAt: { gte: new Date(now.getTime() - 24 * 3600 * 1000) } },
+      where: { status: 'LIVREE', deliveryOperator: operator, deliveryFeeMethod: 'MOBILE_MONEY', deliveryFeeVerifiedAt: { gte: new Date(now.getTime() - 24 * 3600 * 1000) } },
       include: DELIVERED,
       orderBy: { deliveryFeeVerifiedAt: 'desc' },
     }),
     // Espèces encore chez les livreurs
     prisma.order.findMany({
-      where: { status: 'LIVREE', deliveryFeeMethod: 'ESPECES', cashRemittanceId: null },
+      where: { status: 'LIVREE', deliveryOperator: operator, deliveryFeeMethod: 'ESPECES', cashRemittanceId: null },
       include: DELIVERED,
     }),
-    prisma.staffUser.findMany({ where: { role: 'LIVREUR', isActive: true }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
-    prisma.cashRemittance.findMany({ orderBy: { createdAt: 'desc' }, take: REMITTANCES_SHOWN }),
+    prisma.staffUser.findMany({ where: { role: 'LIVREUR', isActive: true, courierTeam: operator }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    prisma.cashRemittance.findMany({ where: { operator }, orderBy: { createdAt: 'desc' }, take: REMITTANCES_SHOWN }),
   ]);
   const feeRow = (o) => ({
     reference: o.reference,
@@ -52,13 +53,13 @@ export async function getCash(now = new Date()) {
 }
 
 // « Espèces remises » : le livreur a remis l'argent de ces courses (celles affichées à l'écran de l'agent)
-export async function remitCash({ courierId, references }, staff) {
+export async function remitCash({ courierId, references }, staff, operator = 'RESTAURANT') {
   const remittance = await prisma.$transaction(async (tx) => {
     const orders = await tx.order.findMany({
       where: { reference: { in: references } },
-      select: { id: true, reference: true, status: true, courierId: true, courierName: true, deliveryFee: true, deliveryFeeMethod: true, cashRemittanceId: true },
+      select: { id: true, reference: true, status: true, courierId: true, courierName: true, deliveryFee: true, deliveryFeeMethod: true, cashRemittanceId: true, deliveryOperator: true },
     });
-    const error = remitError(orders, courierId, references);
+    const error = remitError(orders, courierId, references, operator);
     if (error) throw new AppError(409, error, 'REMISE_IMPOSSIBLE');
     const created = await tx.cashRemittance.create({
       data: {
@@ -68,6 +69,7 @@ export async function remitCash({ courierId, references }, staff) {
         orderCount: orders.length,
         receivedById: staff.id,
         receivedByName: staff.name,
+        operator,
       },
     });
     // Seulement les courses encore non remises : deux agents ne peuvent pas compter deux fois le même argent

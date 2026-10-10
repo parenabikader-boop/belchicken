@@ -15,6 +15,7 @@ export const FEATURES = [
   { key: 'PARCOURS_COURT', label: 'Parcours court', help: 'Fermé : comme si le Patron l’avait éteint.' },
   { key: 'PRISE_COMMANDE_AGENT', label: 'Prise de commande par l’agent', help: 'Fermé : comme si le Patron l’avait éteinte. Les commandes déjà saisies gardent leur provenance.' },
   { key: 'SUPPLEMENT_NUIT', label: 'Supplément de nuit', help: 'Fermé : comme si le Patron l’avait éteint. Les commandes déjà passées gardent leurs frais.' },
+  { key: 'TOURNEES_RESTAURANT', label: 'Tournées et disponibilité des livreurs du restaurant', help: 'Fermé : comme si le Patron l’avait éteint. Les livreurs du restaurant fonctionnent comme avant ; notre équipe de livraison n’est pas concernée.' },
 ];
 
 export const FEATURE_KEYS = FEATURES.map((f) => f.key);

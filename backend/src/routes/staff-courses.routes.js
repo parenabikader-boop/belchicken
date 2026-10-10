@@ -3,6 +3,8 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { requireStaff } from '../middlewares/staff-auth.js';
 import { deliverWithCode, listCourses } from '../services/courier.service.js';
+import { myAvailability, setAvailability } from '../services/courier-team.service.js';
+import { AVAILABILITIES } from '../services/courier-team.js';
 
 // Espace livreur : ses courses seulement. Les autres routes de l'équipe lui sont fermées.
 export const staffCoursesRouter = Router();
@@ -10,7 +12,20 @@ staffCoursesRouter.use(requireStaff('LIVREUR'));
 
 staffCoursesRouter.get('/', async (req, res, next) => {
   try {
-    res.json({ courses: await listCourses(req.staff), serverTime: new Date() });
+    res.json({ courses: await listCourses(req.staff), availability: await myAvailability(req.staff), serverTime: new Date() });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Lot 5b : le livreur se met Disponible ou En pause (si la disponibilité est active pour son équipe)
+staffCoursesRouter.put('/disponibilite', async (req, res, next) => {
+  try {
+    const { availability } = z
+      .object({ availability: z.enum(AVAILABILITIES, { errorMap: () => ({ message: 'Choisissez Disponible ou En pause.' }) }) })
+      .parse(req.body);
+    await setAvailability(req.staff, req.staff.id, availability, 'self');
+    res.json({ availability: await myAvailability(req.staff) });
   } catch (e) {
     next(e);
   }

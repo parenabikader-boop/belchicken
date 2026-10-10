@@ -2,13 +2,15 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireStaff } from '../middlewares/staff-auth.js';
 import {
-  changeStatus, confirmNotice, getOrder, listCouriers, listOrders, logMessagePrepared, reassignCourier, setDeliveryFee, setFeeVerified,
+  changeStatus, confirmNotice, getOrder, listOrders, logMessagePrepared, reassignCourier, setDeliveryFee, setFeeVerified,
 } from '../services/staff-orders.service.js';
 import { MESSAGE_KEYS } from '../services/customer-messages.js';
 import { agentContext, createAgentOrder, findCustomer } from '../services/order-sources.service.js';
 import { agentOrderSchema } from '../validators/order.schema.js';
 import { normalizePhone } from '../utils/phone.js';
 import { FEE_MAX, FEE_METHODS, FEE_MIN, STATUSES } from '../services/order-status.js';
+import { listCouriersFor, setAvailability } from '../services/courier-team.service.js';
+import { AVAILABILITIES } from '../services/courier-team.js';
 
 // Commandes de l'espace équipe : Patron et Opérateur
 export const staffOrdersRouter = Router();
@@ -56,10 +58,27 @@ staffOrdersRouter.post('/', async (req, res, next) => {
   }
 });
 
-// Livreurs à choisir au départ d'une commande (avant /:reference)
+// Livreurs à choisir au départ d'une commande (avant /:reference). Lot 5b : ?reference=… ne propose que
+// les livreurs de l'équipe du mode de la commande, avec leur état si la disponibilité est active.
 staffOrdersRouter.get('/livreurs', async (req, res, next) => {
   try {
-    res.json({ couriers: await listCouriers() });
+    const ref = z.string().max(20).optional().parse(req.query.reference);
+    res.json(await listCouriersFor(ref ? ref.toUpperCase() : null));
+  } catch (e) {
+    next(e);
+  }
+});
+
+export const availabilitySchema = z.object({
+  availability: z.enum(AVAILABILITIES, { errorMap: () => ({ message: 'Choisissez Disponible ou En pause.' }) }),
+});
+
+// Lot 5b : disponibilité d'un livreur du restaurant (réglage « Tournées et disponibilité » allumé)
+staffOrdersRouter.put('/livreurs/:id/disponibilite', async (req, res, next) => {
+  try {
+    const { availability } = availabilitySchema.parse(req.body);
+    await setAvailability(req.staff, String(req.params.id), availability, 'restaurant');
+    res.json(await listCouriersFor(null));
   } catch (e) {
     next(e);
   }

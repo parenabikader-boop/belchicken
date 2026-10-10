@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { hashPassword, hashToken, verifyPassword } from './staff-auth.js';
 import { teamActionError } from './team.js';
+import { isDeliveryTeamAccount } from './courier-team.js';
 
 // Ce que la page Équipe montre d'un compte : jamais l'empreinte du mot de passe
 const toMember = (u, sessions) => ({
@@ -10,6 +11,7 @@ const toMember = (u, sessions) => ({
   name: u.name,
   phone: u.phone,
   role: u.role,
+  courierTeam: u.role === 'LIVREUR' ? u.courierTeam : null, // lot 5b : livreur du restaurant ou de notre équipe
   isActive: u.isActive,
   mustChangePassword: u.mustChangePassword,
   lastLoginAt: u.lastLoginAt,
@@ -20,6 +22,8 @@ const toMember = (u, sessions) => ({
 // Lot 4 : le Patron voit qu'un compte Prestataire existe (transparence), sans son numéro, ses connexions
 // ni aucune action possible
 const toPrestataireLine = (u) => ({ id: u.id, name: u.name, role: u.role, isActive: u.isActive });
+// Lot 5b : notre équipe de livraison, visible par le Patron sans numéro ni action (gérée par le Prestataire)
+const toDeliveryLine = (u) => ({ ...toPrestataireLine(u), courierTeam: u.role === 'LIVREUR' ? u.courierTeam : null, deliveryTeam: true });
 
 export async function listMembers() {
   const [users, sessions] = await Promise.all([
@@ -27,10 +31,15 @@ export async function listMembers() {
     prisma.staffSession.groupBy({ by: ['userId'], where: { expiresAt: { gt: new Date() } }, _count: { _all: true } }),
   ]);
   const count = new Map(sessions.map((s) => [s.userId, s._count._all]));
-  return users.map((u) => (u.role === 'PRESTATAIRE' ? toPrestataireLine(u) : toMember(u, count.get(u.id) || 0)));
+  return users.map((u) => {
+    if (u.role === 'PRESTATAIRE') return toPrestataireLine(u);
+    if (isDeliveryTeamAccount(u)) return toDeliveryLine(u);
+    return toMember(u, count.get(u.id) || 0);
+  });
 }
 
-export async function createMember({ name, phone, role, password }) {
+// courierTeam (lot 5b) : PRESTATAIRE pour nos livreurs, créés depuis la page Livraison ou Prestataire
+export async function createMember({ name, phone, role, password }, courierTeam = 'RESTAURANT') {
   const existing = await prisma.staffUser.findUnique({ where: { phone } });
   if (existing) {
     const message = existing.isActive
@@ -39,23 +48,24 @@ export async function createMember({ name, phone, role, password }) {
     throw new AppError(409, message, 'NUMERO_DEJA_UTILISE');
   }
   const user = await prisma.staffUser.create({
-    data: { name, phone, role, passwordHash: await hashPassword(password), mustChangePassword: true },
+    data: { name, phone, role, courierTeam, passwordHash: await hashPassword(password), mustChangePassword: true },
   });
   return toMember(user, 0);
 }
 
-async function findTarget(actor, id, action) {
+// check : règles de la page (teamActionError pour le Patron, deliveryActionError pour notre équipe, lot 5b)
+async function findTarget(actor, id, action, check) {
   const target = await prisma.staffUser.findUnique({ where: { id } });
   if (!target) throw new AppError(404, 'Compte introuvable.', 'INTROUVABLE');
-  const error = teamActionError(actor, target, action);
+  const error = check(actor, target, action);
   if (error) throw new AppError(409, error, 'ACTION_IMPOSSIBLE');
   return target;
 }
 
 // Mot de passe oublié : nouveau mot de passe provisoire, à changer à la prochaine connexion.
 // Les appareils encore connectés sont déconnectés.
-export async function resetPassword(actor, id, password) {
-  const target = await findTarget(actor, id, 'reset');
+export async function resetPassword(actor, id, password, check = teamActionError) {
+  const target = await findTarget(actor, id, 'reset', check);
   const [user] = await prisma.$transaction([
     prisma.staffUser.update({ where: { id: target.id }, data: { passwordHash: await hashPassword(password), mustChangePassword: true } }),
     prisma.staffSession.deleteMany({ where: { userId: target.id } }),
@@ -65,8 +75,8 @@ export async function resetPassword(actor, id, password) {
 
 // Agent qui part : plus de connexion, déconnecté de tous ses téléphones, et ses téléphones
 // ne reçoivent plus les alertes de nouvelle commande.
-export async function deactivate(actor, id) {
-  const target = await findTarget(actor, id, 'deactivate');
+export async function deactivate(actor, id, check = teamActionError) {
+  const target = await findTarget(actor, id, 'deactivate', check);
   const [user] = await prisma.$transaction([
     prisma.staffUser.update({ where: { id: target.id }, data: { isActive: false } }),
     prisma.staffSession.deleteMany({ where: { userId: target.id } }),
@@ -76,8 +86,8 @@ export async function deactivate(actor, id) {
 }
 
 // Retour d'un agent (ou désactivation par erreur) : l'ancien mot de passe n'est jamais remis en service
-export async function reactivate(actor, id, password) {
-  const target = await findTarget(actor, id, 'reactivate');
+export async function reactivate(actor, id, password, check = teamActionError) {
+  const target = await findTarget(actor, id, 'reactivate', check);
   const user = await prisma.staffUser.update({
     where: { id: target.id },
     data: { isActive: true, passwordHash: await hashPassword(password), mustChangePassword: true },

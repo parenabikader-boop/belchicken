@@ -62,7 +62,7 @@ export function accessFor(user, roles, { allowProvisional = false } = {}) {
 }
 
 function guard(roles, options) {
-  return async (req, res, next) => {
+  const middleware = async (req, res, next) => {
     try {
       const user = await getSessionUser(readSessionToken(req));
       const access = accessFor(user, roles, options);
@@ -75,6 +75,9 @@ function guard(roles, options) {
       next(e);
     }
   };
+  // Lot 5b : lu par test/route-access.test.js, qui vérifie qui a accès à chaque adresse de l'espace équipe
+  middleware.staffAccess = { roles, ...options };
+  return middleware;
 }
 
 // Protège une route de l'espace équipe. Sans rôle : tout compte connecté.

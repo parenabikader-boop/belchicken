@@ -11,7 +11,11 @@ export const PAID = ['PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE', 'LIVREE
 const isPaid = (o) => PAID.includes(o.status);
 // Frais de livraison : comptés une fois payés (au livreur, à la réception), sauf commande annulée.
 // Anciennes commandes : payés avant le départ, notés « mobile money » par la migration du 6 octobre 2026.
-const feeCounted = (o) => o.deliveryFee != null && o.deliveryFeeMethod != null && o.status !== 'ANNULEE';
+const feePaid = (o) => o.deliveryFee != null && o.deliveryFeeMethod != null && o.status !== 'ANNULEE';
+// Lot 5b : les frais des commandes livrées par notre partenaire (mode Prestataire) ne sont pas des recettes de
+// Belchicken : comptés à part, jamais dans les frais du restaurant.
+const isPartner = (o) => o.deliveryOperator === 'PRESTATAIRE';
+const feeCounted = (o) => feePaid(o) && !isPartner(o);
 const feeSum = (list) => list.reduce((s, o) => s + o.deliveryFee, 0);
 
 export const dashboardQuerySchema = z.object({
@@ -66,6 +70,8 @@ export function summarize(orders) {
     deliveryCashCount: cash.length,
     deliveryMobile: feeSum(mobile),
     deliveryMobileCount: mobile.length,
+    partnerFees: feeSum(orders.filter((o) => feePaid(o) && isPartner(o))),
+    partnerFeesCount: orders.filter((o) => feePaid(o) && isPartner(o)).length,
     avgBasket: paid.length ? Math.round(revenue / paid.length) : 0,
     cancelled: orders.filter((o) => o.status === 'ANNULEE').length,
     toVerify: orders.filter((o) => o.status === 'PAIEMENT_A_VERIFIER').length,

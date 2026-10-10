@@ -15,6 +15,8 @@ import { messageContextFor } from './delivery-mode.service.js';
 import { pushCourierAssigned, pushCourseCancelled, pushTeamDelivered } from './push.service.js';
 import { enteredBy, paymentVerification, sendFrom, sourceLabel } from './order-sources.js';
 import { checkPickupCode, codeLocked, courierAssignError, generateDeliveryCode, handoverReasonError, MAX_CODE_ATTEMPTS } from './courier.js';
+import { isAvailabilityActive } from './courier-team.service.js';
+import { feeOperatorError } from './cash.js';
 
 const LIST_LIMIT = 100;
 
@@ -251,7 +253,7 @@ async function findForRules(tx, reference) {
     where: { reference },
     select: {
       id: true, status: true, mode: true, deliveryFee: true, deliveryNightFee: true, deliveryFeeMethod: true, deliveryFeeVerifiedAt: true, courierId: true,
-      cashRemittanceId: true,
+      cashRemittanceId: true, deliveryOperator: true,
       deliveryCode: true, deliveryCodeAttempts: true, shortFlow: true,
       createdById: true, // commande saisie par un agent : message « à payer » facultatif
       statusChanges: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
@@ -279,10 +281,12 @@ async function guardedUpdate(tx, order, data) {
   if (updated.count !== 1) throw new AppError(409, CHANGED, 'COMMANDE_DEJA_CHANGEE');
 }
 
-// Livreur choisi par l'agent : compte LIVREUR actif (courier.js)
+// Livreur choisi par l'agent : compte LIVREUR actif (courier.js), de l'équipe du mode de la commande et
+// pas en pause quand la disponibilité est active (lot 5b, courier-team.js)
 async function findCourier(tx, order, courierId) {
   const courier = courierId ? await tx.staffUser.findUnique({ where: { id: courierId } }) : null;
-  const error = courierAssignError(order, courier);
+  const active = await isAvailabilityActive(order.deliveryOperator, tx);
+  const error = courierAssignError(order, courier, { active });
   if (error) throw new AppError(400, error, 'LIVREUR_IMPOSSIBLE');
   return courier;
 }
@@ -399,16 +403,6 @@ export async function reassignCourier(reference, courierId, staff) {
   return getOrder(reference);
 }
 
-// Livreurs proposés au départ d'une commande, avec le nombre de courses qu'ils ont en cours
-export async function listCouriers() {
-  const couriers = await prisma.staffUser.findMany({
-    where: { role: 'LIVREUR', isActive: true },
-    orderBy: { name: 'asc' },
-    select: { id: true, name: true, phone: true, _count: { select: { courses: { where: { status: 'EN_LIVRAISON' } } } } },
-  });
-  return couriers.map(({ _count, ...c }) => ({ ...c, activeCourses: _count.courses }));
-}
-
 // Commande livrée (par le livreur avec le code, ou validée sans code par un agent) : notification à
 // l'équipe, pour remercier le client. N'échoue jamais. byAgent : l'agent qui a validé sans code.
 export function notifyDelivered(reference, byAgent = null) {
@@ -454,14 +448,20 @@ export async function setDeliveryFee(reference, amount, staff, reason = null, ni
 
 // Frais payés par mobile money (code marchand) : l'agent coche après vérification sur le téléphone
 // marchand (page Caisse, onglet « Frais à vérifier »). Décocher reste possible (erreur de manipulation).
-export async function setFeeVerified(reference, verified, staff) {
+// Lot 5b : caisse séparée. operator = caisse de la page (RESTAURANT : page Caisse ; PRESTATAIRE : page Livraison).
+// Les frais d'une commande Prestataire sont payés sur nos codes : seul notre responsable les vérifie.
+export async function markFeeVerified(reference, verified, staff, operator) {
   await prisma.$transaction(async (tx) => {
     const order = await findForRules(tx, reference);
-    const error = feeVerifyError(order, verified);
+    const error = feeOperatorError(order, operator) || feeVerifyError(order, verified);
     if (error) throw new AppError(400, error, 'FRAIS_IMPOSSIBLES');
     await guardedUpdate(tx, order, { deliveryFeeVerifiedAt: verified ? new Date() : null });
     await tx.orderEvent.create({ data: event(order.id, verified ? 'FRAIS_VERIFIES' : 'FRAIS_NON_VERIFIES', staff, { amount: order.deliveryFee }) });
   });
+}
+
+export async function setFeeVerified(reference, verified, staff) {
+  await markFeeVerified(reference, verified, staff, 'RESTAURANT');
   return getOrder(reference);
 }
 

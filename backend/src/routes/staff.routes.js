@@ -22,6 +22,7 @@ import { staffCashRouter } from './staff-cash.routes.js';
 import { staffDeliveryFeesRouter } from './staff-delivery-fees.routes.js';
 import { staffSettingsRouter } from './staff-settings.routes.js';
 import { staffSourcesRouter } from './staff-sources.routes.js';
+import { staffDeliveryTeamRouter } from './staff-delivery-team.routes.js';
 import { ownPasswordSchema } from '../services/team.js';
 import { changeOwnPassword } from '../services/team.service.js';
 
@@ -163,3 +164,4 @@ staffRouter.use('/frais-livraison', staffDeliveryFeesRouter); // grille des frai
 staffRouter.use('/reglages', staffSettingsRouter); // réglages du logiciel (lus par l'équipe, changés par le Patron)
 staffRouter.use('/provenances', staffSourcesRouter); // provenances des commandes (Patron, lot 2)
 staffRouter.use('/prestataire', staffPrestataireRouter); // interrupteurs et journal (Prestataire, lot 4)
+staffRouter.use('/livraison', staffDeliveryTeamRouter); // notre équipe de livraison (Responsable livraison et Prestataire, lot 5b)

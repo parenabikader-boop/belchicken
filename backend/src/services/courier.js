@@ -11,6 +11,7 @@
 // - À emporter : même code (mêmes colonnes deliveryCode / deliveryCodeAttempts), créé au passage PRETE
 //   et envoyé dans le message « commande prête ». L'agent le tape au comptoir (checkPickupCode).
 import { randomInt, timingSafeEqual } from 'node:crypto';
+import { courierTeamError } from './courier-team.js';
 
 export const MAX_CODE_ATTEMPTS = 5;
 export const CODE_LENGTH = 4;
@@ -25,12 +26,15 @@ export const codeLocked = (order) => order.deliveryCodeAttempts >= MAX_CODE_ATTE
 export const attemptsLeft = (order) => Math.max(0, MAX_CODE_ATTEMPTS - order.deliveryCodeAttempts);
 
 // Choix du livreur : au passage EN_LIVRAISON (depuis EN_PREPARATION), ou remplacement pendant la livraison.
-// Renvoie null si permis, sinon le message.
-export function courierAssignError(order, courier) {
+// Lot 5b : livreur de l'équipe du mode de la commande, pas en pause quand la disponibilité est active
+// (active, voir courier-team.js). Renvoie null si permis, sinon le message.
+export function courierAssignError(order, courier, { active = false } = {}) {
   if (!['EN_PREPARATION', 'EN_LIVRAISON'].includes(order.status)) return 'Le livreur se choisit au départ de la commande.';
   if (!courier) return 'Choisissez le livreur.';
   if (courier.role !== 'LIVREUR') return 'Ce compte n’est pas un compte livreur.';
   if (!courier.isActive) return `Le compte de ${courier.name} est désactivé.`;
+  const teamError = courierTeamError(order, courier, active);
+  if (teamError) return teamError;
   if (order.status === 'EN_LIVRAISON' && order.courierId === courier.id) return `${courier.name} a déjà cette course.`;
   return null;
 }

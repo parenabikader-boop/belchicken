@@ -65,6 +65,22 @@ export const staffApi = {
   deliveryCompany: () => staffRequest('/prestataire/livraison'),
   setDeliveryCompany: (body) => staffRequest('/prestataire/livraison', { method: 'PUT', body: JSON.stringify(body) }),
   logout: () => staffRequest('/logout', { method: 'POST' }),
+  // Lot 5b : page Livraison (Responsable livraison et Prestataire) : nos livreurs, nos courses, notre caisse
+  deliveryOverview: () => staffRequest('/livraison'),
+  setDeliveryAvailability: (id, availability) =>
+    staffRequest(`/livraison/livreurs/${id}/disponibilite`, { method: 'PUT', body: JSON.stringify({ availability }) }),
+  deliveryTeam: () => staffRequest('/livraison/equipe').then((d) => d.members),
+  createDeliveryMember: (body) => staffRequest('/livraison/equipe', { method: 'POST', body: JSON.stringify(body) }).then((d) => d.member),
+  resetDeliveryMember: (id, password) =>
+    staffRequest(`/livraison/equipe/${id}/password`, { method: 'POST', body: JSON.stringify({ password }) }).then((d) => d.member),
+  deactivateDeliveryMember: (id) => staffRequest(`/livraison/equipe/${id}/deactivate`, { method: 'POST' }).then((d) => d.member),
+  reactivateDeliveryMember: (id, password) =>
+    staffRequest(`/livraison/equipe/${id}/reactivate`, { method: 'POST', body: JSON.stringify({ password }) }).then((d) => d.member),
+  deliveryCash: () => staffRequest('/livraison/caisse'),
+  remitDeliveryCash: (courierId, references) =>
+    staffRequest('/livraison/caisse/remises', { method: 'POST', body: JSON.stringify({ courierId, references }) }),
+  verifyDeliveryFee: (reference, verified) =>
+    staffRequest(`/livraison/caisse/${encodeURIComponent(reference)}/verifie`, { method: 'POST', body: JSON.stringify({ verified }) }),
   orders: ({ status, q } = {}) => {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
@@ -120,12 +136,16 @@ export const staffApi = {
     staffRequest(`/orders/${encodeURIComponent(reference)}/messages`, { method: 'POST', body: JSON.stringify({ key }), keepalive: true }),
 
   // Livreurs : liste pour le départ d'une commande, remplacement pendant la livraison
-  couriers: () => staffRequest('/orders/livreurs').then((d) => d.couriers),
+  // Lot 5b : livreurs de l'équipe du mode de la commande, avec leur état (si la disponibilité est active)
+  couriers: (reference) => staffRequest(`/orders/livreurs${reference ? `?reference=${encodeURIComponent(reference)}` : ''}`),
+  setRestaurantAvailability: (id, availability) =>
+    staffRequest(`/orders/livreurs/${id}/disponibilite`, { method: 'PUT', body: JSON.stringify({ availability }) }),
   reassignCourier: (reference, courierId) =>
     staffRequest(`/orders/${encodeURIComponent(reference)}/courier`, { method: 'PUT', body: JSON.stringify({ courierId }) }).then((d) => d.order),
 
   // Espace livreur : ses courses du jour, et la remise avec le code du client
   courses: () => staffRequest('/courses'),
+  setMyAvailability: (availability) => staffRequest('/courses/disponibilite', { method: 'PUT', body: JSON.stringify({ availability }) }).then((d) => d.availability),
   // feeMethod : comment le client a payé les frais (ESPECES ou MOBILE_MONEY)
   deliver: (reference, code, feeMethod) =>
     staffRequest(`/courses/${encodeURIComponent(reference)}/deliver`, { method: 'POST', body: JSON.stringify({ code, feeMethod }) }).then((d) => d.course),

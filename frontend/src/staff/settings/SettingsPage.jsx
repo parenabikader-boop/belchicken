@@ -83,6 +83,21 @@ export default function SettingsPage() {
             </div>
             <SettingSwitch settings={settings} name="agentOrders" label="Prise de commande par l’agent" saving={saving} onToggle={toggle} />
           </div>
+          <div className="rg-row rg-sep">
+            <div className="rg-text">
+              <h2>Tournées et disponibilité des livreurs</h2>
+              <p>
+                Vos livreurs indiquent sur leur page s’ils sont <b>Disponibles</b> ou <b>En pause</b> ; « En course » s’affiche
+                tout seul. Au départ d’une commande, l’agent voit l’état de chaque livreur ; un livreur en pause ne peut pas être choisi.
+              </p>
+              <ul className="rg-list">
+                <li><b>Éteint</b> : comme aujourd’hui, tous les livreurs actifs sont proposés, sans bouton de disponibilité.</li>
+                <li>L’agent peut aussi mettre un livreur en pause ou le rendre disponible (téléphone éteint, absence).</li>
+                <li>Concerne seulement les livreurs du restaurant.</li>
+              </ul>
+            </div>
+            <SettingSwitch settings={settings} name="restaurantDispatch" label="Tournées et disponibilité des livreurs" saving={saving} onToggle={toggle} />
+          </div>
           {settings.updatedByName && (
             <p className="st-muted rg-who">Dernier changement : {settings.updatedByName}, le {formatDateTime(settings.updatedAt)}.</p>
           )}
