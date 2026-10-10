@@ -30,7 +30,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 2 | Prise de commande par l'agent (appel, WhatsApp) | En ligne depuis le 9 octobre 2026 (réglage « Prise de commande par l'agent » éteint en production) |
 | 3 | Supplément de nuit dans la grille des frais | En ligne depuis le 9 octobre 2026 (réglage « Supplément de nuit » éteint en production) |
 | 4 | Compte Prestataire au-dessus du Patron | En ligne depuis le 10 octobre 2026 (aucun compte Prestataire en production, tout ouvert) |
-| 5 | Livraison en deux modes (Restaurant / Prestataire) | En cours : 5a en ligne depuis le 10 octobre 2026 (mode Restaurant en production) ; 5b prêt sur dev, en attente de mise en ligne ; 5c, 5d à faire |
+| 5 | Livraison en deux modes (Restaurant / Prestataire) | En cours : 5a en ligne depuis le 10 octobre 2026 (mode Restaurant en production) ; 5b en ligne depuis le 10 octobre 2026 (réglage « Tournées et disponibilité » éteint, aucun Responsable livraison en production) ; 5c, 5d à faire |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | À faire |
 | 7 | Avis des clients | À faire |
 | 8 | Langue FR/EN sur le site client | À faire |
@@ -186,7 +186,7 @@ Mode figé sur chaque commande à sa création (`Order.deliveryOperator`). Quatr
 | Sous-lot | Contenu | État |
 |----------|---------|------|
 | 5a | Fondations : mode Restaurant / Prestataire, notre société et nos codes (page Prestataire), codes des frais selon le mode de la commande, journal `MOT_DE_PASSE` et `LIVRAISON` | En ligne depuis le 10 octobre 2026 (enregistrement `c8b4b78`), mode Restaurant en production |
-| 5b | Disponibilité des livreurs, livreurs du restaurant ou de notre équipe, rôle `RESPONSABLE_LIVRAISON`, caisse séparée | Prêt sur dev (10 octobre 2026), STOP avant la mise en ligne |
+| 5b | Disponibilité des livreurs, livreurs du restaurant ou de notre équipe, rôle `RESPONSABLE_LIVRAISON`, caisse séparée | En ligne depuis le 10 octobre 2026 (enregistrement `6ed214d`), réglage éteint, aucun compte de notre équipe en production |
 | 5c | « Prête pour livraison », « Commande récupérée », tournées, preuves horaires | À faire |
 | 5d | Conditions du contrat (versions datées), relevé par période, PDF et Excel, interrupteur `RELEVE` | À faire |
 
@@ -258,12 +258,30 @@ relevé (5d) ; en 5b, l'agent choisit toujours le livreur ; livreur « En pause 
   de journal d'un premier passage interrompu par la connexion internet ; 6 lignes par passage, comme prévu). Refus du Responsable
   livraison vérifié aussi en vrai sur les 67 autres adresses (403). Depuis ce PC, chaque requête vers Neon prend ~300 ms : le
   changement « Paiement vérifié » a dépassé le délai de 5 s des transactions ; pour l'essai seulement, serveur lancé avec un délai
-  plus long (code du projet non modifié). Sur Render, la base est proche : rien à changer a priori.
+  plus long (code du projet non modifié).
+- [x] Régions (d'après la configuration, non vérifiées dans les tableaux de bord) : `render.yaml` demande Render en **Ohio
+  (us-east-2)** ; la base dev est en **us-east-2** (adresse dans `backend/.env`). L'adresse de la base de production n'est
+  pas sur ce PC (seulement sur Render) : même projet Neon, donc normalement même région, à confirmer dans Neon. La région d'un
+  service Render se choisit à sa création : à confirmer dans Render (Settings > Region).
+- [x] Précaution demandée par le client : délai des transactions Prisma porté de 5 s (valeur par défaut, réglée nulle part) à
+  **15 s** pour tout le serveur (`TRANSACTION_TIMEOUT_MS`, `backend/src/lib/prisma.js`). Les deux délais déjà plus longs restent
+  (code de secours du Prestataire 20 s, remplissage du menu 5 min). Vérifié sur dev en lecture seule : une transaction de 6 s
+  passe, une de 16 s est refusée. Tests : 215, tous passent.
 - [x] dev remise comme avant : commandes, comptes, sessions, remises, disponibilités, réglages (`AppSettings` remis à l'identique),
   société de livraison, interrupteur. Seules restent 35 lignes du journal de sécurité (la base refuse de les effacer, voulu).
 - [x] Captures (18 images) dans `C:\Users\HP\Desktop\belchiken\captures-lot5b-equipes\`.
-- [ ] Accord du client sur les captures, sauvegarde Neon `sauvegarde-lot5b`, mise en ligne (migration
-  `20261010180000_livraison_equipes_5b` : structure seulement, relue : aucun `INSERT`, `UPDATE` ni `DELETE`).
+- [x] Accord du client sur les captures, sauvegarde Neon `sauvegarde-lot5b` (faite et vérifiée par le client), migration relue
+  (seulement `CREATE` et `ALTER` : aucun `INSERT`, `UPDATE` ni `DELETE`, le seul « DELETE » est la règle `ON DELETE SET NULL` du
+  lien), inchangée depuis dev (`migrate status` à jour), tests (215) et construction relancés, enregistrement `6ed214d`, mise en
+  ligne le 10 octobre 2026. Migration passée par Render au déploiement (la construction la lance avant de démarrer : le nouveau
+  serveur n'aurait pas démarré sans elle ; la connexion de l'équipe lit les nouvelles colonnes et répond normalement).
+  **Non vérifié dans le tableau de bord de Render** par le client.
+  Vérifié après la mise en ligne, sans rien écrire en production : serveur en bonne santé, nouvelle adresse `/api/staff/livraison`
+  en place (401 sans connexion, aussi par le site Vercel), menu (10 catégories, 51 plats), codes ECOFOOD (Orange, Moov, Telecel),
+  grille des frais, suivi, espace équipe protégé (401 sans connexion sur commandes, caisse, tableau de bord, livraison, courses,
+  réglages, Prestataire), connexion de l'équipe qui répond comme avant, site Vercel à jour (nouvelles pages dans son code).
+  En production : réglage « Tournées et disponibilité » éteint, aucun Responsable livraison ni livreur de notre équipe, mode
+  Restaurant : tout fonctionne comme avant.
 
 ### 6. Ventes
 
