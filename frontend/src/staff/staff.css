@@ -913,3 +913,37 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .dl-row .dl-main small{color:var(--muted);font-size:12px}
 .dl-team-tag{display:inline-block;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:800;background:var(--info-soft);color:var(--info);margin-left:6px;vertical-align:middle}
 .tm-role.r-RESPONSABLE_LIVRAISON{background:#e5f4ec;color:#136c3d}
+
+/* Lot 5c : prête pour livraison (notre partenaire), tournées, preuves horaires */
+.st-pill.p-PRETE_LIVRAISON{background:#e3f1e4;color:#2b6e2f}
+.st-pickup.st-ready{background:#e3f1e4;color:#2b6e2f}
+.tr-bar{display:grid;gap:8px;margin:0 0 10px}
+.tr-bar .btn{justify-self:start}
+.tr-panel{margin:0 0 12px}
+.tr-list{display:grid;gap:6px;margin:8px 0 12px}
+.tr-opt{display:flex;align-items:center;gap:10px;border:1.5px solid var(--line);border-radius:var(--r);padding:8px 12px;background:#fff;cursor:pointer}
+.tr-opt.on{border-color:var(--brand);background:#fbe3e3}
+.tr-opt input{width:20px;height:20px;accent-color:var(--brand)}
+.tr-opt small{display:block;color:var(--muted);font-size:12px}
+.pr-list{display:grid;gap:4px;margin:10px 0 0;padding:10px 12px;border-radius:var(--r);background:var(--panel-2)}
+.pr-list>div{display:flex;justify-content:space-between;gap:12px;font-size:13px}
+.pr-list dt{color:var(--muted)}
+.pr-list dd{margin:0;font-weight:700;text-align:right}
+.pr-list .pr-note{display:block}
+.pr-list .pr-note dd{font-weight:400;text-align:left}
+.dl-col{flex-direction:column;align-items:stretch}
+.dl-top{display:flex;align-items:center;gap:10px}
+.dl-top .dl-main{flex:1;min-width:0}
+.dl-check{display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer}
+.dl-check input{width:20px;height:20px;accent-color:var(--brand)}
+.dl-inline{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-top:10px}
+.dl-select{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:200px;flex:1}
+.dl-select select{font:inherit;padding:10px;border:1.5px solid var(--line);border-radius:var(--r);background:#fff}
+.dl-reason{display:grid;gap:8px;margin-top:10px}
+.dl-reason label{font-weight:700;font-size:14px}
+.dl-reason textarea{font:inherit;padding:10px;border:1.5px solid var(--line);border-radius:var(--r);min-height:70px}
+.lv-pickup{display:grid;gap:6px;margin:0 0 12px;padding:12px;border-radius:var(--r)}
+.lv-pickup small{color:var(--muted);font-size:13px}
+.lv-pickup.wait{background:#fff1d6}
+.lv-pickup.ready{background:#e3f1e4;border:1.5px solid #9cc79a}
+.lv-pickup.ready .btn{margin-top:4px}

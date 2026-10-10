@@ -190,7 +190,7 @@ test('historique fermé : en cours, à remercier, et terminées depuis moins de 
   assert.deepEqual(visibleWhere(true, { now }), {});
   assert.equal(historyCutoff(now).toISOString(), '2026-10-09T12:00:00.000Z');
   const where = visibleWhere(false, { now });
-  assert.deepEqual(where.OR[0], { status: { in: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE'] } });
+  assert.deepEqual(where.OR[0], { status: { in: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE_LIVRAISON', 'EN_LIVRAISON', 'PRETE'] } });
   assert.equal(where.OR[1].status, 'LIVREE'); // à remercier
   assert.deepEqual(where.OR[2], { statusChanges: { some: { toStatus: { in: ['LIVREE', 'ANNULEE'] }, createdAt: { gte: historyCutoff(now) } } } });
   // Remerciement automatique : pas d'étape « à remercier »

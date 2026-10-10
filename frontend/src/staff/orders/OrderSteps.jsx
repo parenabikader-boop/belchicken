@@ -4,7 +4,7 @@ import { formatPrice } from '../../utils/format.js';
 import { hourLabel, nightLine } from '../../utils/deliveryFee.js';
 import { useStaff } from '../StaffContext.jsx';
 import { useAppSettings } from '../settings/useAppSettings.js';
-import { ACTIVE, canEditFee, deliveryBlock, feeOrigin, feeText, FEE_METHODS, formatPhone, formatTime, isPickup, METHOD_LABEL, nextAction } from './labels.js';
+import { ACTIVE, canEditFee, deliveryBlock, feeOrigin, feeText, FEE_METHODS, formatPhone, formatTime, isPartner, isPickup, METHOD_LABEL, nextAction, proofLines } from './labels.js';
 
 // « 1 500 » -> 1500 ; champ vide -> NaN (jamais 0 par erreur : 0 F = livraison offerte)
 const toAmount = (v) => (v.trim() === '' ? NaN : Number(v.replace(/\s/g, '')));
@@ -217,7 +217,8 @@ export function Actions({ order: o, steps }) {
   const { shortFlow, loaded } = useAppSettings();
   const next = nextAction(o, { shortFlow });
   const pickup = isPickup(o);
-  const [mode, setMode] = useState(null); // null | 'confirm' | 'depart' | 'handover' | 'counter' | 'cancel'
+  const partner = isPartner(o); // lot 5c : livrée par notre partenaire
+  const [mode, setMode] = useState(null); // null | 'confirm' | 'depart' | 'handover' | 'counter' | 'pickedUp' | 'cancel'
   const [reason, setReason] = useState('');
   const [fee, setFee] = useState('');
   const [feeReason, setFeeReason] = useState('');
@@ -238,7 +239,7 @@ export function Actions({ order: o, steps }) {
   const notified = !o.notice?.required;
   const blocked = !notified
     ? 'Prévenez d’abord le client : confirmez l’envoi du message ci-dessus.'
-    : o.status === 'EN_PREPARATION' && !pickup ? deliveryBlock(o) : null;
+    : o.status === 'EN_PREPARATION' && !pickup && !partner ? deliveryBlock(o) : null;
   const go = (call) => steps.run(call);
   const amount = toAmount(fee);
   // Frais calculés par la grille et changés par l'agent : c'est une correction, avec un motif
@@ -304,6 +305,23 @@ export function Actions({ order: o, steps }) {
         {fromHint}
         <div className="st-action-row">
           <button type="submit" className="btn btn-p" disabled={steps.busy || !courierId}>{steps.busy ? 'Enregistrement…' : 'Partie en livraison : prévenir le client'}</button>
+          <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
+        </div>
+      </form>
+    );
+  }
+
+  // Lot 5c : commande de notre partenaire récupérée, mais son livreur n'a pas pu appuyer (téléphone éteint) :
+  // l'agent confirme à sa place, avec un motif. Le code de remise est créé à ce moment.
+  if (mode === 'pickedUp' && o.status === 'PRETE_LIVRAISON') {
+    return (
+      <form className="st-action cancel" onSubmit={async (e) => { e.preventDefault(); if (await go(() => staffApi.pickUpForCourier(o.reference, reason))) setReason(''); }}>
+        <label htmlFor="st-pickup-reason"><b>{o.courier?.name || 'Le livreur'} est parti avec la commande sans appuyer sur « Commande récupérée » : pourquoi ?</b></label>
+        <textarea id="st-pickup-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder="Ex. : téléphone du livreur éteint…" autoFocus />
+        <p className="st-muted">À faire seulement si le livreur a bien pris le sac. L’heure et le motif sont notés dans l’historique. Ensuite, envoyez le message « en route » au client.</p>
+        {steps.error && <p className="st-err">{steps.error}</p>}
+        <div className="st-action-row">
+          <button type="submit" className="btn btn-p" disabled={steps.busy || reason.trim().length < 3}>{steps.busy ? 'Enregistrement…' : 'Confirmer la récupération'}</button>
           <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
         </div>
       </form>
@@ -397,7 +415,7 @@ export function Actions({ order: o, steps }) {
       setFeeReason('');
       setNight(nightInput(o.deliveryNightFee));
       setMode('confirm');
-    } else if (o.status === 'EN_PREPARATION' && !pickup) {
+    } else if (o.status === 'EN_PREPARATION' && !pickup && !partner) {
       setCourierId('');
       setMode('depart');
     } else if (o.status === 'PRETE') {
@@ -422,6 +440,19 @@ export function Actions({ order: o, steps }) {
           {o.codeLocked && <> <b>Trop de codes faux</b> : si c’est bien le client, validez sans code, avec un motif.</>}
         </p>
       )}
+      {partner && o.status === 'EN_PREPARATION' && (
+        <p className="st-wait">
+          Livraison Prestataire : le livreur est choisi par le responsable livraison de notre partenaire
+          {o.courier ? <> (<b>{o.courier.name}</b>)</> : <> (pas encore choisi)</>}. Quand le sac est prêt, appuyez sur « Prête pour livraison ».
+        </p>
+      )}
+      {o.status === 'PRETE_LIVRAISON' && (
+        <p className="st-wait">
+          {o.courier
+            ? <><b>{o.courier.name}</b> vient récupérer la commande et appuie sur « Commande récupérée » dans son application.</>
+            : <>Prête : le responsable livraison de notre partenaire doit encore choisir un livreur.</>}
+        </p>
+      )}
       {o.status === 'EN_LIVRAISON' && (
         <p className="st-wait">
           Le livreur valide la livraison avec le <b>code du client</b>.
@@ -431,7 +462,11 @@ export function Actions({ order: o, steps }) {
       {steps.error && !mode && <p className="st-err">{steps.error}</p>}
       {fromHint}
       <div className="st-action-row">
-        {o.status === 'EN_LIVRAISON' ? (
+        {o.status === 'PRETE_LIVRAISON' ? (
+          <button type="button" className="btn btn-s" disabled={steps.busy || !o.courier} onClick={() => { setReason(''); setMode('pickedUp'); }}>
+            Le livreur ne peut pas appuyer : confirmer la récupération
+          </button>
+        ) : o.status === 'EN_LIVRAISON' ? (
           <button type="button" className="btn btn-s" disabled={steps.busy || Boolean(blocked)} onClick={() => { setReason(''); setFeeMethod(''); setMode('handover'); }}>
             Le client n’a plus son code : valider la livraison
           </button>
@@ -581,7 +616,7 @@ export function FeeMethodPicker({ fee, value, onChange, big = false }) {
 // Liste des livreurs actifs, avec leurs courses en cours. Lot 5b : seulement ceux de l'équipe du mode
 // de la commande ; avec la disponibilité active, leur état (En pause : refusé par le serveur) et, pour les
 // livreurs du restaurant, un bouton pour les mettre en pause ou les rendre disponibles.
-function CourierPicker({ reference, value, onChange, exclude }) {
+export function CourierPicker({ reference, value, onChange, exclude }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
@@ -684,6 +719,7 @@ export function CourierBox({ order: o, onChange }) {
       <h2>Livreur</h2>
       <p className="cr-name">{o.courier.name}</p>
       <p className="st-muted">Course confiée à {formatTime(o.courier.assignedAt)}</p>
+      <Proofs proofs={o.proofs} />
       {o.deliveryCode && o.status === 'EN_LIVRAISON' && (
         <div className={`cr-code${o.codeLocked ? ' locked' : ''}`}>
           <span>Code du client</span>
@@ -693,7 +729,10 @@ export function CourierBox({ order: o, onChange }) {
           </small>
         </div>
       )}
-      {o.status === 'EN_LIVRAISON' && (editing ? (
+      {o.status === 'EN_LIVRAISON' && isPartner(o) && (
+        <p className="st-muted">Livraison Prestataire : seul son responsable livraison change de livreur.</p>
+      )}
+      {o.status === 'EN_LIVRAISON' && !isPartner(o) && (editing ? (
         <form onSubmit={save}>
           <CourierPicker reference={o.reference} value={courierId} onChange={setCourierId} exclude={o.courier.id} />
           {error && <p className="st-err">{error}</p>}
@@ -708,5 +747,27 @@ export function CourierBox({ order: o, onChange }) {
         </div>
       ))}
     </section>
+  );
+}
+
+// Lot 5c, preuves : l'heure de chaque étape de la livraison
+export function Proofs({ proofs }) {
+  const lines = proofLines(proofs);
+  if (lines.length === 0) return null;
+  return (
+    <dl className="pr-list">
+      {lines.map(([label, value]) => (
+        <div key={label}>
+          <dt>{label}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))}
+      {proofs.pickedUpReason && (
+        <div className="pr-note">
+          <dt>Récupérée sans le livreur</dt>
+          <dd>{proofs.pickedUpBy ? `${proofs.pickedUpBy} : ` : ''}{proofs.pickedUpReason}</dd>
+        </div>
+      )}
+    </dl>
   );
 }

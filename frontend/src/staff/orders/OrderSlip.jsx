@@ -14,7 +14,7 @@ const FORMATS = [
   { id: '80', label: 'Ticket 80 mm', page: '@page{size:80mm auto;margin:3mm}' },
   { id: 'a4', label: 'A4', page: '@page{size:A4;margin:14mm}' },
 ];
-const PAID = ['PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE', 'LIVREE'];
+const PAID = ['PAYEE', 'EN_PREPARATION', 'PRETE_LIVRAISON', 'EN_LIVRAISON', 'PRETE', 'LIVREE'];
 
 export default function OrderSlip() {
   const { reference } = useParams();

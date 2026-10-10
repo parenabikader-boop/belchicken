@@ -106,8 +106,11 @@ test('le Responsable livraison ne voit jamais les ventes : une course = référe
     items: [{ productName: 'Finest', lineTotal: 9000 }], deliveryCode: '1234', customerName: 'Awa',
   };
   const course = toPartnerCourse(order);
-  assert.deepEqual(Object.keys(course).sort(), ['assignedAt', 'courierId', 'courierName', 'deliveryFee', 'deliveryNightFee', 'deliveryZoneName', 'reference', 'status']);
-  const text = JSON.stringify(course);
+  assert.deepEqual(Object.keys(course).sort(), ['assignedAt', 'courierId', 'courierName', 'deliveryFee', 'deliveryNightFee', 'deliveryRunId', 'deliveryZoneName', 'proofs', 'reference', 'status']);
+  assert.equal(course.proofs, null); // sans historique lu, pas de preuves
+  const withHistory = toPartnerCourse({ ...order, statusChanges: [{ toStatus: 'PRETE_LIVRAISON', createdAt: new Date('2026-10-10T12:00:00Z') }], events: [] });
+  assert.deepEqual(Object.keys(withHistory.proofs).sort(), ['assignedAt', 'deliveredAt', 'pickedUpAt', 'pickedUpBy', 'pickedUpReason', 'preparedAt', 'readyAt', 'rideMinutes', 'waitMinutes']);
+  const text = JSON.stringify([course, withHistory]);
   for (const secret of ['9000', '10000', 'ORANGE', '1234', 'Finest']) assert.ok(!text.includes(secret), secret);
 });
 

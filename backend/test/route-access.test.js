@@ -37,9 +37,10 @@ const key = (r) => `${r.method} ${r.path}`;
 // Adresses sans connexion : se connecter, se déconnecter
 const PUBLIC = ['POST /login', 'POST /login/code', 'POST /logout'];
 
-// Les seules adresses ouvertes au Responsable livraison
+// Les seules adresses ouvertes au Responsable livraison. Lot 5c : ses alertes sur téléphone (/push : activer,
+// couper, essayer ; il ne reçoit que les siennes, commande prête ou sans livreur, voir push.service.js)
 const RESPONSABLE_ALLOWED = (r) =>
-  ['GET /me', 'POST /password'].includes(key(r)) || r.path === '/livraison' || r.path.startsWith('/livraison/');
+  ['GET /me', 'POST /password'].includes(key(r)) || r.path === '/livraison' || r.path.startsWith('/livraison/') || r.path === '/push' || r.path.startsWith('/push/');
 
 test('la liste des adresses est bien lue (toutes les pages de l’espace équipe)', () => {
   assert.ok(ROUTES.length > 60, `${ROUTES.length} adresses seulement`);
@@ -55,7 +56,7 @@ test('chaque adresse est protégée par une connexion, sauf la connexion elle-m�
   }
 });
 
-test('Responsable livraison : refusé sur TOUTES les adresses, sauf sa page Livraison, « qui suis-je » et son mot de passe', () => {
+test('Responsable livraison : refusé sur TOUTES les adresses, sauf sa page Livraison, ses alertes, « qui suis-je » et son mot de passe', () => {
   let refused = 0;
   for (const r of ROUTES) {
     if (PUBLIC.includes(key(r))) continue;
@@ -70,7 +71,7 @@ test('Responsable livraison : refusé sur TOUTES les adresses, sauf sa page Livr
 });
 
 test('Responsable livraison : jamais les commandes, le tableau de bord, la caisse du restaurant ni le menu', () => {
-  for (const p of ['/orders', '/dashboard', '/caisse', '/menu', '/home', '/team', '/reglages', '/provenances', '/frais-livraison', '/prestataire', '/courses', '/push']) {
+  for (const p of ['/orders', '/dashboard', '/caisse', '/menu', '/home', '/team', '/reglages', '/provenances', '/frais-livraison', '/prestataire', '/courses']) {
     const list = ROUTES.filter((r) => r.path === p || r.path.startsWith(`${p}/`));
     assert.ok(list.length > 0, p);
     for (const r of list) assert.equal(allowed(r, 'RESPONSABLE_LIVRAISON'), false, key(r));
@@ -79,7 +80,7 @@ test('Responsable livraison : jamais les commandes, le tableau de bord, la caiss
 
 test('page Livraison : Responsable livraison et Prestataire seulement (ni Patron, ni Opérateur, ni Livreur)', () => {
   const list = ROUTES.filter((r) => r.path.startsWith('/livraison'));
-  assert.ok(list.length >= 9);
+  assert.ok(list.length >= 13);
   for (const r of list) {
     assert.equal(allowed(r, 'RESPONSABLE_LIVRAISON'), true, key(r));
     assert.equal(allowed(r, 'PRESTATAIRE'), true, key(r));
@@ -96,4 +97,19 @@ test('rien ne change pour les autres rôles : le Livreur reste sur ses courses, 
   assert.equal(allowed(get('GET /caisse'), 'OPERATEUR'), true);
   assert.equal(allowed(get('GET /dashboard'), 'OPERATEUR'), false);
   assert.equal(allowed(get('GET /dashboard'), 'PATRON'), true);
+});
+
+test('lot 5c : récupération et tournées, chacun sur ses adresses', () => {
+  const get = (p) => ROUTES.find((r) => key(r) === p);
+  assert.equal(allowed(get('POST /courses/:reference/recuperee'), 'LIVREUR'), true);
+  assert.equal(allowed(get('POST /courses/:reference/recuperee'), 'RESPONSABLE_LIVRAISON'), false);
+  for (const p of ['POST /orders/tournee', 'POST /orders/:reference/recuperee']) {
+    assert.equal(allowed(get(p), 'OPERATEUR'), true, p);
+    assert.equal(allowed(get(p), 'RESPONSABLE_LIVRAISON'), false, p);
+    assert.equal(allowed(get(p), 'LIVREUR'), false, p);
+  }
+  for (const p of ['POST /livraison/tournees', 'PUT /livraison/courses/:reference/livreur', 'DELETE /livraison/courses/:reference/livreur', 'POST /livraison/courses/:reference/recuperee']) {
+    assert.equal(allowed(get(p), 'RESPONSABLE_LIVRAISON'), true, p);
+    assert.equal(allowed(get(p), 'OPERATEUR'), false, p);
+  }
 });

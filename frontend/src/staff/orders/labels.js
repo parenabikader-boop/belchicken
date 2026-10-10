@@ -5,6 +5,7 @@ export const STATUS_LABEL = {
   PAIEMENT_A_VERIFIER: 'Paiement à vérifier',
   PAYEE: 'Payée',
   EN_PREPARATION: 'En préparation',
+  PRETE_LIVRAISON: 'Prête pour livraison', // lot 5c : livraison par notre partenaire, en attente de son livreur
   EN_LIVRAISON: 'En livraison',
   PRETE: 'Prête à retirer',
   LIVREE: 'Livrée',
@@ -15,7 +16,9 @@ export const STATUS_LABEL = {
 export const isPickup = (o) => o?.mode === 'A_EMPORTER';
 export const statusLabel = (o, status = o.status) => (isPickup(o) && status === 'LIVREE' ? 'Retirée' : STATUS_LABEL[status]);
 
-export const ACTIVE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE'];
+export const ACTIVE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE_LIVRAISON', 'EN_LIVRAISON', 'PRETE'];
+// Lot 5c : livraison par notre partenaire (son responsable choisit le livreur, le livreur confirme la récupération)
+export const isPartner = (o) => !isPickup(o) && o?.deliveryOperator === 'PRESTATAIRE';
 
 // Étapes de la page Commandes, dans l'ordre du travail : un onglet (téléphone) ou une colonne
 // (ordinateur) par statut, avec l'action à faire. Puis l'historique (livrées et annulées).
@@ -35,7 +38,8 @@ export const STAGES = [
   {
     id: 'EN_PREPARATION',
     label: 'En préparation',
-    hint: 'Préparez ces commandes, puis choisissez le livreur au départ. À emporter : prévenez le client qu’elle est prête.',
+    // Lot 5c : avec aussi les commandes de notre partenaire prêtes, qui attendent son livreur (PRETE_LIVRAISON)
+    hint: 'Préparez ces commandes, puis choisissez le livreur au départ. À emporter : prévenez le client qu’elle est prête. Livraison Prestataire : appuyez sur « Prête pour livraison », son livreur vient la récupérer.',
     empty: 'Aucune commande en préparation.',
   },
   {
@@ -75,6 +79,11 @@ export const NEXT_ACTION = {
   // Livrée : validée par le livreur avec le code du client, ou par l'agent avec un motif (OrderSteps.jsx)
   EN_LIVRAISON: { to: 'LIVREE', label: 'Livrée : remercier le client' },
 };
+// Lot 5c, livraison par notre partenaire : le sac est prêt, son livreur vient le récupérer (pas de message au client)
+const PARTNER_ACTION = {
+  EN_PREPARATION: { to: 'PRETE_LIVRAISON', label: 'Prête pour livraison : prévenir le livreur' },
+  PRETE_LIVRAISON: { to: 'EN_LIVRAISON', label: 'Commande récupérée' },
+};
 // À emporter : « prête » au lieu du départ du livreur, puis remise au comptoir
 const PICKUP_ACTION = {
   EN_PREPARATION: { to: 'PRETE', label: 'Commande prête : prévenir le client' },
@@ -83,7 +92,7 @@ const PICKUP_ACTION = {
 // Parcours court (réglage) : paiement vérifié et préparation lancée en une fois, un seul message
 const SHORT_ACTION = { to: 'EN_PREPARATION', label: 'Paiement vérifié : lancer la préparation et prévenir le client' };
 export const nextAction = (o, { shortFlow = false } = {}) =>
-  (shortFlow && o.status === 'PAIEMENT_A_VERIFIER' && SHORT_ACTION) || (isPickup(o) && PICKUP_ACTION[o.status]) || NEXT_ACTION[o.status];
+  (shortFlow && o.status === 'PAIEMENT_A_VERIFIER' && SHORT_ACTION) || (isPickup(o) && PICKUP_ACTION[o.status]) || (isPartner(o) && PARTNER_ACTION[o.status]) || NEXT_ACTION[o.status];
 
 export const METHOD_LABEL = { ORANGE_MONEY: 'Orange Money', MOOV_MONEY: 'Moov Money', TELECEL_MONEY: 'Telecel Money', ESPECES: 'Espèces' };
 
@@ -174,10 +183,33 @@ export function timelineOf(o) {
       CODE_INCORRECT: isPickup(o) ? 'Code de retrait faux, tapé au comptoir' : 'Code de remise faux, tapé par le livreur',
       LIVRAISON_SANS_CODE: 'Livraison validée sans code',
       RETRAIT_SANS_CODE: 'Remise au comptoir validée sans code',
+      RECUPEREE_SANS_LIVREUR: `Récupérée sans que le livreur appuie${e.courierName ? ` (${e.courierName})` : ''}`,
+      LIVREUR_RETIRE: `Livreur retiré : ${e.courierName}`,
     }[e.type],
     note: e.messageLabel || (e.reason ? `Motif : ${e.reason}` : null),
     by: e.by,
     at: e.at,
   }));
   return [...statuses, ...events].sort((a, b) => new Date(b.at) - new Date(a.at));
+}
+
+// Lot 5c : étapes d'une commande comptées ensemble sur la page Commandes (prêtes pour livraison avec « En préparation »)
+export const STAGE_STATUSES = { EN_PREPARATION: ['EN_PREPARATION', 'PRETE_LIVRAISON'] };
+export const stageCount = (counts, id) => (STAGE_STATUSES[id] || [id]).reduce((n, s) => n + (counts[s] || 0), 0);
+
+// Lot 5c, preuves : l'heure de chaque étape de la livraison (o.proofs, calculé par le serveur)
+const minutesText = (n) => (n == null ? null : n < 1 ? 'moins d’1 min' : n < 60 ? `${n} min` : `${Math.floor(n / 60)} h ${String(n % 60).padStart(2, '0')}`);
+export function proofLines(p) {
+  if (!p) return [];
+  // Dans l'ordre où les étapes se sont passées (le livreur peut être choisi avant ou après « Prête »)
+  return [
+    [p.preparedAt, 'Préparation lancée', ''],
+    [p.readyAt, 'Prête pour livraison', ''],
+    [p.assignedAt, 'Livreur choisi', ''],
+    [p.pickedUpAt, 'Récupérée', p.waitMinutes != null ? ` · attente ${minutesText(p.waitMinutes)}` : ''],
+    [p.deliveredAt, 'Livrée', p.rideMinutes != null ? ` · trajet ${minutesText(p.rideMinutes)}` : ''],
+  ]
+    .filter(([at]) => at)
+    .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+    .map(([at, label, extra]) => [label, `${formatTime(at)}${extra}`]);
 }

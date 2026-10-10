@@ -2,8 +2,10 @@ import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { customerAutoEnabled, messageContext } from '../config/env.js';
 import {
-  ACTIVE, deliveryError, feeAlreadyPaid, isShortcut, SHORTCUT_OFF, feeMethodError, feeToCollect, feeVerifyError, isPickup, paymentConfirmError, STATUSES, transitionError,
+  ACTIVE, deliveryError, feeAlreadyPaid, isShortcut, SHORTCUT_OFF, feeMethodError, feeToCollect, feeVerifyError, isPartnerDelivery, isPickup, paymentConfirmError, STATUSES, transitionError,
 } from './order-status.js';
+import { deliveryProofs, PARTNER_ONLY } from './dispatch.js';
+import { courseReadyNotification, partnerNotification } from './push.message.js';
 import { feeCorrectionError, feeEditRight, isNightTime, minutesToHHMM, nightFeeAfter } from './delivery-fees.js';
 import { loadGrid } from './delivery-fees.service.js';
 import { getAppSettings } from './app-settings.service.js';
@@ -12,7 +14,7 @@ import { historyCutoff } from './features.js';
 import { customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticeState, THANKS_KEYS, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
 import { messageContextFor } from './delivery-mode.service.js';
-import { pushCourierAssigned, pushCourseCancelled, pushTeamDelivered } from './push.service.js';
+import { pushCourier, pushCourierAssigned, pushCourseCancelled, pushDeliveryManagers, pushTeamDelivered } from './push.service.js';
 import { enteredBy, paymentVerification, sendFrom, sourceLabel } from './order-sources.js';
 import { checkPickupCode, codeLocked, courierAssignError, generateDeliveryCode, handoverReasonError, MAX_CODE_ATTEMPTS } from './courier.js';
 import { isAvailabilityActive } from './courier-team.service.js';
@@ -89,6 +91,7 @@ export async function listOrders({ status, q }) {
       reference: o.reference,
       status: o.status,
       mode: o.mode,
+      deliveryOperator: o.deliveryOperator ?? 'RESTAURANT', // lot 5c : livrée par notre partenaire
       createdAt: o.createdAt,
       customerName: o.customerName,
       customerPhone: o.customerPhone,
@@ -138,6 +141,9 @@ export function toStaffOrder(order, night = null, ctx = messageContext()) {
     mode: o.mode,
     // Lot 5 : qui livre et encaisse les frais (RESTAURANT ou PRESTATAIRE), figé à la création
     deliveryOperator: o.deliveryOperator ?? 'RESTAURANT',
+    // Lot 5c : heures de chaque étape de la livraison (preuves), et tournée de la commande
+    proofs: o.mode === 'A_EMPORTER' ? null : deliveryProofs(o),
+    deliveryRunId: o.deliveryRunId ?? null,
     createdAt: o.createdAt,
     customerName: o.customerName,
     customerPhone: o.customerPhone,
@@ -221,14 +227,14 @@ export function toStaffOrder(order, night = null, ctx = messageContext()) {
 }
 
 // Après chaque changement : message automatique au client, s'il est activé (voir whatsapp.service.js)
-async function afterChange(reference) {
+export async function afterChange(reference) {
   const order = await prisma.order.findUnique({ where: { reference }, include: DETAIL_INCLUDE });
   autoNotifyCustomer(withCancelReason(order)).catch((e) => console.error('[whatsapp]', e));
   return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order));
 }
 
-const event = (orderId, type, staff, extra = {}) => ({ orderId, type, staffUserId: staff.id, staffName: staff.name, ...extra });
-const CHANGED = "Quelqu'un vient de modifier cette commande. La page est mise à jour.";
+export const event = (orderId, type, staff, extra = {}) => ({ orderId, type, staffUserId: staff.id, staffName: staff.name, ...extra });
+export const CHANGED = "Quelqu'un vient de modifier cette commande. La page est mise à jour.";
 
 // Frais saisis pour la première fois (FRAIS_SAISIS) ou corrigés, avec le motif et l'ancien montant (FRAIS_CORRIGES)
 const feeEvent = (order, amount, staff, reason) =>
@@ -248,12 +254,12 @@ export async function getOrder(reference, { checkHistory = false } = {}) {
 }
 
 // Commande lue dans une transaction, avec ce qu'il faut pour les règles (statuts et événements)
-async function findForRules(tx, reference) {
+export async function findForRules(tx, reference) {
   const order = await tx.order.findUnique({
     where: { reference },
     select: {
       id: true, status: true, mode: true, deliveryFee: true, deliveryNightFee: true, deliveryFeeMethod: true, deliveryFeeVerifiedAt: true, courierId: true,
-      cashRemittanceId: true, deliveryOperator: true,
+      cashRemittanceId: true, deliveryOperator: true, reference: true, courierName: true, deliveryRunId: true,
       deliveryCode: true, deliveryCodeAttempts: true, shortFlow: true,
       createdById: true, // commande saisie par un agent : message « à payer » facultatif
       statusChanges: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
@@ -265,7 +271,7 @@ async function findForRules(tx, reference) {
 }
 
 // Écriture protégée : refusée si quelqu'un a changé le statut ou les frais depuis la lecture
-async function guardedUpdate(tx, order, data) {
+export async function guardedUpdate(tx, order, data) {
   const updated = await tx.order.updateMany({
     where: {
       id: order.id,
@@ -283,7 +289,7 @@ async function guardedUpdate(tx, order, data) {
 
 // Livreur choisi par l'agent : compte LIVREUR actif (courier.js), de l'équipe du mode de la commande et
 // pas en pause quand la disponibilité est active (lot 5b, courier-team.js)
-async function findCourier(tx, order, courierId) {
+export async function findCourier(tx, order, courierId) {
   const courier = courierId ? await tx.staffUser.findUnique({ where: { id: courierId } }) : null;
   const active = await isAvailabilityActive(order.deliveryOperator, tx);
   const error = courierAssignError(order, courier, { active });
@@ -291,7 +297,7 @@ async function findCourier(tx, order, courierId) {
   return courier;
 }
 
-const assignment = (courier) => ({ courierId: courier.id, courierName: courier.name, courierAssignedAt: new Date() });
+export const assignment = (courier) => ({ courierId: courier.id, courierName: courier.name, courierAssignedAt: new Date() });
 
 export const statusChange = (order, to, staff, reason = null) => ({
   orderId: order.id, fromStatus: order.status, toStatus: to, reason, staffUserId: staff.id, staffName: staff.name,
@@ -313,9 +319,12 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, n
   let courier = null;
   let cancelledCourierId = null;
   let wrongCode = null;
+  let partner = null; // lot 5c : commande livrée par notre partenaire (alertes du Responsable livraison)
   await prisma.$transaction(async (tx) => {
     const order = await findForRules(tx, reference);
-    if (to === 'ANNULEE' && order.status === 'EN_LIVRAISON') cancelledCourierId = order.courierId;
+    partner = isPartnerDelivery(order) ? { courierId: order.courierId } : null;
+    // Lot 5c : un livreur de notre partenaire peut avoir la course dès la préparation
+    if (to === 'ANNULEE' && order.courierId && ['EN_PREPARATION', 'PRETE_LIVRAISON', 'EN_LIVRAISON'].includes(order.status)) cancelledCourierId = order.courierId;
     if (from && from !== order.status) {
       throw new AppError(409, "Quelqu'un a déjà changé le statut de cette commande. La page est mise à jour.", 'STATUT_DEJA_CHANGE');
     }
@@ -330,7 +339,9 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, n
     const fee = pickup ? deliveryFee ?? null : paying ? deliveryFee ?? order.deliveryFee : order.deliveryFee;
     const night = paying && !pickup ? nightFeeAfter(order, fee, nightFee) : null;
     const error =
-      transitionError(order.status, shortcut ? 'PAYEE' : to, reason, order.mode) ||
+      transitionError(order.status, shortcut ? 'PAYEE' : to, reason, order.mode, order.deliveryOperator) ||
+      // Lot 5c : une commande Prestataire part avec « Commande récupérée », jamais par ce bouton
+      (to === 'EN_LIVRAISON' && partner ? PARTNER_ONLY : null) ||
       (to !== 'ANNULEE' ? noticeError(notice(order)) : null) ||
       (paying ? paymentConfirmError(fee, order.mode, order.deliveryFee) : null) ||
       night?.error ||
@@ -385,15 +396,34 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, n
   if (courier) notifyCourier(reference, courier.id);
   if (to === 'LIVREE') notifyDelivered(reference, staff);
   if (cancelledCourierId) notifyCourier(reference, cancelledCourierId, pushCourseCancelled);
+  if (partner && (to === 'PRETE_LIVRAISON' || (to === 'EN_PREPARATION' && !partner.courierId))) notifyPartner(reference, to);
   return afterChange(reference);
+}
+
+// Lot 5c : alertes du Responsable livraison (commande prête, commande sans livreur), et au livreur déjà
+// choisi quand la commande est prête. N'échoue jamais.
+function notifyPartner(reference, to) {
+  prisma.order
+    .findUnique({ where: { reference }, select: { id: true, reference: true, courierId: true, courierName: true, deliveryZoneName: true } })
+    .then(async (order) => {
+      if (!order) return;
+      await pushDeliveryManagers(order, partnerNotification(order, to === 'PRETE_LIVRAISON' ? 'PRETE' : 'A_ATTRIBUER'));
+      if (to === 'PRETE_LIVRAISON' && order.courierId) await pushCourier(order, order.courierId, courseReadyNotification(order));
+    })
+    .catch((e) => console.error('[push] livraison', e));
 }
 
 // Remplacement du livreur pendant la livraison (panne, absence) : le code reste le même,
 // l'ancien livreur ne voit plus la course, le nouveau est prévenu.
-export async function reassignCourier(reference, courierId, staff) {
+// partner (lot 5c) : appelé depuis la page Livraison. Une commande Prestataire ne se change que là,
+// une commande du restaurant jamais là.
+export async function reassignCourier(reference, courierId, staff, { partner = false } = {}) {
   let courier = null;
   await prisma.$transaction(async (tx) => {
     const order = await findForRules(tx, reference);
+    if (isPartnerDelivery(order) !== partner) {
+      throw new AppError(403, partner ? 'Cette commande est livrée par le restaurant.' : PARTNER_ONLY, 'LIVREUR_IMPOSSIBLE');
+    }
     if (order.status !== 'EN_LIVRAISON') throw new AppError(400, 'Le livreur se remplace seulement pendant la livraison.', 'LIVREUR_IMPOSSIBLE');
     courier = await findCourier(tx, order, courierId);
     await guardedUpdate(tx, order, assignment(courier));
@@ -421,7 +451,7 @@ export function notifyDelivered(reference, byAgent = null) {
 }
 
 // Notification au livreur : nouvelle course, ou course annulée (n'échoue jamais)
-function notifyCourier(reference, courierId, send = pushCourierAssigned) {
+export function notifyCourier(reference, courierId, send = pushCourierAssigned) {
   prisma.order
     .findUnique({ where: { reference }, select: { id: true, reference: true, items: { select: { quantity: true } } } })
     .then((order) => order && send(order, courierId))

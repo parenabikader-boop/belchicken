@@ -97,11 +97,14 @@ export async function getOrderSummary(reference) {
 // Page de suivi : étapes datées, frais de livraison, motif d'annulation. Jamais de nom, numéro,
 // position ni nom d'agent : la référence suffit pour la voir.
 // ctx : contexte des messages (lot 5 : nos codes pour les frais d'une commande en mode Prestataire)
+// Lot 5c : « Prête pour livraison » est une étape interne (sac prêt, en attente de notre livreur) : le client
+// voit toujours « En préparation », jusqu'à « En route ».
+const PUBLIC_STATUS = { PRETE_LIVRAISON: 'EN_PREPARATION' };
 export function toPublicOrder(order, ctx = { payment: env.payment }) {
-  const changes = order.statusChanges || [];
+  const changes = (order.statusChanges || []).filter((h) => !PUBLIC_STATUS[h.toStatus]);
   return {
     reference: order.reference,
-    status: order.status,
+    status: PUBLIC_STATUS[order.status] || order.status,
     mode: order.mode,
     createdAt: order.createdAt,
     paymentMethod: order.paymentMethod,

@@ -12,6 +12,9 @@ import { nightLine } from '../../utils/deliveryFee.js';
 // /equipe/courses : le livreur ne voit que ses courses du jour (l'API ne lui donne rien d'autre).
 // Seul montant affiché : les frais de livraison à encaisser (le client a payé les plats d'avance). Pour remettre
 // la commande, le livreur tape le code à 4 chiffres reçu par le client sur WhatsApp et note comment les frais ont été payés.
+// Lot 5c, livreur de notre partenaire : une course peut lui être confiée dès la préparation (« À récupérer ») ;
+// quand le sac est prêt, il le prend au restaurant et appuie sur « Commande récupérée ».
+const UPCOMING = ['EN_PREPARATION', 'PRETE_LIVRAISON'];
 
 const POLL_VISIBLE_MS = 10000;
 const POLL_HIDDEN_MS = 30000;
@@ -29,9 +32,11 @@ export default function CoursesPage() {
     try {
       const { courses: list, availability: mine } = await staffApi.courses();
       setAvailability(mine || null);
-      const active = list.filter((c) => c.status === 'EN_LIVRAISON').map((c) => c.reference);
-      if (known.current && active.some((r) => !known.current.has(r))) play();
-      known.current = new Set(active);
+      // Un son pour chaque nouvelle course, et quand une course à récupérer est prête (lot 5c)
+      const open = list.filter((c) => c.status === 'EN_LIVRAISON' || UPCOMING.includes(c.status));
+      const ready = open.filter((c) => c.status === 'PRETE_LIVRAISON').map((c) => c.reference);
+      if (known.current && (open.some((c) => !known.current.all.has(c.reference)) || ready.some((r) => !known.current.ready.has(r)))) play();
+      known.current = { all: new Set(open.map((c) => c.reference)), ready: new Set(ready) };
       setCourses(list);
       setError(null);
     } catch (e) {
@@ -67,7 +72,8 @@ export default function CoursesPage() {
   }
 
   const active = courses.filter((c) => c.status === 'EN_LIVRAISON');
-  const done = courses.filter((c) => c.status !== 'EN_LIVRAISON');
+  const upcoming = courses.filter((c) => UPCOMING.includes(c.status));
+  const done = courses.filter((c) => c.status === 'LIVREE' || c.status === 'ANNULEE');
 
   return (
     <div className="lv">
@@ -77,7 +83,7 @@ export default function CoursesPage() {
       </div>
       {availability?.active && <AvailabilitySwitch value={availability} onChange={setAvailability} />}
       <AlertsPrompt what="course" />
-      {!soundReady && active.length === 0 && <p className="st-muted lv-sound">Touchez l’écran une fois : un son vous prévient de chaque nouvelle course.</p>}
+      {!soundReady && active.length === 0 && upcoming.length === 0 && <p className="st-muted lv-sound">Touchez l’écran une fois : un son vous prévient de chaque nouvelle course.</p>}
       {error && <div className="alert err" role="alert" style={{ marginBottom: 12 }}><span>{error.message}</span></div>}
       {success && (
         <div className="lv-success" role="status">
@@ -96,8 +102,15 @@ export default function CoursesPage() {
         </div>
       )}
 
+      {upcoming.length > 0 && (
+        <>
+          <p className="lv-count">{upcoming.length} course{upcoming.length > 1 ? 's' : ''} à récupérer au restaurant</p>
+          {upcoming.map((c) => <Course key={c.reference} course={c} onPickedUp={replace} onRefresh={load} />)}
+        </>
+      )}
+
       {active.length === 0 ? (
-        <div className="st-empty">
+        upcoming.length === 0 && <div className="st-empty">
           <b>Aucune course en cours</b>
           <p>Vos nouvelles courses s’affichent ici dès que l’équipe vous les assigne.</p>
         </div>
@@ -132,13 +145,17 @@ export default function CoursesPage() {
   );
 }
 
-function Course({ course: c, onDelivered, onRefresh }) {
+function Course({ course: c, onDelivered, onPickedUp, onRefresh }) {
+  const upcoming = UPCOMING.includes(c.status);
   return (
-    <article className="lv-card">
+    <article className={`lv-card${upcoming ? ' lv-upcoming' : ''}`}>
       <header className="lv-top">
         <b>{c.reference}</b>
-        <span className="st-muted">Assignée à {formatTime(c.assignedAt)}</span>
+        <span className="st-muted">
+          {c.readyAt && c.pickedUpAt ? `Récupérée à ${formatTime(c.pickedUpAt)}` : `Assignée à ${formatTime(c.assignedAt)}`}
+        </span>
       </header>
+      {upcoming && <PickUp course={c} onPickedUp={onPickedUp} onRefresh={onRefresh} />}
 
       {/* Frais de livraison : le seul montant que le livreur voit */}
       {c.feePaidBefore || c.deliveryFee === 0 ? (
@@ -199,8 +216,42 @@ function Course({ course: c, onDelivered, onRefresh }) {
         </ul>
       </section>
 
-      <Handover course={c} onDelivered={onDelivered} onRefresh={onRefresh} />
+      {!upcoming && <Handover course={c} onDelivered={onDelivered} onRefresh={onRefresh} />}
     </article>
+  );
+}
+
+// Lot 5c : « Commande récupérée ». En préparation : attendre ; prête : le livreur prend le sac et appuie.
+// L'heure est notée (preuve) ; le client reçoit ensuite le message « en route » avec son code.
+function PickUp({ course: c, onPickedUp, onRefresh }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  if (c.status === 'EN_PREPARATION') {
+    return (
+      <p className="lv-pickup wait">
+        <b>En préparation au restaurant</b>
+        <small>Vous serez prévenu quand le sac sera prêt.</small>
+      </p>
+    );
+  }
+  const submit = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      onPickedUp(await staffApi.pickUp(c.reference));
+    } catch (err) {
+      setError(err.message);
+      onRefresh();
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="lv-pickup ready">
+      <b>Prête{c.readyAt && ` depuis ${formatTime(c.readyAt)}`} : venez la récupérer au restaurant</b>
+      <small>Vérifiez le sac avec la liste ci-dessous, puis appuyez.</small>
+      <button type="button" className="btn btn-p btn-block" disabled={busy} onClick={submit}>{busy ? 'Enregistrement…' : 'Commande récupérée'}</button>
+      {error && <p className="st-err" role="alert">{error}</p>}
+    </div>
   );
 }
 

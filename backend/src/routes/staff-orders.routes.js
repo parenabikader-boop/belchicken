@@ -11,6 +11,8 @@ import { normalizePhone } from '../utils/phone.js';
 import { FEE_MAX, FEE_METHODS, FEE_MIN, STATUSES } from '../services/order-status.js';
 import { listCouriersFor, setAvailability } from '../services/courier-team.service.js';
 import { AVAILABILITIES } from '../services/courier-team.js';
+import { pickUp, restaurantTour } from '../services/dispatch.service.js';
+import { RUN_MAX } from '../services/dispatch.js';
 
 // Commandes de l'espace équipe : Patron et Opérateur
 export const staffOrdersRouter = Router();
@@ -79,6 +81,22 @@ staffOrdersRouter.put('/livreurs/:id/disponibilite', async (req, res, next) => {
     const { availability } = availabilitySchema.parse(req.body);
     await setAvailability(req.staff, String(req.params.id), availability, 'restaurant');
     res.json(await listCouriersFor(null));
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Lot 5c : tournée en mode Restaurant (réglage « Tournées et disponibilité ») : plusieurs commandes « En
+// préparation » partent avec le même livreur, chacune avec son code et son message « en route » (avant /:reference)
+const tourSchema = z.object({
+  courierId: z.string({ required_error: 'Choisissez le livreur.' }).max(40),
+  orders: z.array(z.object({ reference: z.string().max(20), from: z.string().max(30).optional() })).min(1, 'Cochez au moins une commande.').max(RUN_MAX),
+});
+
+staffOrdersRouter.post('/tournee', async (req, res, next) => {
+  try {
+    const { courierId, orders } = tourSchema.parse(req.body);
+    res.json(await restaurantTour(req.staff, courierId, orders.map((o) => ({ ...o, reference: o.reference.toUpperCase() }))));
   } catch (e) {
     next(e);
   }
@@ -184,6 +202,16 @@ const noticeSchema = z.object({
 staffOrdersRouter.post('/:reference/notice', async (req, res, next) => {
   try {
     res.json({ order: await confirmNotice(reference(req), noticeSchema.parse(req.body), req.staff) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Lot 5c : commande Prestataire récupérée sans que le livreur ait pu appuyer (téléphone éteint) : motif obligatoire
+staffOrdersRouter.post('/:reference/recuperee', async (req, res, next) => {
+  try {
+    const { reason } = z.object({ reason: z.string({ required_error: 'Indiquez le motif.' }).max(300) }).parse(req.body);
+    res.json({ order: await pickUp(req.staff, reference(req), { reason }) });
   } catch (e) {
     next(e);
   }

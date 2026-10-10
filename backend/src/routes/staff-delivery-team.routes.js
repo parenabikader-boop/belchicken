@@ -2,12 +2,15 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireStaff } from '../middlewares/staff-auth.js';
 import { requestMeta } from '../services/security-log.service.js';
+import { prisma } from '../lib/prisma.js';
 import {
   createDeliveryMember, deliveryMemberAction, getDeliveryOverview, listDeliveryTeam, setAvailability,
 } from '../services/courier-team.service.js';
 import { AVAILABILITIES } from '../services/courier-team.js';
 import { getCash, remitCash } from '../services/cash.service.js';
-import { markFeeVerified } from '../services/staff-orders.service.js';
+import { markFeeVerified, reassignCourier } from '../services/staff-orders.service.js';
+import { assignPartnerRun, pickUp, unassignPartner } from '../services/dispatch.service.js';
+import { RUN_MAX } from '../services/dispatch.js';
 import { createDeliveryMemberSchema, provisionalPasswordSchema } from '../services/team.js';
 
 // Lot 5b : page Livraison, notre équipe de livraison. Responsable livraison et Prestataire seulement.
@@ -33,6 +36,43 @@ staffDeliveryTeamRouter.put('/livreurs/:id/disponibilite', handle(async (req, re
     .object({ availability: z.enum(AVAILABILITIES, { errorMap: () => ({ message: 'Choisissez Disponible ou En pause.' }) }) })
     .parse(req.body);
   await setAvailability(req.staff, String(req.params.id), availability, 'livraison');
+  res.json(await getDeliveryOverview());
+}));
+
+// ─── Lot 5c : choix du livreur des commandes Prestataire (tournées), récupération ───
+
+const ref = (req) => String(req.params.reference).toUpperCase();
+const courierSchema = z.object({ courierId: z.string({ required_error: 'Choisissez le livreur.' }).max(40) });
+
+// Confier une ou plusieurs commandes à un livreur (dès « En préparation », jusqu'à la récupération)
+staffDeliveryTeamRouter.post('/tournees', handle(async (req, res) => {
+  const { courierId, references } = courierSchema
+    .extend({ references: z.array(z.string().max(20)).min(1, 'Cochez au moins une commande.').max(RUN_MAX) })
+    .parse(req.body);
+  await assignPartnerRun(req.staff, courierId, references.map((r) => r.toUpperCase()));
+  res.json(await getDeliveryOverview());
+}));
+
+// Changer le livreur d'une commande : avant la récupération (nouvelle attribution), ou pendant la livraison
+// (remplacement, le code reste le même)
+staffDeliveryTeamRouter.put('/courses/:reference/livreur', handle(async (req, res) => {
+  const { courierId } = courierSchema.parse(req.body);
+  const order = await prisma.order.findUnique({ where: { reference: ref(req) }, select: { status: true } });
+  if (order?.status === 'EN_LIVRAISON') await reassignCourier(ref(req), courierId, req.staff, { partner: true });
+  else await assignPartnerRun(req.staff, courierId, [ref(req)]);
+  res.json(await getDeliveryOverview());
+}));
+
+// Retirer le livreur avant la récupération : la commande revient « à attribuer »
+staffDeliveryTeamRouter.delete('/courses/:reference/livreur', handle(async (req, res) => {
+  await unassignPartner(req.staff, ref(req));
+  res.json(await getDeliveryOverview());
+}));
+
+// Récupérée sans que le livreur ait pu appuyer : motif obligatoire
+staffDeliveryTeamRouter.post('/courses/:reference/recuperee', handle(async (req, res) => {
+  const { reason } = z.object({ reason: z.string({ required_error: 'Indiquez le motif.' }).max(300) }).parse(req.body);
+  await pickUp(req.staff, ref(req), { reason });
   res.json(await getDeliveryOverview());
 }));
 

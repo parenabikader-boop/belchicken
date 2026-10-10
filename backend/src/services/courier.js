@@ -29,7 +29,8 @@ export const attemptsLeft = (order) => Math.max(0, MAX_CODE_ATTEMPTS - order.del
 // Lot 5b : livreur de l'équipe du mode de la commande, pas en pause quand la disponibilité est active
 // (active, voir courier-team.js). Renvoie null si permis, sinon le message.
 export function courierAssignError(order, courier, { active = false } = {}) {
-  if (!['EN_PREPARATION', 'EN_LIVRAISON'].includes(order.status)) return 'Le livreur se choisit au départ de la commande.';
+  // Lot 5c : notre partenaire choisit son livreur dès la préparation, jusqu'à la récupération (PRETE_LIVRAISON)
+  if (!['EN_PREPARATION', 'PRETE_LIVRAISON', 'EN_LIVRAISON'].includes(order.status)) return 'Le livreur se choisit au départ de la commande.';
   if (!courier) return 'Choisissez le livreur.';
   if (courier.role !== 'LIVREUR') return 'Ce compte n’est pas un compte livreur.';
   if (!courier.isActive) return `Le compte de ${courier.name} est désactivé.`;
@@ -103,6 +104,9 @@ export function toCourse(o) {
     status: o.status,
     assignedAt: o.courierAssignedAt,
     deliveredAt,
+    // Lot 5c : commande de notre partenaire pas encore récupérée (EN_PREPARATION, puis PRETE_LIVRAISON : à récupérer)
+    readyAt: o.statusChanges?.findLast((h) => h.toStatus === 'PRETE_LIVRAISON')?.createdAt || null,
+    pickedUpAt: o.statusChanges?.findLast((h) => h.toStatus === 'EN_LIVRAISON')?.createdAt || null,
     // Frais à encaisser à la réception ; feePaidBefore : anciennes commandes, frais déjà payés avant le départ
     deliveryFee: o.deliveryFee,
     deliveryNightFee: o.deliveryNightFee ?? null, // lot 3 : dont supplément de nuit (compris dans deliveryFee)

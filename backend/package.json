@@ -11,6 +11,7 @@
     "dev": "node --watch-path=src src/server.js",
     "start": "node src/server.js",
     "test": "node --test test/*.test.js",
+    "test:db": "node --test --test-timeout=180000 test-db/*.db.test.js",
     "postinstall": "prisma generate",
     "db:deploy": "node scripts/migrate-deploy.js",
     "db:seed": "prisma db seed",

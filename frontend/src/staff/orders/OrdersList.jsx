@@ -6,7 +6,8 @@ import { useOrdersFeed } from './OrdersFeed.jsx';
 import { useStaff } from '../StaffContext.jsx';
 import AlertsPrompt from '../alerts/AlertsPrompt.jsx';
 import { useAppSettings } from '../settings/useAppSettings.js';
-import { FEE_METHOD_LABEL, feeText, formatTime, HISTORY, HISTORY_FILTERS, isPickup, METHOD_LABEL, STAGES, statusLabel, timeAgo } from './labels.js';
+import { FEE_METHOD_LABEL, feeText, formatTime, HISTORY, HISTORY_FILTERS, isPartner, isPickup, METHOD_LABEL, STAGES, STAGE_STATUSES, stageCount, statusLabel, timeAgo } from './labels.js';
+import TourPanel from './TourPanel.jsx';
 
 const REFRESH_MS = 5000;
 // Au-delà : les 6 étapes en colonnes côte à côte ; en dessous : un onglet par étape
@@ -36,7 +37,7 @@ export default function OrdersList() {
   // À l'ouverture : la première étape qui contient des commandes, en commençant par « À vérifier »
   useEffect(() => {
     if (etape || !feed.orders) return;
-    const first = STAGES.find((s) => counts[s.id] > 0) || STAGES[0];
+    const first = STAGES.find((s) => stageCount(counts, s.id) > 0) || STAGES[0];
     go({ etape: first.id });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [etape, feed.orders]);
@@ -76,11 +77,11 @@ export default function OrdersList() {
         <>
           <nav className="od-tabs" aria-label="Étapes">
             {(wide ? [] : STAGES).map((s) => (
-              <StageTab key={s.id} stage={s} count={counts[s.id] || 0} on={current?.id === s.id} onClick={() => go({ etape: s.id, statut: null })} />
+              <StageTab key={s.id} stage={s} count={stageCount(counts, s.id)} on={current?.id === s.id} onClick={() => go({ etape: s.id, statut: null })} />
             ))}
             {wide && (
               <button type="button" className={`od-tab${current && current !== HISTORY ? ' on' : ''}`} aria-pressed={current !== HISTORY} onClick={() => go({ etape: STAGES[0].id, statut: null })}>
-                Commandes en cours <span>{STAGES.reduce((n, s) => n + (counts[s.id] || 0), 0)}</span>
+                Commandes en cours <span>{STAGES.reduce((n, s) => n + stageCount(counts, s.id), 0)}</span>
               </button>
             )}
             <button type="button" className={`od-tab od-tab-history${current === HISTORY ? ' on' : ''}`} aria-pressed={current === HISTORY} onClick={() => go({ etape: HISTORY.id })}>
@@ -127,7 +128,7 @@ function StageTab({ stage, count, on, onClick }) {
 }
 
 // Commandes d'une étape : la plus ancienne en premier (celle qui attend depuis le plus longtemps)
-const inStage = (o, id) => (id === 'A_REMERCIER' ? o.status === 'LIVREE' && o.toThank : o.status === id);
+const inStage = (o, id) => (id === 'A_REMERCIER' ? o.status === 'LIVREE' && o.toThank : (STAGE_STATUSES[id] || [id]).includes(o.status));
 const ofStage = (orders, id) => (orders || []).filter((o) => inStage(o, id)).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
 // Téléphone : une seule étape
@@ -136,6 +137,7 @@ function Stage({ stage, feed }) {
   return (
     <section className={`od-stage s-${stage.id}`}>
       <p className="od-hint">{stage.hint}</p>
+      {stage.id === 'EN_PREPARATION' && <TourPanel orders={orders} onDone={feed.refresh} />}
       <OrderList orders={orders} unseen={feed.unseen} empty={stage.empty} />
     </section>
   );
@@ -145,22 +147,26 @@ function Stage({ stage, feed }) {
 function Board({ feed }) {
   const counts = feed.counts || {};
   return (
-    <div className="od-board">
-      {STAGES.map((s) => {
-        const n = counts[s.id] || 0;
-        const orders = ofStage(feed.orders, s.id);
-        return (
-          <section key={s.id} className={`od-col s-${s.id}${n ? ' has' : ''}`} aria-label={s.label}>
-            <header className="od-col-head">
-              <h2>{s.label}</h2>
-              <span className="od-count">{n}</span>
-            </header>
-            <p className="od-hint">{s.hint}</p>
-            <OrderList orders={orders} unseen={feed.unseen} empty={s.empty} compact />
-          </section>
-        );
-      })}
-    </div>
+    <>
+      {/* Lot 5c : tournée des livreurs du restaurant, sur toute la largeur au-dessus des colonnes */}
+      <TourPanel orders={ofStage(feed.orders, 'EN_PREPARATION')} onDone={feed.refresh} />
+      <div className="od-board">
+        {STAGES.map((s) => {
+          const n = stageCount(counts, s.id);
+          const orders = ofStage(feed.orders, s.id);
+          return (
+            <section key={s.id} className={`od-col s-${s.id}${n ? ' has' : ''}`} aria-label={s.label}>
+              <header className="od-col-head">
+                <h2>{s.label}</h2>
+                <span className="od-count">{n}</span>
+              </header>
+              <p className="od-hint">{s.hint}</p>
+              <OrderList orders={orders} unseen={feed.unseen} empty={s.empty} compact />
+            </section>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
@@ -260,6 +266,9 @@ function stageDetail(o) {
     if (o.deliveryFee == null) return 'Frais à saisir';
     return o.deliveryFee === 0 ? 'Livraison offerte' : `Frais : ${formatPrice(o.deliveryFee)}, payés au livreur`;
   }
+  // Lot 5c : livraison par notre partenaire, son livreur vient récupérer la commande
+  if (isPartner(o) && o.status === 'EN_PREPARATION') return o.courierName ? `Prestataire · livreur : ${o.courierName}` : 'Prestataire · livreur pas encore choisi';
+  if (o.status === 'PRETE_LIVRAISON') return o.courierName ? `Prête · ${o.courierName} vient la récupérer` : 'Prête · en attente d’un livreur';
   if (o.status === 'EN_LIVRAISON') return o.courierName ? `Livreur : ${o.courierName}` : 'Livreur non indiqué';
   if (o.status === 'LIVREE') return [o.courierName ? `Livrée par ${o.courierName}` : 'Livrée', o.deliveryFeeMethod && `frais ${FEE_METHOD_LABEL[o.deliveryFeeMethod]}`].filter(Boolean).join(' · ');
   return null;
@@ -275,6 +284,7 @@ function OrderCard({ order: o, isNew, withStatus }) {
           <b className="st-ref">{o.reference}</b>
           {isNew && <span className="st-new">Nouvelle</span>}
           {isPickup(o) && <span className="st-pickup">À emporter</span>}
+          {o.status === 'PRETE_LIVRAISON' && <span className="st-pickup st-ready">Prête</span>}
           <span className="st-time">{formatTime(o.createdAt)} · {timeAgo(o.createdAt)}</span>
         </div>
         <div className="st-order-name">{o.customerName}</div>

@@ -24,6 +24,9 @@ enum OrderStatus {
   LIVREE // livrée, ou retirée au comptoir pour une commande à emporter
   ANNULEE
   PRETE // à emporter : prête, le client peut venir la retirer
+  // Lot 5c, livraison en mode Prestataire seulement : prête, en attente de notre livreur
+  // (EN_PREPARATION -> PRETE_LIVRAISON -> EN_LIVRAISON, « Commande récupérée »)
+  PRETE_LIVRAISON
 }
 
 // Livraison à domicile, ou commande à emporter (retirée au restaurant, sans frais ni livreur)
@@ -332,15 +335,18 @@ model Order {
   // Livreur assigné au passage EN_LIVRAISON (remplaçable tant que la commande n'est pas livrée).
   // courierName est une copie figée, comme staffName dans l'historique.
   courierId            String?
-  courier              StaffUser? @relation("Courses", fields: [courierId], references: [id], onDelete: SetNull)
+  courier              StaffUser?   @relation("Courses", fields: [courierId], references: [id], onDelete: SetNull)
   courierName          String?
   courierAssignedAt    DateTime?
+  // Lot 5c : tournée dans laquelle la commande a été confiée au livreur (vide = confiée seule, ou avant 5c)
+  deliveryRunId        String?
+  deliveryRun          DeliveryRun? @relation(fields: [deliveryRunId], references: [id], onDelete: SetNull)
   // Code de remise à 4 chiffres, créé au passage EN_LIVRAISON et envoyé au client dans le message
   // « en route ». Jamais envoyé au livreur : il le tape, l'API vérifie. Bloqué après 5 codes faux.
   // À emporter : même code (code de retrait), créé au passage PRETE et envoyé dans le message « prête » ;
   // l'agent le tape au comptoir. Jamais sur la page de suivi publique.
   deliveryCode         String?
-  deliveryCodeAttempts Int        @default(0)
+  deliveryCodeAttempts Int          @default(0)
 
   items         OrderItem[]
   notifications NotificationLog[]
@@ -358,6 +364,7 @@ model Order {
   @@index([cashRemittanceId])
   @@index([customerPhone, createdAt]) // client retrouvé par son numéro (prise de commande par l'agent)
   @@index([sourceId])
+  @@index([deliveryRunId])
 }
 
 model OrderItem {
@@ -399,6 +406,10 @@ model OrderItemDrink {
 // Historique des statuts : chaque changement, quand et par qui.
 // staffUserId vide = action du système (création de la commande). staffName est une copie figée,
 // pour garder l'historique lisible même si le compte est supprimé.
+// Lot 5c, preuves : la base refuse toute MODIFICATION de ces lignes (déclencheur de la migration
+// 20261010200000_livraison_tournees_5c). Seule exception : compte de l'équipe supprimé, le lien staffUserId
+// passe à vide (le nom copié reste). Les SUPPRESSIONS restent possibles : une commande supprimée emporte
+// son historique (nettoyage des commandes d'essai).
 model OrderStatusChange {
   id          String       @id @default(cuid())
   orderId     String
@@ -430,8 +441,14 @@ enum OrderEventType {
   LIVRAISON_SANS_CODE // livraison validée par l'agent, client sans son code (motif dans OrderStatusChange.reason)
   FRAIS_CORRIGES // frais d'une commande corrigés par l'équipe, avec un motif (après le départ du livreur : Patron seulement)
   RETRAIT_SANS_CODE // à emporter : remise au comptoir validée par l'agent, client sans son code de retrait (motif dans OrderStatusChange.reason)
+  RECUPEREE_SANS_LIVREUR // lot 5c : « Commande récupérée » confirmée par l'agent ou le Responsable livraison à la place du livreur (motif dans OrderStatusChange.reason)
+  LIVREUR_RETIRE // lot 5c : livreur retiré par le Responsable livraison avant la récupération (nom dans courierName)
 }
 
+// Lot 5c, preuves : la base refuse toute MODIFICATION de ces lignes (déclencheur de la migration
+// 20261010200000_livraison_tournees_5c). Seule exception : compte de l'équipe supprimé, le lien staffUserId
+// passe à vide (le nom copié reste). Les SUPPRESSIONS restent possibles : une commande supprimée emporte
+// son historique (nettoyage des commandes d'essai).
 model OrderEvent {
   id             String         @id @default(cuid())
   orderId        String
@@ -538,6 +555,27 @@ model StaffUser {
   cashReceived        CashRemittance[]            @relation("CashToStaff")
   ordersEntered       Order[]                     @relation("OrdersEntered")
   availabilityChanges CourierAvailabilityChange[]
+  deliveryRuns        DeliveryRun[]               @relation("RunCourier")
+  deliveryRunsCreated DeliveryRun[]               @relation("RunCreatedBy")
+}
+
+// Lot 5c : tournée, des commandes confiées en une fois à un livreur (par le Responsable livraison en mode
+// Prestataire, par l'agent en mode Restaurant avec le réglage « Tournées et disponibilité »). Chaque commande
+// garde son code, ses frais et son message « en route ». Noms copiés, comme dans l'historique.
+model DeliveryRun {
+  id            String           @id @default(cuid())
+  operator      DeliveryOperator // RESTAURANT ou PRESTATAIRE
+  courierId     String?
+  courier       StaffUser?       @relation("RunCourier", fields: [courierId], references: [id], onDelete: SetNull)
+  courierName   String
+  createdById   String?
+  createdBy     StaffUser?       @relation("RunCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdByName String
+  createdAt     DateTime         @default(now())
+  orders        Order[]
+
+  @@index([courierId, createdAt])
+  @@index([createdAt])
 }
 
 // Lot 5b : chaque passage Disponible / En pause d'un livreur (preuves pour le relevé du sous-lot 5d).

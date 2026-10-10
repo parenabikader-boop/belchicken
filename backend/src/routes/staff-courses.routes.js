@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { requireStaff } from '../middlewares/staff-auth.js';
 import { deliverWithCode, listCourses } from '../services/courier.service.js';
 import { myAvailability, setAvailability } from '../services/courier-team.service.js';
+import { pickUp } from '../services/dispatch.service.js';
 import { AVAILABILITIES } from '../services/courier-team.js';
 
 // Espace livreur : ses courses seulement. Les autres routes de l'équipe lui sont fermées.
@@ -26,6 +27,17 @@ staffCoursesRouter.put('/disponibilite', async (req, res, next) => {
       .parse(req.body);
     await setAvailability(req.staff, req.staff.id, availability, 'self');
     res.json({ availability: await myAvailability(req.staff) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Lot 5c : « Commande récupérée » (commande de notre partenaire, prête au restaurant)
+staffCoursesRouter.post('/:reference/recuperee', async (req, res, next) => {
+  try {
+    const reference = String(req.params.reference).toUpperCase();
+    await pickUp(req.staff, reference, { byCourier: true });
+    res.json({ course: (await listCourses(req.staff)).find((c) => c.reference === reference) });
   } catch (e) {
     next(e);
   }

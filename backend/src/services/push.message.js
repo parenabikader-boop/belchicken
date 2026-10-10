@@ -52,6 +52,42 @@ export const courseCancelledNotification = (order) => ({
   tag: `course-${order.reference}`,
 });
 
+// Lot 5c : le Responsable livraison retire la course avant la récupération
+export const courseRemovedNotification = (order) => ({
+  title: `Course ${order.reference} retirée`,
+  body: 'Le responsable livraison a repris cette commande : ne venez pas la récupérer.',
+  url: '/equipe/courses',
+  tag: `course-${order.reference}`,
+});
+
+// Lot 5c : la commande confiée au livreur est prête, il peut venir la récupérer
+export const courseReadyNotification = (order) => ({
+  title: `Course ${order.reference} prête`,
+  body: 'Le sac est prêt au restaurant : venez le récupérer, puis appuyez sur « Commande récupérée ».',
+  url: '/equipe/courses',
+  tag: `course-${order.reference}`,
+});
+
+// Lot 5c : alertes du Responsable livraison (commande prête, commande sans livreur). Jamais de montant des
+// plats : la référence, le quartier et le livreur seulement.
+export function partnerNotification(order, kind) {
+  const zone = order.deliveryZoneName ? ` · ${order.deliveryZoneName}` : '';
+  if (kind === 'PRETE') {
+    return {
+      title: `Commande ${order.reference} prête pour livraison`,
+      body: order.courierName ? `${order.courierName} peut la récupérer${zone}.` : `Aucun livreur : choisissez-en un${zone}.`,
+      url: '/equipe/livraison',
+      tag: `livraison-${order.reference}`,
+    };
+  }
+  return {
+    title: `Commande ${order.reference} à attribuer`,
+    body: `En préparation au restaurant, sans livreur${zone}. Choisissez un livreur.`,
+    url: '/equipe/livraison',
+    tag: `livraison-${order.reference}`,
+  };
+}
+
 export const testNotification = () => ({
   title: 'Notification d’essai',
   body: 'Les alertes Belchicken fonctionnent sur ce téléphone.',

@@ -5,7 +5,8 @@ import { pushStatus, sendTest, subscribe, unsubscribe } from '../services/push.s
 
 // Alertes sur téléphone : nouvelles commandes (Patron et Opérateur), nouvelles courses (Livreur)
 export const staffPushRouter = Router();
-staffPushRouter.use(requireStaff('PATRON', 'OPERATEUR', 'LIVREUR'));
+// Lot 5c : le Responsable livraison reçoit seulement ses alertes (commande prête, commande sans livreur)
+staffPushRouter.use(requireStaff('PATRON', 'OPERATEUR', 'LIVREUR', 'RESPONSABLE_LIVRAISON'));
 
 // Services de notification des navigateurs (Chrome, Safari, Firefox, Edge). Le serveur
 // n'envoie jamais rien ailleurs, même si une adresse inconnue lui est donnée.

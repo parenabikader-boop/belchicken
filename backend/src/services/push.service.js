@@ -77,6 +77,19 @@ export async function pushCourseCancelled(order, courierId) {
   await pushAndLog(order, { staffUserId: courierId, staffUser: { isActive: true } }, courseCancelledNotification(order));
 }
 
+// Lot 5c : notification à un livreur (course prête, course retirée). Ne lève jamais d'erreur.
+export async function pushCourier(order, courierId, payload) {
+  if (!pushEnabled()) return;
+  await pushAndLog(order, { staffUserId: courierId, staffUser: { isActive: true } }, payload);
+}
+
+// Lot 5c : alertes du Responsable livraison, seulement les siennes (commande prête, commande sans livreur).
+// Ne lève jamais d'erreur.
+export async function pushDeliveryManagers(order, payload) {
+  if (!pushEnabled()) return;
+  await pushAndLog(order, { staffUser: { isActive: true, role: 'RESPONSABLE_LIVRAISON' } }, payload);
+}
+
 async function pushAndLog(order, where, payload) {
   const subs = await prisma.pushSubscription.findMany({
     where,

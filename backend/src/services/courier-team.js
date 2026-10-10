@@ -10,6 +10,8 @@
 //   « Tournées et disponibilité » (AppSettings.restaurantDispatch, inclus par le Prestataire : TOURNEES_RESTAURANT).
 //   Éteint : fonctionnement d'avant, aucun bouton, tous les livreurs proposés.
 // - Responsable livraison : gère nos livreurs et notre caisse, ne voit JAMAIS les ventes de Belchicken.
+import { deliveryProofs } from './dispatch.js';
+
 export const AVAILABILITIES = ['DISPONIBLE', 'EN_PAUSE'];
 export const STATE_LABEL = { DISPONIBLE: 'Disponible', EN_PAUSE: 'En pause', EN_COURSE: 'En course' };
 export const TEAM_LABEL = { RESTAURANT: 'Restaurant', PRESTATAIRE: 'Notre équipe' };
@@ -85,9 +87,12 @@ export function deliveryActionError(actor, target, action) {
 }
 
 // Ce que le Responsable livraison voit d'une course de notre équipe : référence, quartier, livreur, frais
-// de livraison. Jamais les plats, le total, le paiement des plats ni le code de remise.
+// de livraison, et les heures de chaque étape (lot 5c). Jamais les plats, le total, le paiement des plats
+// ni le code de remise.
 export function toPartnerCourse(o) {
   return {
+    proofs: o.statusChanges ? deliveryProofs(o) : null,
+    deliveryRunId: o.deliveryRunId ?? null,
     reference: o.reference,
     status: o.status,
     deliveryZoneName: o.deliveryZoneName ?? null,

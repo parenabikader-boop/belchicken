@@ -76,6 +76,13 @@ export const staffApi = {
   deactivateDeliveryMember: (id) => staffRequest(`/livraison/equipe/${id}/deactivate`, { method: 'POST' }).then((d) => d.member),
   reactivateDeliveryMember: (id, password) =>
     staffRequest(`/livraison/equipe/${id}/reactivate`, { method: 'POST', body: JSON.stringify({ password }) }).then((d) => d.member),
+  // Lot 5c : livreur des commandes de notre partenaire (seul ou en tournée), retrait, récupération avec un motif
+  assignDeliveryRun: (courierId, references) => staffRequest('/livraison/tournees', { method: 'POST', body: JSON.stringify({ courierId, references }) }),
+  setDeliveryCourier: (reference, courierId) =>
+    staffRequest(`/livraison/courses/${encodeURIComponent(reference)}/livreur`, { method: 'PUT', body: JSON.stringify({ courierId }) }),
+  removeDeliveryCourier: (reference) => staffRequest(`/livraison/courses/${encodeURIComponent(reference)}/livreur`, { method: 'DELETE' }),
+  deliveryPickUp: (reference, reason) =>
+    staffRequest(`/livraison/courses/${encodeURIComponent(reference)}/recuperee`, { method: 'POST', body: JSON.stringify({ reason }) }),
   deliveryCash: () => staffRequest('/livraison/caisse'),
   remitDeliveryCash: (courierId, references) =>
     staffRequest('/livraison/caisse/remises', { method: 'POST', body: JSON.stringify({ courierId, references }) }),
@@ -142,10 +149,17 @@ export const staffApi = {
     staffRequest(`/orders/livreurs/${id}/disponibilite`, { method: 'PUT', body: JSON.stringify({ availability }) }),
   reassignCourier: (reference, courierId) =>
     staffRequest(`/orders/${encodeURIComponent(reference)}/courier`, { method: 'PUT', body: JSON.stringify({ courierId }) }).then((d) => d.order),
+  // Lot 5c : tournée des livreurs du restaurant (orders : [{ reference, from }]), et commande de notre partenaire
+  // récupérée sans que son livreur ait pu appuyer (motif obligatoire)
+  restaurantTour: (courierId, orders) => staffRequest('/orders/tournee', { method: 'POST', body: JSON.stringify({ courierId, orders }) }),
+  pickUpForCourier: (reference, reason) =>
+    staffRequest(`/orders/${encodeURIComponent(reference)}/recuperee`, { method: 'POST', body: JSON.stringify({ reason }) }).then((d) => d.order),
 
   // Espace livreur : ses courses du jour, et la remise avec le code du client
   courses: () => staffRequest('/courses'),
   setMyAvailability: (availability) => staffRequest('/courses/disponibilite', { method: 'PUT', body: JSON.stringify({ availability }) }).then((d) => d.availability),
+  // Lot 5c : « Commande récupérée » (commande de notre partenaire, prête au restaurant)
+  pickUp: (reference) => staffRequest(`/courses/${encodeURIComponent(reference)}/recuperee`, { method: 'POST' }).then((d) => d.course),
   // feeMethod : comment le client a payé les frais (ESPECES ou MOBILE_MONEY)
   deliver: (reference, code, feeMethod) =>
     staffRequest(`/courses/${encodeURIComponent(reference)}/deliver`, { method: 'POST', body: JSON.stringify({ code, feeMethod }) }).then((d) => d.course),

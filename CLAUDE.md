@@ -43,6 +43,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 ## Règles
 
 - **Ne jamais tester sur la base de production.** Les essais, migrations et serveurs locaux utilisent seulement la branche Neon « dev ». Avant tout essai, regarder le nom du serveur dans `backend/.env` (afficher seulement le nom du serveur, jamais l'adresse complète ni le mot de passe). S'il s'agit du serveur de production, ou en cas de doute, prévenir le client et s'arrêter. Serveurs Neon (vérifiés par le client le 5 octobre 2026) : **dev** = `ep-nameless-band-b4vetndd` (seul autorisé en local) ; **production** = `ep-damp-lab-b44k8hrf` (Render seulement, jamais en local).
+- **Ne jamais afficher `DATABASE_URL` ni `DIRECT_URL`, même en partie** (pas de `grep`, `cat` ou `sed` sur ces lignes de `backend/.env`, ni dans les journaux) : seulement le nom du serveur (ex. `ep-nameless-band-b4vetndd`), lu par un petit script qui découpe l'adresse (`new URL(...).hostname.split('.')[0]`) et n'imprime rien d'autre. Le 10 octobre 2026, une commande mal filtrée a affiché l'adresse complète de dev dans la conversation ; le client a changé les mots de passe Neon de dev et de production.
 - **Règle absolue Prisma (depuis le 9 octobre 2026, la base dev a été vidée par erreur ce jour-là) :**
   - ne **jamais** donner l'adresse d'une vraie base (dev ou production) à Prisma comme base de brouillon (`--shadow-database-url`, `shadowDatabaseUrl`) : Prisma la vide ;
   - ne **jamais** lancer `prisma migrate dev`, `prisma migrate reset` ni `prisma db push`, ni sur dev ni sur production ;
@@ -78,7 +79,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 2. Alerte WhatsApp : application Meta, modèle `nouvelle_commande` approuvé, variables WhatsApp sur Render.
 3. Espace équipe (cahier des charges ci-dessous).
 4. Vraies informations du restaurant : adresse, téléphone et horaires faits (6 octobre 2026). Numéros WhatsApp et du restaurant faits. Codes marchands faits. Restent : descriptions des burgers, prix des Fuego Wings 8 pièces.
-5. Préparation de l'ouverture : commandes de test de la base production vidées le 2 octobre 2026 (9 commandes) ; la commande d'essai depuis le téléphone sera à supprimer aussi. Reste : changer le mot de passe Neon et mettre à jour `DATABASE_URL` sur Render.
+5. Préparation de l'ouverture : commandes de test de la base production vidées le 2 octobre 2026 (9 commandes) ; la commande d'essai depuis le téléphone sera à supprimer aussi. Mots de passe Neon de dev et de production changés par le client le 10 octobre 2026 (`backend/.env` et Render à jour).
 
 ### Espace équipe : cahier des charges
 

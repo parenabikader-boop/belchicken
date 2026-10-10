@@ -187,7 +187,7 @@ Mode figé sur chaque commande à sa création (`Order.deliveryOperator`). Quatr
 |----------|---------|------|
 | 5a | Fondations : mode Restaurant / Prestataire, notre société et nos codes (page Prestataire), codes des frais selon le mode de la commande, journal `MOT_DE_PASSE` et `LIVRAISON` | En ligne depuis le 10 octobre 2026 (enregistrement `c8b4b78`), mode Restaurant en production |
 | 5b | Disponibilité des livreurs, livreurs du restaurant ou de notre équipe, rôle `RESPONSABLE_LIVRAISON`, caisse séparée | En ligne depuis le 10 octobre 2026 (enregistrement `6ed214d`), réglage éteint, aucun compte de notre équipe en production |
-| 5c | « Prête pour livraison », « Commande récupérée », tournées, preuves horaires | À faire |
+| 5c | « Prête pour livraison », « Commande récupérée », tournées, preuves horaires | Prêt sur dev (10 octobre 2026), en attente de l’accord du client pour la mise en ligne |
 | 5d | Conditions du contrat (versions datées), relevé par période, PDF et Excel, interrupteur `RELEVE` | À faire |
 
 **Avancement 5a** :
@@ -283,6 +283,32 @@ relevé (5d) ; en 5b, l'agent choisit toujours le livreur ; livreur « En pause 
   En production : réglage « Tournées et disponibilité » éteint, aucun Responsable livraison ni livreur de notre équipe, mode
   Restaurant : tout fonctionne comme avant.
 
+**Avancement 5c** :
+
+- [x] Schéma : statut `PRETE_LIVRAISON` (mode Prestataire seulement), table `DeliveryRun` (tournées), `Order.deliveryRunId`,
+  événements `RECUPEREE_SANS_LIVREUR` et `LIVREUR_RETIRE`. Preuves : la base refuse toute modification de l'historique des
+  commandes (`OrderStatusChange`, `OrderEvent`) ; seule exception, le lien `staffUserId` vidé à la suppression d'un compte (seule
+  clé `ON DELETE SET NULL` de ces deux tables, l'autre, `orderId`, est en `CASCADE`) ; suppressions toujours possibles.
+  Migration `20261010200000_livraison_tournees_5c` écrite sans base, passée sur dev (même fichier, empreinte identique).
+  `npm run test:db` (dev seulement) : modification refusée, lien vidé, suppression en cascade, sur les deux tables : passe.
+- [x] Serveur : règles `dispatch.js`, `dispatch.service.js`. Mode Prestataire : le Responsable livraison confie une ou plusieurs
+  commandes (tournée, 10 au plus) dès « En préparation », change ou retire le livreur avant la récupération, le remplace pendant
+  la livraison ; l'équipe du restaurant pose « Prête pour livraison » (sans message au client) ; le livreur appuie sur
+  « Commande récupérée » (code de remise créé à ce moment), ou l'agent / le Responsable à sa place avec un motif. L'agent ne fait
+  plus partir ni ne change le livreur d'une commande Prestataire. Mode Restaurant avec le réglage « Tournées et disponibilité » :
+  tournée de l'agent, tout ou rien, chaque commande avec son code, ses frais et son message « en route ». Le client voit toujours
+  « En préparation » jusqu'à « En route » (page de suivi). Heures de chaque étape (preuves) pour l'équipe et le Responsable.
+  Alertes : Responsable livraison (commande à attribuer, commande prête), livreur (course prête, course retirée).
+- [x] Pages : Commandes (« Prête » rangée avec « En préparation », tournée du restaurant au-dessus des colonnes), détail (Prête
+  pour livraison, récupérée sans le livreur, heures), Livraison (À attribuer, À récupérer, En cours, Livrées aujourd'hui),
+  Mes courses (À récupérer, « Commande récupérée »). Compilé.
+- [x] Tests : 232, tous passent (`dispatch.test.js`, `order-history-rule.test.js`, `route-access.test.js` mis à jour).
+- [x] Essai de bout en bout sur dev (10 octobre), serveur local avec WhatsApp et alertes coupés, comptes d'essai à part
+  (« Essai5c … ») créés par le script : 54 vérifications sur 54. Dev remise comme avant : commandes, tournées, disponibilités,
+  comptes, société de livraison, réglages (à l'identique) ; journal de sécurité inchangé (140 lignes).
+- [x] Captures (13 images) dans `C:\Users\HP\Desktop\belchiken\captures-lot5c-tournees\`.
+- [ ] Accord du client, sauvegarde Neon `sauvegarde-lot5c`, mise en ligne.
+
 ### 6. Ventes
 
 - Ventes globales, par agent et par provenance, avec le mode de paiement, par période.
@@ -314,7 +340,8 @@ Chaque point se fait avec l'accord du client, et chaque action sur la production
   menu, les photos, les comptes de l'équipe, les réglages, la grille des frais ni les provenances. Le script affiche
   d'abord ce qu'il va supprimer (nombre de commandes, références) et attend une confirmation ; sauvegarde Neon juste avant.
 - [ ] **Passer Render en offre Starter** (le serveur ne s'endort plus : pas d'attente au premier client du matin).
-- [ ] **Changer le mot de passe Neon de production**, puis mettre à jour `DATABASE_URL` sur Render.
+- [x] **Changer le mot de passe Neon de production**, puis mettre à jour `DATABASE_URL` sur Render : fait par le client le
+  10 octobre 2026 (dev et production, `backend/.env` et Render mis à jour ; dev et production répondent).
 - [ ] **Nettoyer les variables Render** : retirer celles qui ne servent plus ou d'essai, vérifier les autres
   (codes marchands, `PUBLIC_SITE_URL`, WhatsApp, Cloudinary, clés des alertes).
 - [ ] **Créer les comptes** des agents du call center (Opérateur) et des livreurs (Livreur), page Équipe du Patron.

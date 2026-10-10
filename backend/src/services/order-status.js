@@ -2,17 +2,25 @@
 //
 // Livraison  : PAIEMENT_A_VERIFIER -> PAYEE -> EN_PREPARATION -> EN_LIVRAISON -> LIVREE
 // À emporter : PAIEMENT_A_VERIFIER -> PAYEE -> EN_PREPARATION -> PRETE -> LIVREE (affichée « Retirée »)
+// Lot 5c, livraison par notre partenaire (Order.deliveryOperator = PRESTATAIRE) :
+//   … -> EN_PREPARATION -> PRETE_LIVRAISON -> EN_LIVRAISON -> LIVREE. « Prête pour livraison » est posé par
+//   l'équipe du restaurant ; EN_LIVRAISON seulement par « Commande récupérée » (dispatch.js).
 // ANNULEE possible depuis tout statut sauf LIVREE et ANNULEE, avec un motif obligatoire.
 // Aucun passage automatique : PAYEE est posé à la main, après vérification sur le téléphone marchand.
 
-export const STATUSES = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE', 'LIVREE', 'ANNULEE'];
+export const STATUSES = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE_LIVRAISON', 'EN_LIVRAISON', 'PRETE', 'LIVREE', 'ANNULEE'];
 export const MODES = ['LIVRAISON', 'A_EMPORTER'];
 export const FLOWS = {
   LIVRAISON: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'LIVREE'],
   A_EMPORTER: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE', 'LIVREE'],
+  PARTENAIRE: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE_LIVRAISON', 'EN_LIVRAISON', 'LIVREE'],
 };
 export const FLOW = FLOWS.LIVRAISON;
-export const ACTIVE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE'];
+// Parcours d'une commande : à emporter, livraison par notre partenaire (lot 5c), sinon livraison par le restaurant
+export const flowKey = (mode = 'LIVRAISON', operator = 'RESTAURANT') =>
+  mode === 'A_EMPORTER' ? 'A_EMPORTER' : operator === 'PRESTATAIRE' ? 'PARTENAIRE' : 'LIVRAISON';
+export const isPartnerDelivery = (order) => order?.mode !== 'A_EMPORTER' && order?.deliveryOperator === 'PRESTATAIRE';
+export const ACTIVE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE_LIVRAISON', 'EN_LIVRAISON', 'PRETE'];
 export const INITIAL_STATUS = 'PAIEMENT_A_VERIFIER';
 export const isPickup = (order) => order?.mode === 'A_EMPORTER';
 
@@ -20,6 +28,7 @@ export const STATUS_LABEL = {
   PAIEMENT_A_VERIFIER: 'Paiement à vérifier',
   PAYEE: 'Payée',
   EN_PREPARATION: 'En préparation',
+  PRETE_LIVRAISON: 'Prête pour livraison',
   EN_LIVRAISON: 'En livraison',
   PRETE: 'Prête à retirer',
   LIVREE: 'Livrée',
@@ -28,8 +37,8 @@ export const STATUS_LABEL = {
 // Libellé selon le mode : une commande à emporter remise au comptoir est « Retirée »
 export const statusLabel = (status, mode) => (mode === 'A_EMPORTER' && status === 'LIVREE' ? 'Retirée' : STATUS_LABEL[status]);
 
-export const nextStatus = (status, mode = 'LIVRAISON') => {
-  const flow = FLOWS[mode] || FLOW;
+export const nextStatus = (status, mode = 'LIVRAISON', operator = 'RESTAURANT') => {
+  const flow = FLOWS[flowKey(mode, operator)] || FLOW;
   const i = flow.indexOf(status);
   return i >= 0 && i < flow.length - 1 ? flow[i + 1] : null;
 };
@@ -43,7 +52,8 @@ export const isShortcut = (from, to) => from === 'PAIEMENT_A_VERIFIER' && to ===
 export const SHORTCUT_OFF = 'Confirmez d’abord le paiement : le parcours court n’est pas activé.';
 
 // Renvoie null si le changement est permis, sinon le message d'erreur (en français)
-export function transitionError(from, to, reason, mode = 'LIVRAISON') {
+// operator (lot 5c) : livraison par le restaurant (par défaut) ou par notre partenaire
+export function transitionError(from, to, reason, mode = 'LIVRAISON', operator = 'RESTAURANT') {
   if (!STATUSES.includes(to)) return 'Statut inconnu.';
   if (from === to) return `La commande est déjà « ${statusLabel(to, mode)} ».`;
   if (to === 'ANNULEE') {
@@ -51,7 +61,7 @@ export function transitionError(from, to, reason, mode = 'LIVRAISON') {
     if (!reason || reason.trim().length < 3) return "Indiquez le motif de l'annulation.";
     return null;
   }
-  if (nextStatus(from, mode) !== to) {
+  if (nextStatus(from, mode, operator) !== to) {
     return `Passage impossible de « ${statusLabel(from, mode)} » à « ${statusLabel(to, mode)} ».`;
   }
   return null;

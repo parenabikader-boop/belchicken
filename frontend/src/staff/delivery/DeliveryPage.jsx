@@ -4,9 +4,9 @@ import { staffApi } from '../../api/client.js';
 import { useStaff } from '../StaffContext.jsx';
 import { CashBoard } from '../cash/CashPage.jsx';
 import { TeamManager } from '../team/TeamPage.jsx';
-import { formatPhone, formatTime, timeAgo } from '../orders/labels.js';
-import { formatPrice, plural } from '../../utils/format.js';
-import { nightLine } from '../../utils/deliveryFee.js';
+import { formatPhone, timeAgo } from '../orders/labels.js';
+import { plural } from '../../utils/format.js';
+import DispatchBoard from './DispatchBoard.jsx';
 
 const REFRESH_MS = 15000;
 
@@ -148,28 +148,8 @@ function Couriers() {
         </ul>
       )}
 
-      <h2 className="mn-section">Courses en cours <span>{data.courses.length}</span></h2>
-      {data.courses.length === 0 ? (
-        <p className="od-empty">Aucune course en cours.</p>
-      ) : (
-        <ul className="dl-list">
-          {data.courses.map((o) => (
-            <li key={o.reference} className="dl-row">
-              <div className="dl-main">
-                <b className="st-ref">{o.reference}</b>
-                <small>
-                  {o.courierName || 'Livreur ?'}
-                  {o.assignedAt && ` · partie à ${formatTime(o.assignedAt)}`}
-                  {o.deliveryZoneName && ` · ${o.deliveryZoneName}`}
-                  {o.deliveryNightFee > 0 && ` · ${nightLine(o.deliveryNightFee)}`}
-                </small>
-              </div>
-              <b className="ca-amount">{o.deliveryFee === 0 ? 'Offerte' : o.deliveryFee != null ? formatPrice(o.deliveryFee) : '—'}</b>
-            </li>
-          ))}
-        </ul>
-      )}
-      <p className="st-muted">Montant affiché : les frais de livraison à encaisser par le livreur.</p>
+      {/* Lot 5c : à attribuer, à récupérer, en cours, livrées aujourd'hui */}
+      <DispatchBoard data={data} onData={setData} />
     </>
   );
 }

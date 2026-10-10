@@ -80,17 +80,40 @@ export async function myAvailability(courier) {
 
 // ─── Page Livraison (Responsable livraison et Prestataire) ───
 
-// Nos livreurs et leur état, nos courses en cours (frais de livraison seulement, jamais les ventes)
+// Nos livreurs et leur état, et nos commandes (frais de livraison seulement, jamais les ventes) :
+//   toAssign  : en préparation ou prêtes, sans livreur (lot 5c) ;
+//   toPickUp  : confiées à un livreur, pas encore récupérées (lot 5c) ;
+//   courses   : en livraison ;
+//   delivered : livrées aujourd'hui (preuves horaires).
+const PARTNER_SELECT = {
+  reference: true, status: true, deliveryZoneName: true, courierId: true, courierName: true, courierAssignedAt: true,
+  deliveryFee: true, deliveryNightFee: true, deliveryRunId: true,
+  statusChanges: { select: { toStatus: true, createdAt: true, staffName: true, reason: true }, orderBy: { createdAt: 'asc' } },
+  events: { where: { type: 'LIVREUR_ASSIGNE' }, select: { type: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
+};
+
 export async function getDeliveryOverview(now = new Date()) {
-  const [couriers, courses] = await Promise.all([
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const partner = { deliveryOperator: 'PRESTATAIRE', mode: 'LIVRAISON' };
+  const [couriers, waiting, courses, delivered] = await Promise.all([
     couriersOf('PRESTATAIRE', true),
+    prisma.order.findMany({ where: { ...partner, status: { in: ['EN_PREPARATION', 'PRETE_LIVRAISON'] } }, orderBy: { createdAt: 'asc' }, select: PARTNER_SELECT }),
+    prisma.order.findMany({ where: { ...partner, status: 'EN_LIVRAISON' }, orderBy: { courierAssignedAt: 'asc' }, select: PARTNER_SELECT }),
     prisma.order.findMany({
-      where: { deliveryOperator: 'PRESTATAIRE', status: 'EN_LIVRAISON' },
-      orderBy: { courierAssignedAt: 'asc' },
-      select: { reference: true, status: true, deliveryZoneName: true, courierId: true, courierName: true, courierAssignedAt: true, deliveryFee: true, deliveryNightFee: true },
+      where: { ...partner, status: 'LIVREE', statusChanges: { some: { toStatus: 'LIVREE', createdAt: { gte: today } } } },
+      orderBy: { updatedAt: 'desc' },
+      take: 50,
+      select: PARTNER_SELECT,
     }),
   ]);
-  return { couriers, courses: courses.map(toPartnerCourse), serverTime: now };
+  return {
+    couriers,
+    toAssign: waiting.filter((o) => !o.courierId).map(toPartnerCourse),
+    toPickUp: waiting.filter((o) => o.courierId).map(toPartnerCourse),
+    courses: courses.map(toPartnerCourse),
+    delivered: delivered.map(toPartnerCourse),
+    serverTime: now,
+  };
 }
 
 // Comptes de notre équipe : nos livreurs (et, pour le Prestataire, les Responsables livraison)

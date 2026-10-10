@@ -33,7 +33,7 @@ test('annulation : motif obligatoire, impossible une fois livrée ou déjà annu
 });
 
 test('filtres de la liste', () => {
-  const active = { status: { in: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE'] } };
+  const active = { status: { in: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE_LIVRAISON', 'EN_LIVRAISON', 'PRETE'] } };
   const thanks = thanksWhere();
   // En cours : les étapes en cours et les livrées à remercier ; l'historique (LIVREE) : livrées et remerciées
   assert.deepEqual(statusWhere(undefined), { OR: [active, thanks] });

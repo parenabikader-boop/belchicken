@@ -5,24 +5,30 @@ import { checkHandover, startOfToday, toCourse } from './courier.js';
 import { feeMethodError, feeToCollect } from './order-status.js';
 import { notifyDelivered, statusChange } from './staff-orders.service.js';
 
-// Courses en cours, plus celles livrées ou annulées aujourd'hui
+// Courses à récupérer (lot 5c, notre équipe : confiées dès la préparation), en cours, plus celles livrées
+// ou annulées aujourd'hui
 export async function listCourses(courier, now = new Date()) {
   const orders = await prisma.order.findMany({
     where: {
       courierId: courier.id,
-      OR: [{ status: 'EN_LIVRAISON' }, { status: { in: ['LIVREE', 'ANNULEE'] }, updatedAt: { gte: startOfToday(now) } }],
+      OR: [
+        { status: { in: ['EN_PREPARATION', 'PRETE_LIVRAISON', 'EN_LIVRAISON'] } },
+        { status: { in: ['LIVREE', 'ANNULEE'] }, updatedAt: { gte: startOfToday(now) } },
+      ],
     },
     orderBy: { courierAssignedAt: 'asc' },
     include: {
       items: { orderBy: { id: 'asc' }, include: { drinks: true } },
-      statusChanges: { where: { toStatus: 'LIVREE' }, select: { toStatus: true, createdAt: true } },
+      statusChanges: { where: { toStatus: { in: ['PRETE_LIVRAISON', 'EN_LIVRAISON', 'LIVREE'] } }, select: { toStatus: true, createdAt: true } },
     },
   });
   const courses = orders.map(toCourse);
-  // En cours d'abord (la plus ancienne en premier), puis les terminées (la plus récente en premier)
+  // En cours d'abord (la plus ancienne en premier), puis à récupérer, puis les terminées (la plus récente en premier)
+  const upcoming = ['EN_PREPARATION', 'PRETE_LIVRAISON'];
   return [
     ...courses.filter((c) => c.status === 'EN_LIVRAISON'),
-    ...courses.filter((c) => c.status !== 'EN_LIVRAISON').reverse(),
+    ...courses.filter((c) => upcoming.includes(c.status)),
+    ...courses.filter((c) => c.status === 'LIVREE' || c.status === 'ANNULEE').reverse(),
   ];
 }
 

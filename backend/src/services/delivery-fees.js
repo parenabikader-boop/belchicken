@@ -159,7 +159,7 @@ export const orderFeeFields = (quote) =>
 // Avant le départ du livreur : Patron et Opérateur. Après (en livraison, ou livrée tant que les frais
 // ne sont ni vérifiés ni remis au restaurant) : Patron seulement. Motif obligatoire dès que des frais
 // existent déjà ; la première saisie (frais à confirmer, grille vide) n'en demande pas.
-const EDITABLE_BY_ALL = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION'];
+const EDITABLE_BY_ALL = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE_LIVRAISON']; // lot 5c : avant le départ du livreur
 const EDITABLE_BY_PATRON = ['EN_LIVRAISON', 'LIVREE'];
 
 // Qui peut encore modifier les frais : 'TOUS', 'PATRON' ou null (avec la raison)
