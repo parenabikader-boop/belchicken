@@ -30,7 +30,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 2 | Prise de commande par l'agent (appel, WhatsApp) | En ligne depuis le 9 octobre 2026 (réglage « Prise de commande par l'agent » éteint en production) |
 | 3 | Supplément de nuit dans la grille des frais | En ligne depuis le 9 octobre 2026 (réglage « Supplément de nuit » éteint en production) |
 | 4 | Compte Prestataire au-dessus du Patron | En ligne depuis le 10 octobre 2026 (aucun compte Prestataire en production, tout ouvert) |
-| 5 | Livraison en deux modes (Restaurant / Prestataire) | En cours : sous-lot 5a (sur dev) |
+| 5 | Livraison en deux modes (Restaurant / Prestataire) | En cours : 5a en ligne depuis le 10 octobre 2026 (mode Restaurant en production) ; 5b, 5c, 5d à faire |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | À faire |
 | 7 | Avis des clients | À faire |
 | 8 | Langue FR/EN sur le site client | À faire |
@@ -185,7 +185,7 @@ Mode figé sur chaque commande à sa création (`Order.deliveryOperator`). Quatr
 
 | Sous-lot | Contenu | État |
 |----------|---------|------|
-| 5a | Fondations : mode Restaurant / Prestataire, notre société et nos codes (page Prestataire), codes des frais selon le mode de la commande, journal `MOT_DE_PASSE` et `LIVRAISON` | Fait sur dev, en attente de l'accord pour la mise en ligne |
+| 5a | Fondations : mode Restaurant / Prestataire, notre société et nos codes (page Prestataire), codes des frais selon le mode de la commande, journal `MOT_DE_PASSE` et `LIVRAISON` | En ligne depuis le 10 octobre 2026 (enregistrement `c8b4b78`), mode Restaurant en production |
 | 5b | Disponibilité des livreurs, livreurs du restaurant ou de notre équipe, rôle `RESPONSABLE_LIVRAISON`, caisse séparée | À faire |
 | 5c | « Prête pour livraison », « Commande récupérée », tournées, preuves horaires | À faire |
 | 5d | Conditions du contrat (versions datées), relevé par période, PDF et Excel, interrupteur `RELEVE` | À faire |
@@ -218,7 +218,13 @@ Mode figé sur chaque commande à sa création (`Order.deliveryOperator`). Quatr
   Seules restent 16 lignes du journal de sécurité (la base refuse de les effacer, voulu depuis le lot 4).
 - [x] Captures (13 images) dans `C:\Users\HP\Desktop\belchiken\captures-lot5a-modes\`.
 - [x] Tests : 196, tous passent après l'essai ; site compilé.
-- [ ] Accord du client, sauvegarde Neon, enregistrement, mise en ligne.
+- [x] Accord du client sur les captures, sauvegarde Neon `sauvegarde-lot5a` (faite et vérifiée par le client), tests (196)
+  et construction relancés, migration relue (aucun `INSERT`, `UPDATE` ni `DELETE`), enregistrement `c8b4b78`, mise en ligne le
+  10 octobre 2026. Migration `20261010120000_livraison_mode_5a` passée par Render au déploiement : structure seulement,
+  aucune ligne `DeliveryCompany` en production = mode Restaurant, mode Prestataire impossible (nos codes sont vides).
+  Vérifié après la mise en ligne, sans rien écrire en production : site Vercel à jour (nouvelle phrase présente dans son code),
+  serveur en bonne santé, menu (10 catégories, 51 plats), codes ECOFOOD, grille des frais, suivi, espace équipe protégé
+  (401 sans connexion, y compris la nouvelle adresse du mode de livraison), connexion de l'équipe qui répond comme avant.
 
 ### 6. Ventes
 
