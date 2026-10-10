@@ -30,7 +30,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 2 | Prise de commande par l'agent (appel, WhatsApp) | En ligne depuis le 9 octobre 2026 (réglage « Prise de commande par l'agent » éteint en production) |
 | 3 | Supplément de nuit dans la grille des frais | En ligne depuis le 9 octobre 2026 (réglage « Supplément de nuit » éteint en production) |
 | 4 | Compte Prestataire au-dessus du Patron | En ligne depuis le 10 octobre 2026 (aucun compte Prestataire en production, tout ouvert) |
-| 5 | Livraison en deux modes (Restaurant / Prestataire) | En cours : 5a en ligne depuis le 10 octobre 2026 (mode Restaurant en production) ; 5b en ligne depuis le 10 octobre 2026 (réglage « Tournées et disponibilité » éteint, aucun Responsable livraison en production) ; 5c, 5d à faire |
+| 5 | Livraison en deux modes (Restaurant / Prestataire) | En cours : 5a en ligne depuis le 10 octobre 2026 (mode Restaurant en production) ; 5b en ligne depuis le 10 octobre 2026 (réglage « Tournées et disponibilité » éteint, aucun Responsable livraison en production) ; 5c en ligne depuis le 10 octobre 2026 (mode Restaurant, réglage éteint : rien ne change en production) ; 5d à faire |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | À faire |
 | 7 | Avis des clients | À faire |
 | 8 | Langue FR/EN sur le site client | À faire |
@@ -187,7 +187,7 @@ Mode figé sur chaque commande à sa création (`Order.deliveryOperator`). Quatr
 |----------|---------|------|
 | 5a | Fondations : mode Restaurant / Prestataire, notre société et nos codes (page Prestataire), codes des frais selon le mode de la commande, journal `MOT_DE_PASSE` et `LIVRAISON` | En ligne depuis le 10 octobre 2026 (enregistrement `c8b4b78`), mode Restaurant en production |
 | 5b | Disponibilité des livreurs, livreurs du restaurant ou de notre équipe, rôle `RESPONSABLE_LIVRAISON`, caisse séparée | En ligne depuis le 10 octobre 2026 (enregistrement `6ed214d`), réglage éteint, aucun compte de notre équipe en production |
-| 5c | « Prête pour livraison », « Commande récupérée », tournées, preuves horaires | Prêt sur dev (10 octobre 2026), en attente de l’accord du client pour la mise en ligne |
+| 5c | « Prête pour livraison », « Commande récupérée », tournées, preuves horaires | En ligne depuis le 10 octobre 2026 (enregistrement `a47b27e`), mode Restaurant et réglage éteint en production |
 | 5d | Conditions du contrat (versions datées), relevé par période, PDF et Excel, interrupteur `RELEVE` | À faire |
 
 **Avancement 5a** :
@@ -307,7 +307,17 @@ relevé (5d) ; en 5b, l'agent choisit toujours le livreur ; livreur « En pause 
   (« Essai5c … ») créés par le script : 54 vérifications sur 54. Dev remise comme avant : commandes, tournées, disponibilités,
   comptes, société de livraison, réglages (à l'identique) ; journal de sécurité inchangé (140 lignes).
 - [x] Captures (13 images) dans `C:\Users\HP\Desktop\belchiken\captures-lot5c-tournees\`.
-- [ ] Accord du client, sauvegarde Neon `sauvegarde-lot5c`, mise en ligne.
+- [x] Accord du client sur les captures, sauvegarde Neon `sauvegarde-lot5c` (faite et vérifiée par le client), tests (232) et
+  construction relancés, migration relue (seulement `CREATE` et `ALTER` : aucun `INSERT`, `UPDATE` ni `DELETE` ; les mots
+  « UPDATE » et « DELETE » du fichier sont les règles des liens et la règle qui refuse les modifications), inchangée depuis dev
+  (même empreinte), enregistrement `a47b27e`, mise en ligne le 10 octobre 2026. Migration passée par Render au déploiement.
+  **Non vérifié dans le tableau de bord de Render** : les nouvelles adresses sont toutes derrière la connexion de l'équipe, la
+  bascule sur la nouvelle version n'est donc pas visible de l'extérieur. Site Vercel à jour (nouvelles pages dans son code).
+  Vérifié après la mise en ligne, sans rien écrire en production : serveur en bonne santé pendant tout le déploiement, menu
+  (10 catégories, 51 plats), codes ECOFOOD, grille des frais, accueil, suivi, connexion de l'équipe qui répond comme avant,
+  espace équipe protégé (401 sans connexion, y compris les nouvelles adresses : tournées, « Commande récupérée »).
+  En production : mode Restaurant (aucune société de livraison), réglage « Tournées et disponibilité » éteint, aucun Responsable
+  livraison ni livreur de notre équipe : tout fonctionne comme avant.
 
 ### 6. Ventes
 
