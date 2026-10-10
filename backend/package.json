@@ -12,7 +12,6 @@
     "start": "node src/server.js",
     "test": "node --test test/*.test.js",
     "postinstall": "prisma generate",
-    "db:migrate": "prisma migrate dev",
     "db:deploy": "node scripts/migrate-deploy.js",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",

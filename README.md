@@ -46,7 +46,7 @@ belchicken/
 cd backend
 cp .env.example .env        # renseignez DATABASE_URL et DIRECT_URL
 npm install                 # lance aussi prisma generate
-npx prisma migrate dev --name init
+npm run db:deploy           # applique les migrations (jamais migrate dev, reset ni db push)
 npm run db:seed             # remplit le menu si la base est vide
 npm run cloudinary:check    # vérifie les clés Cloudinary (photos), sans les afficher
 npm run dev                 # http://localhost:3006
