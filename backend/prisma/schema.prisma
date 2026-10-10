@@ -53,6 +53,14 @@ enum FeePaymentMethod {
   MOBILE_MONEY // par Orange Money / Moov Money / Telecel Money, code marchand (vérifiés par l'équipe)
 }
 
+// Lot 5 : qui livre et encaisse les frais de livraison. RESTAURANT = fonctionnement d'avant le lot 5
+// (livreurs du restaurant, frais sur les codes ECOFOOD). PRESTATAIRE = notre équipe de livreurs, frais
+// sur nos codes marchands. Noté sur chaque commande à sa création (src/services/delivery-mode.js).
+enum DeliveryOperator {
+  RESTAURANT
+  PRESTATAIRE
+}
+
 enum NotificationStatus {
   ENVOYEE
   ECHEC
@@ -223,6 +231,22 @@ model DeliverySettings {
   updatedAt      DateTime @updatedAt
 }
 
+// Lot 5 : notre société de livraison, réglée par le Prestataire. Une seule ligne (id = 1), créée au premier
+// enregistrement. Pas de ligne = mode Restaurant : la migration n'écrit rien. Le mode Prestataire ne
+// s'active qu'avec notre nom et nos 3 codes marchands valides (règles dans src/services/delivery-mode.js).
+// Plusieurs restaurants plus tard : cette ligne reste la nôtre, les conditions du contrat iront par restaurant.
+model DeliveryCompany {
+  id            Int              @id @default(1)
+  mode          DeliveryOperator @default(RESTAURANT) // mode des nouvelles commandes
+  companyName   String? // nom de notre société
+  merchantName  String? // nom affiché au client sur sa confirmation de paiement des frais
+  orangeCode    String? // avec MONTANT, comme les codes ECOFOOD (ex. *144*10*12345678*MONTANT#)
+  moovCode      String?
+  telecelCode   String?
+  updatedByName String? // copie figée
+  updatedAt     DateTime         @updatedAt
+}
+
 // Les 3 photos de la mosaïque de l'accueil (case 1 : grande à gauche, 2 et 3 : petites à droite)
 model HomePhoto {
   slot          Int      @id // 1, 2 ou 3
@@ -248,6 +272,9 @@ model Order {
   // PAIEMENT_A_VERIFIER directement à EN_PREPARATION, avec un seul message au client. Noté sur la commande
   // pour qu'elle garde son message si le réglage change.
   shortFlow Boolean         @default(false)
+  // Lot 5 : qui livre et encaisse les frais, figé à la création (mode de DeliveryCompany à ce moment).
+  // Changer de mode ne touche pas les commandes déjà passées. Anciennes commandes : RESTAURANT.
+  deliveryOperator DeliveryOperator @default(RESTAURANT)
 
   // Lot 2 : commande saisie par un agent (appel, WhatsApp). Vide = passée par le client sur le site
   // (anciennes commandes comprises). sourceName et createdByName sont des copies figées.
@@ -548,6 +575,8 @@ enum SecurityLogType {
   CODE_SECOURS_UTILISE
   INTERRUPTEUR // fonction ouverte ou fermée (avant, après)
   SCRIPT // npm run equipe:prestataire : création, téléphone perdu, mot de passe, déblocage
+  MOT_DE_PASSE // lot 5 : le Prestataire a changé son mot de passe dans l'application
+  LIVRAISON // lot 5 : mode de livraison, société ou codes marchands du Prestataire changés (avant -> après dans detail)
 }
 
 // Lot 4 : journal de sécurité. Aucune adresse ne le modifie, et la base refuse toute modification ou

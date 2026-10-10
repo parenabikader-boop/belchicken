@@ -70,6 +70,8 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
         </div>
         <span className="st-pills">
           {isPickup(o) && <span className="st-pill p-EMPORTER">À emporter</span>}
+          {/* Lot 5 : livrée par notre équipe, frais sur les codes du Prestataire */}
+          {o.deliveryOperator === 'PRESTATAIRE' && <span className="st-pill p-PRESTATAIRE">Livraison Prestataire</span>}
           <span className={`st-pill p-${o.status}`}>{statusLabel(o)}</span>
         </span>
         {/* Bon de commande à imprimer (caisse, puis cuisine), dans les deux parcours */}

@@ -61,6 +61,9 @@ export const staffApi = {
   features: () => staffRequest('/prestataire/fonctions').then((d) => d.features),
   setFeature: (key, enabled) => staffRequest(`/prestataire/fonctions/${key}`, { method: 'PUT', body: JSON.stringify({ enabled }) }).then((d) => d.features),
   securityLog: (page = 1) => staffRequest(`/prestataire/journal?page=${page}`),
+  // Lot 5 : mode de livraison, notre société et nos codes marchands (Prestataire)
+  deliveryCompany: () => staffRequest('/prestataire/livraison'),
+  setDeliveryCompany: (body) => staffRequest('/prestataire/livraison', { method: 'PUT', body: JSON.stringify(body) }),
   logout: () => staffRequest('/logout', { method: 'POST' }),
   orders: ({ status, q } = {}) => {
     const params = new URLSearchParams();

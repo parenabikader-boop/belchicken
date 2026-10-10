@@ -9,6 +9,8 @@ import { orderFeeFields } from './delivery-fees.js';
 import { quoteForOrder } from './delivery-fees.service.js';
 import { INITIAL_STATUS } from './order-status.js';
 import { notifyTeamNewOrder } from './whatsapp.service.js';
+import { feePaymentOf } from './delivery-mode.js';
+import { getDeliveryMode, messageContextFor } from './delivery-mode.service.js';
 import { pushTeamNewOrder } from './push.service.js';
 
 // Commande du site, ou saisie par un agent (lot 2) : `agent` = { source, staff } (provenance déjà vérifiée).
@@ -28,9 +30,13 @@ export async function createOrder(input, agent = null) {
   // Frais de livraison : calculés ici avec la grille du Patron et copiés dans la commande
   // (grille vide : rien, l'équipe les saisit comme avant)
   const fee = delivery ? orderFeeFields(await quoteForOrder(input.delivery, input.location)) : {};
+  // Lot 5 : qui livre et encaisse les frais, figé ici (mode Restaurant sans réglage du Prestataire).
+  // À emporter : pas de livraison, donc Restaurant.
+  const deliveryOperator = delivery ? await getDeliveryMode() : 'RESTAURANT';
 
   const data = {
     mode: input.mode,
+    deliveryOperator,
     customerName: input.customer.name,
     customerPhone: input.customer.phone,
     paymentMethod: payment.method,
@@ -85,12 +91,13 @@ export async function getOrderSummary(reference) {
     include: { items: { include: { drinks: true } }, statusChanges: { orderBy: { createdAt: 'asc' } } },
   });
   if (!order) throw new AppError(404, 'Commande introuvable.', 'COMMANDE_INTROUVABLE');
-  return toPublicOrder(order);
+  return toPublicOrder(order, await messageContextFor(order));
 }
 
 // Page de suivi : étapes datées, frais de livraison, motif d'annulation. Jamais de nom, numéro,
 // position ni nom d'agent : la référence suffit pour la voir.
-export function toPublicOrder(order) {
+// ctx : contexte des messages (lot 5 : nos codes pour les frais d'une commande en mode Prestataire)
+export function toPublicOrder(order, ctx = { payment: env.payment }) {
   const changes = order.statusChanges || [];
   return {
     reference: order.reference,
@@ -109,7 +116,7 @@ export function toPublicOrder(order) {
     // Codes marchands avec le montant des frais (les mêmes que dans les messages), tant qu'ils sont attendus
     feePayment:
       order.deliveryFee > 0 && order.deliveryFeeMethod == null && order.status !== 'ANNULEE' // 0 F : livraison offerte
-        ? paymentCodes(env.payment, order.deliveryFee)
+        ? { ...paymentCodes(feePaymentOf(order, ctx), order.deliveryFee), operator: order.deliveryOperator ?? 'RESTAURANT' }
         : null,
     steps: changes.map((h) => ({ status: h.toStatus, at: h.createdAt })),
     cancelReason: changes.findLast((h) => h.toStatus === 'ANNULEE')?.reason || null,

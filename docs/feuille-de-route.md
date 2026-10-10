@@ -30,7 +30,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 2 | Prise de commande par l'agent (appel, WhatsApp) | En ligne depuis le 9 octobre 2026 (réglage « Prise de commande par l'agent » éteint en production) |
 | 3 | Supplément de nuit dans la grille des frais | En ligne depuis le 9 octobre 2026 (réglage « Supplément de nuit » éteint en production) |
 | 4 | Compte Prestataire au-dessus du Patron | En ligne depuis le 10 octobre 2026 (aucun compte Prestataire en production, tout ouvert) |
-| 5 | Livraison en deux modes (Restaurant / Prestataire) | À faire |
+| 5 | Livraison en deux modes (Restaurant / Prestataire) | En cours : sous-lot 5a (sur dev) |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | À faire |
 | 7 | Avis des clients | À faire |
 | 8 | Langue FR/EN sur le site client | À faire |
@@ -168,6 +168,57 @@ sur la page Équipe du Patron, sans action.
   - heure exacte de chaque étape (preuves) ;
   - relevé par période.
 - Penser le code pour plusieurs restaurants plus tard, sans le construire.
+
+Le contrat de livraison avec Belchicken n'est pas encore négocié : ce qui en dépend se règle plus tard par le Prestataire.
+Accord du client sur le plan le 10 octobre 2026 (découpage, schéma, API), avec ces réponses :
+
+1. « Prête pour livraison » seulement en mode Prestataire.
+2. Tournées et disponibilité des livreurs en mode Restaurant : réglage à part du Patron, éteint par défaut, et
+   interrupteur du Prestataire pour l'inclure ou non (comme les autres).
+3. Livraisons offertes payées par Belchicken : prix fixe par livraison offerte, réglable dans les conditions.
+4. Forfait mensuel : au prorata des jours, indiqué clairement sur le relevé.
+5. Relevé visible par le Patron en lecture seule, interrupteur du Prestataire `RELEVE`.
+6. Mode Prestataire : le livreur appuie aussi sur « Commande récupérée » ; s'il ne peut pas (téléphone éteint),
+   l'agent confirme à sa place avec un motif. Les deux heures (prête, récupérée) sont des preuves.
+
+Mode figé sur chaque commande à sa création (`Order.deliveryOperator`). Quatre sous-lots, mis en ligne séparément :
+
+| Sous-lot | Contenu | État |
+|----------|---------|------|
+| 5a | Fondations : mode Restaurant / Prestataire, notre société et nos codes (page Prestataire), codes des frais selon le mode de la commande, journal `MOT_DE_PASSE` et `LIVRAISON` | Fait sur dev, en attente de l'accord pour la mise en ligne |
+| 5b | Disponibilité des livreurs, livreurs du restaurant ou de notre équipe, rôle `RESPONSABLE_LIVRAISON`, caisse séparée | À faire |
+| 5c | « Prête pour livraison », « Commande récupérée », tournées, preuves horaires | À faire |
+| 5d | Conditions du contrat (versions datées), relevé par période, PDF et Excel, interrupteur `RELEVE` | À faire |
+
+**Avancement 5a** :
+
+- [x] Base : enum `DeliveryOperator`, table `DeliveryCompany` (une ligne, pas de ligne = mode Restaurant),
+  `Order.deliveryOperator` (RESTAURANT par défaut), journal `MOT_DE_PASSE` et `LIVRAISON`. Migration
+  `20261010120000_livraison_mode_5a` écrite sans aucune base (`prisma migrate diff` entre deux fichiers de schéma).
+- [x] Migration relue et acceptée par le client (10 octobre), journal `LIVRAISON` gardé.
+- [x] Migration passée sur dev le 10 octobre (`npm run db:deploy`, serveur revérifié juste avant) : 20 migrations, base
+  identique au schéma, données d'avant intactes.
+- [x] Serveur : règles `delivery-mode.js` (mode Prestataire refusé sans société, nom affiché et 3 codes valides ; codes
+  jamais vidés tant que des commandes Prestataire attendent leurs frais ; mode Prestataire incomplet = Restaurant),
+  `delivery-mode.service.js`, `GET/PUT /api/staff/prestataire/livraison` (Prestataire seulement), mode noté à la
+  création, codes des frais selon le mode dans les messages, la page de suivi et le détail (mêmes modèles Meta),
+  journal `LIVRAISON` (une ligne par changement) et `MOT_DE_PASSE` (`POST /api/staff/password`).
+- [x] Pages : section « Mode de livraison » de la page Prestataire, badge « Livraison Prestataire » sur le détail,
+  phrase « c’est bien le compte de notre partenaire de livraison » pour les frais sur le suivi en mode Prestataire
+  (demande du client ; la phrase du paiement des plats, page Vos informations et Infos, reste « compte de Belchicken »). Compilé.
+- [x] Tests `backend/test/delivery-mode.test.js`, 13 tests, 196 au total, tous passent (10 octobre).
+- [x] Essai de bout en bout sur dev (10 octobre) avec « Presta (essai) » (vraie connexion, codes calculés par le script,
+  jamais affichés), « Awa (essai) » et « Patron (essai) » : 33 vérifications sur 33. Mode Restaurant au départ, mode Prestataire
+  refusé sans codes (API et page), Patron, Opérateur et visiteur refusés, code mal écrit refusé, société et codes enregistrés,
+  commande Restaurant (ECOFOOD) puis passage au mode Prestataire, commande Prestataire (nos codes dans le message, sur le
+  suivi et le détail, même modèle Meta), commande à emporter restée Restaurant, codes impossibles à vider (mode actif, puis
+  commande Prestataire en cours), retour au mode Restaurant (la commande Prestataire garde nos codes), mot de passe du
+  Prestataire changé, journal `LIVRAISON` et `MOT_DE_PASSE`. Badge du détail rendu plus lisible après les captures.
+  Dev remise comme avant : commandes, réglage, mot de passe, code et sessions de « Presta (essai) », sessions d'essai.
+  Seules restent 16 lignes du journal de sécurité (la base refuse de les effacer, voulu depuis le lot 4).
+- [x] Captures (13 images) dans `C:\Users\HP\Desktop\belchiken\captures-lot5a-modes\`.
+- [x] Tests : 196, tous passent après l'essai ; site compilé.
+- [ ] Accord du client, sauvegarde Neon, enregistrement, mise en ligne.
 
 ### 6. Ventes
 

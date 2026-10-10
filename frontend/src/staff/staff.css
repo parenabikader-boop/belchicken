@@ -694,6 +694,7 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .st-pills{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .st-pill.p-PRETE{background:#e3f1e4;color:#2b6e2f}
 .st-pill.p-EMPORTER{background:#f6cf76;color:#5c3900}
+.st-pill.p-PRESTATAIRE{background:#dde8f6;color:#1f4e8c} /* lot 5 : livrée par l'équipe du Prestataire */
 .st-pickup{font-size:11px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;background:#fff1d6;color:#8a5a00;border-radius:999px;padding:2px 8px}
 .od-col.s-PRETE.has{background:#eef7ec;border-color:#9cc79a}
 .od-col.s-PRETE.has .od-count{background:#2b6e2f}
@@ -870,3 +871,19 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .pr-entry.t-COMPTE_BLOQUE{border-left-color:#c92a2a}
 .pr-entry.t-INTERRUPTEUR{border-left-color:#4a2a8a}
 .pr-pages{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px}
+
+/* Lot 5 : mode de livraison (page Prestataire) */
+.pr-modes{display:grid;gap:10px;margin-bottom:12px}
+@media (min-width:720px){.pr-modes{grid-template-columns:1fr 1fr}}
+.pr-mode{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:2px solid #f1dcb4;border-radius:12px;background:#fff;cursor:pointer}
+.pr-mode input{margin-top:4px;accent-color:var(--brand)}
+.pr-mode.on{border-color:var(--brand);background:#fff8ef}
+.pr-mode.locked{cursor:not-allowed;opacity:.85}
+.pr-mode-text{display:flex;flex-direction:column;gap:3px}
+.pr-mode-text small{color:var(--muted);font-size:13px}
+.pr-mode-now{color:var(--brand);font-weight:700}
+.pr-mode .pr-mode-missing{color:var(--bad);font-weight:600}
+.pr-sub{margin:18px 0 8px;font-size:16px}
+.pr-company .st-action-row{margin-top:14px;align-items:center}
+.pr-saved{color:var(--ok);font-weight:700}
+.pr-company .pr-who{display:block;margin-top:8px;font-style:italic}

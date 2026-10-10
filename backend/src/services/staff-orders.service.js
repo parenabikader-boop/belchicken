@@ -11,6 +11,7 @@ import { featureClosedError, getFeatures } from './features.service.js';
 import { historyCutoff } from './features.js';
 import { customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticeState, THANKS_KEYS, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
+import { messageContextFor } from './delivery-mode.service.js';
 import { pushCourierAssigned, pushCourseCancelled, pushTeamDelivered } from './push.service.js';
 import { enteredBy, paymentVerification, sendFrom, sourceLabel } from './order-sources.js';
 import { checkPickupCode, codeLocked, courierAssignError, generateDeliveryCode, handoverReasonError, MAX_CODE_ATTEMPTS } from './courier.js';
@@ -123,7 +124,8 @@ const withCancelReason = (o) => ({ ...o, cancelReason: o.statusChanges.findLast(
 const notice = (o) => noticeState(o, { auto: customerAutoEnabled() });
 
 // night : heures de nuit réglées (null = réglage éteint), pour le rappel « commande passée de nuit »
-export function toStaffOrder(order, night = null) {
+// ctx : contexte des messages (lot 5 : avec nos codes pour une commande en mode Prestataire, messageContextFor)
+export function toStaffOrder(order, night = null, ctx = messageContext()) {
   const o = withCancelReason(order);
   const state = notice(o);
   const from = sendFrom(o);
@@ -132,6 +134,8 @@ export function toStaffOrder(order, night = null) {
     reference: o.reference,
     status: o.status,
     mode: o.mode,
+    // Lot 5 : qui livre et encaisse les frais (RESTAURANT ou PRESTATAIRE), figé à la création
+    deliveryOperator: o.deliveryOperator ?? 'RESTAURANT',
     createdAt: o.createdAt,
     customerName: o.customerName,
     customerPhone: o.customerPhone,
@@ -205,7 +209,7 @@ export function toStaffOrder(order, night = null) {
     // Message de l'étape en cours : texte et lien WhatsApp (customer-messages.js), et s'il a été confirmé.
     // required = l'étape suivante est bloquée tant que l'envoi n'est pas confirmé.
     notice: state && {
-      ...customerMessage(o, messageContext()),
+      ...customerMessage(o, ctx),
       sendFrom: from,
       required: state.required,
       confirmed: state.confirmed && { type: state.confirmed.type, by: state.confirmed.staffName, at: state.confirmed.createdAt },
@@ -218,7 +222,7 @@ export function toStaffOrder(order, night = null) {
 async function afterChange(reference) {
   const order = await prisma.order.findUnique({ where: { reference }, include: DETAIL_INCLUDE });
   autoNotifyCustomer(withCancelReason(order)).catch((e) => console.error('[whatsapp]', e));
-  return toStaffOrder(order, (await loadGrid()).night);
+  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order));
 }
 
 const event = (orderId, type, staff, extra = {}) => ({ orderId, type, staffUserId: staff.id, staffName: staff.name, ...extra });
@@ -238,7 +242,7 @@ export async function getOrder(reference, { checkHistory = false } = {}) {
     const visible = await prisma.order.count({ where: { id: order.id, ...visibleWhere(false, { auto: customerAutoEnabled() }) } });
     if (!visible) throw featureClosedError();
   }
-  return toStaffOrder(order, (await loadGrid()).night);
+  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order));
 }
 
 // Commande lue dans une transaction, avec ce qu'il faut pour les règles (statuts et événements)

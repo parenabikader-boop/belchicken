@@ -231,7 +231,11 @@ function FeeToPay({ fee, nightFee, feePayment, children }) {
           <div className="trk-codes">
             {feePayment.operators.map((op) => <PayCode key={op.method} label={op.label} code={op.code} compact />)}
           </div>
-          <p className="trk-merchant">Votre confirmation affichera le nom <b>{feePayment.merchantName}</b> : c’est bien le compte de Belchicken. Paiement sans frais.</p>
+          <p className="trk-merchant">
+            Votre confirmation affichera le nom <b>{feePayment.merchantName}</b> :{' '}
+            {/* Lot 5 : en mode Prestataire, les frais vont à notre partenaire de livraison (nom affiché = notre société) */}
+            {feePayment.operator === 'PRESTATAIRE' ? 'c’est bien le compte de notre partenaire de livraison' : 'c’est bien le compte de Belchicken'}. Paiement sans frais.
+          </p>
         </>
       )}
     </div>

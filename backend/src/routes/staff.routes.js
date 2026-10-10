@@ -9,7 +9,7 @@ import { login, logout, toPublicStaff } from '../services/staff.service.js';
 import { checkCodeForPasswordChange, codeStep } from '../services/prestataire.service.js';
 import { PRESTATAIRE_PASSWORD_MIN } from '../services/prestataire-auth.js';
 import { getFeatures } from '../services/features.service.js';
-import { requestMeta } from '../services/security-log.service.js';
+import { logSecurity, requestMeta } from '../services/security-log.service.js';
 import { staffPrestataireRouter } from './staff-prestataire.routes.js';
 import { staffOrdersRouter } from './staff-orders.routes.js';
 import { staffMenuRouter } from './staff-menu.routes.js';
@@ -139,6 +139,12 @@ staffRouter.post('/password', requireStaffSession(), passwordLimiter, async (req
       return res.status(400).json({ error: { code: 'CODE_INCORRECT', message: 'Code incorrect.' } });
     }
     const user = await changeOwnPassword(req.staff, readSessionToken(req), body);
+    // Lot 5 : noté au journal de sécurité, comme les autres événements du Prestataire (le mot de passe est
+    // déjà changé : un journal injoignable ne fait pas échouer la réponse, l'erreur part dans les logs)
+    if (prestataire) {
+      await logSecurity({ type: 'MOT_DE_PASSE', actor: req.staff, detail: 'Mot de passe changé dans l’application', meta: requestMeta(req) })
+        .catch((e) => console.error('[journal] mot de passe du Prestataire non noté :', e.message));
+    }
     res.json({ user: toPublicStaff(user) });
   } catch (e) {
     next(e);

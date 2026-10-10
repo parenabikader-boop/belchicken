@@ -2,6 +2,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { createOrderSchema } from '../validators/order.schema.js';
 import { createOrder, getOrderSummary, toPublicOrder } from '../services/order.service.js';
+import { messageContextFor } from '../services/delivery-mode.service.js';
 
 export const orderRouter = Router();
 
@@ -18,7 +19,7 @@ orderRouter.post('/', createLimiter, async (req, res, next) => {
   try {
     const input = createOrderSchema.parse(req.body);
     const order = await createOrder(input);
-    res.status(201).json({ order: toPublicOrder(order) });
+    res.status(201).json({ order: toPublicOrder(order, await messageContextFor(order)) });
   } catch (e) {
     next(e);
   }

@@ -11,6 +11,7 @@
 import { formatFcfa } from '../utils/format.js';
 import { paymentCodes } from './payment-codes.js';
 import { feeWithNight } from './delivery-fees.js';
+import { feePaymentOf } from './delivery-mode.js';
 import { clean, itemsText } from './whatsapp.message.js';
 
 // Phrase des frais de livraison, la même dans les messages et sur la page de suivi. Les frais sont
@@ -25,9 +26,10 @@ const feeLine = (fee, merchant, orange, moov, telecel) =>
   `Orange Money : \`\`\`${orange}\`\`\`\n` +
   `Moov Money : \`\`\`${moov}\`\`\`\n` +
   `Telecel Money : \`\`\`${telecel}\`\`\``;
-// Nom du compte marchand, puis les 3 codes avec le montant des frais
+// Nom du compte marchand, puis les 3 codes avec le montant des frais. Lot 5 : nos codes pour une commande
+// en mode Prestataire (ctx.prestatairePayment), les codes ECOFOOD sinon (feePaymentOf dans delivery-mode.js).
 const feeCodes = (o, ctx) => {
-  const { merchantName, operators } = paymentCodes(ctx.payment, o.deliveryFee ?? 0);
+  const { merchantName, operators } = paymentCodes(feePaymentOf(o, ctx), o.deliveryFee ?? 0);
   return [merchantName, ...operators.map((op) => op.code)];
 };
 // Livraison offerte (0 F, grille du Patron) : rien à payer au livreur, pas de codes marchands.

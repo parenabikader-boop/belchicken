@@ -1,4 +1,5 @@
-import { customerAutoEnabled, env, messageContext, whatsappEnabled } from '../config/env.js';
+import { customerAutoEnabled, env, whatsappEnabled } from '../config/env.js';
+import { messageContextFor } from './delivery-mode.service.js';
 import { prisma } from '../lib/prisma.js';
 import { buildNewOrderParams } from './whatsapp.message.js';
 import { currentMessageKey, messageModel, messageParams } from './customer-messages.js';
@@ -69,7 +70,7 @@ export async function autoNotifyCustomer(order) {
   try {
     const already = await prisma.notificationLog.findFirst({ where: { orderId: order.id, template, status: 'ENVOYEE' } });
     if (already) return;
-    const id = await sendTemplate(order.customerPhone, template, messageParams(current.key, order, messageContext()));
+    const id = await sendTemplate(order.customerPhone, template, messageParams(current.key, order, await messageContextFor(order)));
     await prisma.notificationLog.create({
       data: { orderId: order.id, recipient: order.customerPhone, template, status: 'ENVOYEE', providerMessageId: id },
     });
