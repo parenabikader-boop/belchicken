@@ -29,7 +29,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 1 | Parcours court (option) + bon de commande imprimable | En ligne depuis le 8 octobre 2026 (réglage « Parcours court » allumé en production par le client le 9 octobre, gardé allumé) |
 | 2 | Prise de commande par l'agent (appel, WhatsApp) | En ligne depuis le 9 octobre 2026 (réglage « Prise de commande par l'agent » éteint en production) |
 | 3 | Supplément de nuit dans la grille des frais | En ligne depuis le 9 octobre 2026 (réglage « Supplément de nuit » éteint en production) |
-| 4 | Compte Prestataire au-dessus du Patron | Fait sur dev, essayé, en attente de l'accord pour la mise en ligne |
+| 4 | Compte Prestataire au-dessus du Patron | En ligne depuis le 10 octobre 2026 (aucun compte Prestataire en production, tout ouvert) |
 | 5 | Livraison en deux modes (Restaurant / Prestataire) | À faire |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | À faire |
 | 7 | Avis des clients | À faire |
@@ -149,8 +149,13 @@ sur la page Équipe du Patron, sans action.
   « Patron (essai) » (70 99 00 09), créés avec les vrais scripts ; codes calculés par le script d'essai, jamais affichés :
   84 vérifications par l'API et les scripts, toutes bonnes. Comptes réels jamais utilisés. Toutes les fonctions rouvertes à la fin.
 - [x] Captures (19 images) dans `C:\Users\HP\Desktop\belchiken\captures-lot4-prestataire\`.
-- [ ] Accord du client, sauvegarde Neon, enregistrement, `PRESTATAIRE_TOTP_KEY` sur Render, mise en ligne. Compte Prestataire de
-  production : plus tard, depuis le terminal de Render.
+- [x] Accord du client sur les captures, sauvegarde Neon `sauvegarde-lot4` (faite et vérifiée par le client),
+  `PRESTATAIRE_TOTP_KEY` ajoutée sur Render par le client (clé différente de dev), enregistrement `460e887`, mise en ligne le
+  10 octobre 2026. Migration `20261009220000_compte_prestataire` passée sur Render : structure seulement, aucune donnée écrite.
+  Vérifié après la mise en ligne, sans rien écrire en production : serveur et site à jour, menu (10 catégories, 51 plats),
+  paiement, grille des frais (lit déjà la table des interrupteurs), espace équipe protégé, connexion de l'équipe qui répond
+  comme avant, nouvelle adresse du code en place.
+- [ ] Compte Prestataire de production : plus tard, depuis le terminal de Render (offre Starter). D'ici là, tout est ouvert.
 
 ### 5. Livraison en deux modes (réglés par le Prestataire)
 
