@@ -509,6 +509,42 @@ chaque tranche de distance a un supplément de nuit (`nightFee`, 0 F par défaut
 - **Réglages** : `PUT /api/staff/frais-livraison/settings` `{ allowOtherZone?, nightEnabled?, nightStart?, nightEnd? }` (« 22:00 »).
 - Migration `20261009180805_supplement_nuit` : colonnes seulement, aucune donnée écrite.
 
+## Compte Prestataire (lot 4)
+
+Compte au-dessus du Patron (rôle `PRESTATAIRE`) : tout ce que fait le Patron, plus les interrupteurs des fonctions.
+Créé et géré **seulement** par `npm run equipe:prestataire` (depuis `backend/`), jamais depuis une page ; le Patron le voit sur
+sa page Équipe (« Compte Prestataire », sans numéro ni action), et `npm run equipe:patron` refuse son numéro.
+
+- **Script** `npm run equipe:prestataire` : 1. Créer (nom, numéro, mot de passe masqué de 12 caractères au moins, QR code pour
+  Google Authenticator + la clé en texte, vérification avec un code de l'application, puis 10 codes de secours affichés une seule
+  fois) ; 2. Téléphone perdu (nouvelle clé, nouveaux codes de secours, tous les appareils déconnectés) ; 3. Nouveau mot de passe ;
+  4. Débloquer. Demande `PRESTATAIRE_TOTP_KEY` (32 octets en base64) dans `backend/.env` et sur Render, jamais dans le code.
+- **Connexion en deux temps** : `POST /api/staff/login` répond `{ codeRequired: true }` et pose un jeton de 5 minutes (cookie
+  httpOnly `bc_equipe_code`, limité à `/api/staff/login`, n'ouvre aucune page) ; puis `POST /api/staff/login/code { code }`
+  (6 chiffres TOTP, bibliothèque `otpauth`, 30 s de tolérance, un même code ne sert qu'une fois ; ou code de secours à usage
+  unique) ouvre une session de **8 heures** fixes. Clé TOTP chiffrée en base (AES-256-GCM, `StaffUser.totpSecretEnc`), codes de
+  secours en empreinte scrypt (`StaffRecoveryCode`).
+- **Blocage** gardé en base (`failedLogins`, `lockedUntil`) : 5 essais ratés (mot de passe ou code) = 15 minutes, puis 1 heure à
+  chaque nouvel échec jusqu'à une connexion réussie. Réponse 429 `TROP_DE_TENTATIVES`. Déblocage : choix 4 du script.
+- **Mot de passe dans l'application** (`POST /api/staff/password`) : 12 caractères et `code` (6 chiffres ou code de secours) en plus.
+- **Interrupteurs** (`FeatureSwitch`, liste dans `backend/src/services/features.js`) : `HISTORIQUE`, `TABLEAU_DE_BORD`, `CAISSE`,
+  `FRAIS_LIVRAISON`, `REGLAGES`, `PARCOURS_COURT`, `PRISE_COMMANDE_AGENT`, `SUPPLEMENT_NUIT`. Pas de ligne = ouvert. Fermé :
+  403 `FONCTION_NON_INCLUSE` « Fonction non incluse dans votre formule, contactez votre prestataire », pour tout le monde,
+  Prestataire compris (`requireFeature()`), et page cachée. Rien n'est supprimé. Détails : historique fermé = commandes en cours,
+  à remercier et terminées depuis moins de 24 h (liste, recherche, détail et bon) ; frais de livraison fermés = seule la page du
+  Patron, la grille continue de calculer ; réglages fermés = enregistrement des réglages et provenances refusé (lecture permise) ;
+  parcours court, prise de commande et supplément de nuit fermés = comme éteints par le Patron (son choix est gardé et revient à
+  la réouverture ; `included` dans `GET /api/staff/reglages`, `nightIncluded` dans la page Frais), commandes passées inchangées.
+  `GET /api/staff/me` renvoie `features`.
+- **Page Prestataire** `/equipe/prestataire` : interrupteurs avec confirmation (`GET /api/staff/prestataire/fonctions`,
+  `PUT …/fonctions/:key { enabled }`) et journal page par page (`GET /api/staff/prestataire/journal?page=`).
+- **Journal de sécurité** (`SecurityLog`) : connexions réussies et ratées du Prestataire, blocages, codes de secours, actions du
+  script, interrupteurs (qui, quand, avant, après), avec l'adresse IP et le navigateur. Aucune adresse ne le modifie, et la base
+  refuse toute modification, suppression ou vidage (déclencheur PostgreSQL de la migration). Noms copiés : rien ne s'efface avec un compte.
+- Le Prestataire ne reçoit pas les alertes de commande et n'est jamais proposé comme livreur.
+- Migration `20261009220000_compte_prestataire` : structure seulement (rôle, colonnes, 4 tables, règle du journal), aucune donnée.
+  Sans compte Prestataire et sans ligne `FeatureSwitch`, tout fonctionne comme avant.
+
 ## Parcours court et bon de commande (lot 1)
 
 - Réglages du logiciel : table `AppSettings` (une ligne, id = 1 ; pas de ligne = tout éteint), `GET /api/staff/reglages`

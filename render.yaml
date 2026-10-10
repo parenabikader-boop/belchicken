@@ -65,5 +65,8 @@ services:
         sync: false
       - key: VAPID_PRIVATE_KEY
         sync: false
+      # Lot 4 : chiffre la clé du code à 6 chiffres du Prestataire (secret, à saisir dans le tableau Render)
+      - key: PRESTATAIRE_TOTP_KEY
+        sync: false
       - key: VAPID_SUBJECT
         value: https://belchicken-api.onrender.com

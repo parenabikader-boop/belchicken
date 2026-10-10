@@ -1,34 +1,12 @@
 // Crée le compte Patron de l'espace équipe (ou change son mot de passe s'il existe déjà).
 // Usage, depuis backend/ :  npm run equipe:patron
 // Le mot de passe est tapé au clavier, masqué, et n'est jamais affiché ni enregistré en clair.
-import readline from 'node:readline';
 import { prisma } from '../src/lib/prisma.js';
 import { normalizePhone } from '../src/utils/phone.js';
 import { hashPassword, PASSWORD_MIN_LENGTH } from '../src/services/staff-auth.js';
+import { createPrompt } from './prompt.js';
 
-// Lecture ligne par ligne : fonctionne au clavier comme avec des réponses envoyées d'un coup
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: Boolean(process.stdin.isTTY) });
-rl.setPrompt('');
-const lines = rl[Symbol.asyncIterator]();
-
-// Pendant la saisie d'un mot de passe, les caractères tapés ne s'affichent pas
-let muted = false;
-const write = rl._writeToOutput.bind(rl);
-rl._writeToOutput = (text) => {
-  if (!muted) write(text);
-  else if (/[\r\n]/.test(text)) write('\n');
-};
-
-async function ask(question, { hidden = false } = {}) {
-  process.stdout.write(question);
-  muted = hidden;
-  const { value, done } = await lines.next();
-  muted = false;
-  if (hidden && !process.stdin.isTTY) process.stdout.write('\n');
-  if (done) throw new Error('Saisie interrompue.');
-  return hidden ? value : value.trim();
-}
-const askHidden = (question) => ask(question, { hidden: true });
+const { ask, askHidden, close } = createPrompt();
 
 async function main() {
   console.log("\nCréation du compte Patron de l'espace équipe Belchicken\n");
@@ -40,6 +18,8 @@ async function main() {
   if (!phone) throw new Error('Numéro de téléphone invalide. Exemple : 76 12 34 56');
 
   const existing = await prisma.staffUser.findUnique({ where: { phone } });
+  // Lot 4 : le compte Prestataire ne se touche qu'avec son propre script
+  if (existing?.role === 'PRESTATAIRE') throw new Error('Ce numéro est celui du compte Prestataire : utilisez npm run equipe:prestataire.');
   if (existing) {
     const ok = await ask(`Un compte ${existing.role} existe déjà pour ${phone} (${existing.name}). Changer son mot de passe ? (o/n) : `);
     if (!/^o/i.test(ok)) return console.log("Rien n'a été modifié.");
@@ -71,6 +51,6 @@ main()
     process.exitCode = 1;
   })
   .finally(async () => {
-    rl.close();
+    close();
     await prisma.$disconnect();
   });

@@ -454,6 +454,9 @@ enum StaffRole {
   PATRON // tout
   OPERATEUR // commandes et disponibilité des plats ; ni chiffre d'affaires, ni prix, ni menu
   LIVREUR // ses courses du jour seulement, sans aucun montant
+  // Lot 4 : tout ce que fait le Patron, plus les interrupteurs des fonctions. Créé seulement par
+  // npm run equipe:prestataire, jamais depuis une page ; le Patron ne peut pas le modifier.
+  PRESTATAIRE
 }
 
 model StaffUser {
@@ -467,9 +470,17 @@ model StaffUser {
   // provisoire, rien n'est accessible tant que le membre ne l'a pas remplacé par le sien.
   mustChangePassword Boolean   @default(false)
   lastLoginAt        DateTime?
+  // Lot 4, Prestataire seulement (vides pour les autres comptes) : code de Google Authenticator
+  // et blocage après des essais ratés, gardé en base (survit aux redémarrages du serveur)
+  totpSecretEnc      String? // clé du code à 6 chiffres, chiffrée (AES-256-GCM, clé PRESTATAIRE_TOTP_KEY)
+  totpLastStep       Int? // période du dernier code accepté : un même code ne sert pas deux fois
+  failedLogins       Int       @default(0) // essais ratés d'affilée (mot de passe ou code)
+  lockedUntil        DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
+  recoveryCodes     StaffRecoveryCode[]
+  loginChallenges   StaffLoginChallenge[]
   sessions          StaffSession[]
   statusChanges     OrderStatusChange[]
   orderEvents       OrderEvent[]
@@ -494,6 +505,68 @@ model StaffSession {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+// Lot 4 : codes de secours du Prestataire, chacun à usage unique. La base ne garde que leur empreinte.
+model StaffRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  user      StaffUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String // scrypt, comme les mots de passe
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// Lot 4 : entre le mot de passe et le code à 6 chiffres (5 minutes). N'ouvre aucune page : sert
+// seulement à taper le code. Le navigateur garde le jeton (cookie httpOnly), la base son empreinte.
+model StaffLoginChallenge {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      StaffUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+// Lot 4 : fonctions incluses dans la formule, ouvertes ou fermées par le Prestataire.
+// Pas de ligne = ouvert : sans Prestataire, tout fonctionne comme avant. Fermer ne supprime aucune donnée.
+model FeatureSwitch {
+  key           String   @id // 'HISTORIQUE', 'TABLEAU_DE_BORD', 'CAISSE'… (liste dans src/services/features.js)
+  enabled       Boolean  @default(true)
+  updatedByName String? // copie figée
+  updatedAt     DateTime @updatedAt
+}
+
+enum SecurityLogType {
+  CONNEXION // connexion réussie du Prestataire
+  CONNEXION_ECHEC // mot de passe ou code faux
+  COMPTE_BLOQUE
+  CODE_SECOURS_UTILISE
+  INTERRUPTEUR // fonction ouverte ou fermée (avant, après)
+  SCRIPT // npm run equipe:prestataire : création, téléphone perdu, mot de passe, déblocage
+}
+
+// Lot 4 : journal de sécurité. Aucune adresse ne le modifie, et la base refuse toute modification ou
+// suppression de ses lignes (règle PostgreSQL dans la migration 20261009220000_compte_prestataire).
+// Noms copiés, sans lien vers les comptes : supprimer un compte n'efface rien du journal.
+model SecurityLog {
+  id         String          @id @default(cuid())
+  at         DateTime        @default(now())
+  type       SecurityLogType
+  actorName  String?
+  actorPhone String?
+  featureKey String?
+  before     Boolean?
+  after      Boolean?
+  ip         String?
+  userAgent  String?
+  detail     String?
+
+  @@index([at])
 }
 
 // Téléphones qui reçoivent les notifications de nouvelle commande (Web Push).

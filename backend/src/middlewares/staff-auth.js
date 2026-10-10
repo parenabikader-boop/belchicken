@@ -1,5 +1,6 @@
 import { env } from '../config/env.js';
 import { getSessionUser } from '../services/staff.service.js';
+import { isPrestataire } from '../services/roles.js';
 
 export const SESSION_COOKIE = 'bc_equipe';
 // Le cookie n'est envoyé qu'aux routes de l'espace équipe, jamais au reste de l'API
@@ -23,15 +24,24 @@ export function parseCookies(header) {
 
 // httpOnly : illisible par le JavaScript de la page. SameSite=Lax : pas envoyé par un autre site.
 // Secure en production : seulement en HTTPS.
-export function sessionCookie(token, expiresAt) {
-  const attrs = [`${SESSION_COOKIE}=${token}`, `Path=${COOKIE_PATH}`, 'HttpOnly', 'SameSite=Lax'];
+function cookie(name, path, token, expiresAt) {
+  const attrs = [`${name}=${token}`, `Path=${path}`, 'HttpOnly', 'SameSite=Lax'];
   if (expiresAt) attrs.push(`Expires=${expiresAt.toUTCString()}`);
   else attrs.push('Max-Age=0');
   if (env.isProd) attrs.push('Secure');
   return attrs.join('; ');
 }
 
+export const sessionCookie = (token, expiresAt) => cookie(SESSION_COOKIE, COOKIE_PATH, token, expiresAt);
+
 export const readSessionToken = (req) => parseCookies(req.headers.cookie)[SESSION_COOKIE] || null;
+
+// Lot 4 : jeton de 5 minutes entre le mot de passe et le code du Prestataire. Envoyé seulement à
+// l'adresse de connexion : il n'ouvre aucune page.
+export const CHALLENGE_COOKIE = 'bc_equipe_code';
+const CHALLENGE_PATH = '/api/staff/login';
+export const challengeCookie = (token, expiresAt) => cookie(CHALLENGE_COOKIE, CHALLENGE_PATH, token, expiresAt);
+export const readChallengeToken = (req) => parseCookies(req.headers.cookie)[CHALLENGE_COOKIE] || null;
 
 const unauthorized = (res) =>
   res.status(401).json({ error: { code: 'NON_CONNECTE', message: "Connectez-vous pour accéder à l'espace équipe." } });
@@ -41,10 +51,12 @@ const mustChange = (res) =>
   res.status(403).json({ error: { code: 'MOT_DE_PASSE_A_CHANGER', message: 'Choisissez d’abord votre propre mot de passe.' } });
 
 // 'ok', 'non-connecte', 'refuse' ou 'mot-de-passe' (mot de passe provisoire à changer) :
-// qui a droit à une route de l'espace équipe
+// qui a droit à une route de l'espace équipe.
+// Lot 4 : une route ouverte au Patron l'est aussi au Prestataire (jamais celles du livreur seul).
 export function accessFor(user, roles, { allowProvisional = false } = {}) {
   if (!user) return 'non-connecte';
   if (user.mustChangePassword && !allowProvisional) return 'mot-de-passe';
+  if (isPrestataire(user) && roles.includes('PATRON')) return 'ok';
   if (roles.length && !roles.includes(user.role)) return 'refuse';
   return 'ok';
 }

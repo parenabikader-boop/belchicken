@@ -5,17 +5,22 @@ import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { env } from '../config/env.js';
 import { sameItems } from './menu-edit.js';
+import { featureClosedError, getFeatures } from './features.service.js';
 import {
   activeGrid, bandRanges, expectedFeeError, isNightTime, minutesToHHMM, publicGrid, quoteDelivery, sameZoneName,
 } from './delivery-fees.js';
 
+// Lot 4 : supplément de nuit fermé par le Prestataire = comme si le Patron l'avait éteint (nightIncluded)
 async function readGrid(db = prisma) {
-  const [zones, bands, settings] = await Promise.all([
+  const [zones, bands, stored, features] = await Promise.all([
     db.deliveryZone.findMany({ orderBy: [{ position: 'asc' }, { name: 'asc' }] }),
     db.deliveryDistanceBand.findMany({ orderBy: { upToMeters: 'asc' } }),
     db.deliverySettings.findUnique({ where: { id: 1 } }),
+    getFeatures(db),
   ]);
-  return { zones, bands, settings };
+  const nightIncluded = features.SUPPLEMENT_NUIT;
+  const settings = stored && !nightIncluded ? { ...stored, nightEnabled: false } : stored;
+  return { zones, bands, settings, nightIncluded };
 }
 
 export const loadGrid = async (db = prisma) => activeGrid(await readGrid(db));
@@ -61,7 +66,7 @@ export async function nightInfo(at = new Date()) {
 // ─── Page « Frais de livraison » du Patron ───
 
 export async function getStaffGrid() {
-  const { zones, bands, settings } = await readGrid();
+  const { zones, bands, settings, nightIncluded } = await readGrid();
   const active = activeGrid({ zones, bands, settings });
   const ranges = new Map(bandRanges(active.bands).map((b) => [b.id, b.fromMeters]));
   return {
@@ -73,6 +78,7 @@ export async function getStaffGrid() {
       allowOtherZone: active.allowOther,
       // Lot 3 : heures de nuit (réglées même quand le supplément est éteint)
       nightEnabled: settings?.nightEnabled ?? false,
+      nightIncluded, // lot 4 : fermé par le Prestataire = non inclus dans la formule
       nightStart: minutesToHHMM(settings?.nightStartMin ?? 1320),
       nightEnd: minutesToHHMM(settings?.nightEndMin ?? 360),
       isNight: isNightTime(active.night),
@@ -146,6 +152,7 @@ export async function deleteBand(id) {
 
 // Seulement les champs envoyés (le reste garde sa valeur, ou la valeur par défaut à la création)
 export async function setSettings({ allowOtherZone, nightEnabled, nightStart, nightEnd }) {
+  if (nightEnabled === true && !(await getFeatures()).SUPPLEMENT_NUIT) throw featureClosedError();
   const data = Object.fromEntries(
     Object.entries({ allowOtherZone, nightEnabled, nightStartMin: nightStart, nightEndMin: nightEnd }).filter(([, v]) => v !== undefined),
   );

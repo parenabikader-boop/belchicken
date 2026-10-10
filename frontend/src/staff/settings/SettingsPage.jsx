@@ -3,9 +3,26 @@ import { staffApi } from '../../api/client.js';
 import { formatDateTime } from '../orders/labels.js';
 import { rememberSettings } from './useAppSettings.js';
 import SourcesBox from './SourcesBox.jsx';
+import { FEATURE_CLOSED } from '../FeatureGate.jsx';
+
+// Lot 4 : interrupteur d'un réglage. Non inclus dans la formule (fermé par le Prestataire) : bloqué sur « Éteint ».
+function SettingSwitch({ settings, name, label, saving, onToggle }) {
+  const included = settings.included?.[name] !== false;
+  return (
+    <div className="rg-switch">
+      <label className={`mn-switch${saving || !included ? ' saving' : ''}`}>
+        <input type="checkbox" role="switch" checked={settings[name]} disabled={saving || !included} onChange={() => onToggle(name)} aria-label={label} />
+        <span className="mn-track" aria-hidden="true" />
+        <span className="mn-state">{!included ? 'Non inclus' : settings[name] ? 'Allumé' : 'Éteint'}</span>
+      </label>
+      {!included && <p className="st-closed-note">{FEATURE_CLOSED}</p>}
+    </div>
+  );
+}
 
 // Page « Réglages » (Patron) : les options du logiciel, toutes éteintes par défaut.
-// Éteint = fonctionnement habituel. Le compte Prestataire (lot 4) reprendra ces interrupteurs.
+// Éteint = fonctionnement habituel. Lot 4 : le Prestataire décide si chaque option est incluse dans la formule,
+// le Patron l'allume ou l'éteint à l'intérieur.
 export default function SettingsPage() {
   const [settings, setSettings] = useState(null);
   const [error, setError] = useState(null);
@@ -49,11 +66,7 @@ export default function SettingsPage() {
                 <li>Les commandes déjà « Payées » continuent leur parcours habituel.</li>
               </ul>
             </div>
-            <label className={`mn-switch${saving ? ' saving' : ''}`}>
-              <input type="checkbox" role="switch" checked={settings.shortFlow} disabled={saving} onChange={() => toggle('shortFlow')} aria-label="Parcours court" />
-              <span className="mn-track" aria-hidden="true" />
-              <span className="mn-state">{settings.shortFlow ? 'Allumé' : 'Éteint'}</span>
-            </label>
+            <SettingSwitch settings={settings} name="shortFlow" label="Parcours court" saving={saving} onToggle={toggle} />
           </div>
           <div className="rg-row rg-sep">
             <div className="rg-text">
@@ -68,11 +81,7 @@ export default function SettingsPage() {
                 <li>Provenance WhatsApp : l’agent voit à chaque étape depuis quel numéro écrire au client.</li>
               </ul>
             </div>
-            <label className={`mn-switch${saving ? ' saving' : ''}`}>
-              <input type="checkbox" role="switch" checked={settings.agentOrders} disabled={saving} onChange={() => toggle('agentOrders')} aria-label="Prise de commande par l’agent" />
-              <span className="mn-track" aria-hidden="true" />
-              <span className="mn-state">{settings.agentOrders ? 'Allumé' : 'Éteint'}</span>
-            </label>
+            <SettingSwitch settings={settings} name="agentOrders" label="Prise de commande par l’agent" saving={saving} onToggle={toggle} />
           </div>
           {settings.updatedByName && (
             <p className="st-muted rg-who">Dernier changement : {settings.updatedByName}, le {formatDateTime(settings.updatedAt)}.</p>

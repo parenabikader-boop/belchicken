@@ -506,7 +506,7 @@ export function DeliveryFee({ order: o, steps }) {
         </p>
       )}
       {!editing && feeOrigin(o) && <p className="st-muted of-origin">{feeOrigin(o)}</p>}
-      {!editing && patronOnly && user.role !== 'PATRON' && o.deliveryFee != null && (
+      {!editing && patronOnly && !canEditFee(o, user.role) && o.deliveryFee != null && (
         <p className="st-muted of-origin">Le livreur est parti : seul le Patron peut encore corriger les frais.</p>
       )}
 

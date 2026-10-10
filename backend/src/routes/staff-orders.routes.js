@@ -67,7 +67,7 @@ staffOrdersRouter.get('/livreurs', async (req, res, next) => {
 
 staffOrdersRouter.get('/:reference', async (req, res, next) => {
   try {
-    res.json({ order: await getOrder(reference(req)) });
+    res.json({ order: await getOrder(reference(req), { checkHistory: true }) });
   } catch (e) {
     next(e);
   }

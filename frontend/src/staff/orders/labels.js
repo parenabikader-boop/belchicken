@@ -141,7 +141,8 @@ export function feeOrigin(o) {
 }
 
 // Qui peut corriger les frais (même règle que l'API, delivery-fees.js : o.feeEdit = 'TOUS' | 'PATRON' | null)
-export const canEditFee = (o, role) => o.feeEdit === 'TOUS' || (o.feeEdit === 'PATRON' && role === 'PATRON');
+// Lot 4 : le Prestataire comme le Patron
+export const canEditFee = (o, role) => o.feeEdit === 'TOUS' || (o.feeEdit === 'PATRON' && (role === 'PATRON' || role === 'PRESTATAIRE'));
 // Ce qui empêche le livreur de partir, ou null
 export function deliveryBlock(o) {
   if (o.deliveryFee == null) return 'Saisissez d’abord les frais de livraison ci-dessous.';

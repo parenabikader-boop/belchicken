@@ -7,6 +7,8 @@ import {
 import { feeCorrectionError, feeEditRight, isNightTime, minutesToHHMM, nightFeeAfter } from './delivery-fees.js';
 import { loadGrid } from './delivery-fees.service.js';
 import { getAppSettings } from './app-settings.service.js';
+import { featureClosedError, getFeatures } from './features.service.js';
+import { historyCutoff } from './features.js';
 import { customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticeState, THANKS_KEYS, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
 import { pushCourierAssigned, pushCourseCancelled, pushTeamDelivered } from './push.service.js';
@@ -40,9 +42,25 @@ export function searchWhere(q) {
   return { OR: or };
 }
 
+// Lot 4, historique fermé par le Prestataire : seulement les commandes en cours, à remercier, et celles
+// terminées (livrées ou annulées) depuis moins de 24 heures. {} = historique ouvert, tout est visible.
+export function visibleWhere(historyOpen, { auto = false, now = new Date() } = {}) {
+  if (historyOpen) return {};
+  const thanks = thanksWhere({ auto });
+  return {
+    OR: [
+      { status: { in: ACTIVE } },
+      ...(thanks ? [thanks] : []),
+      { statusChanges: { some: { toStatus: { in: ['LIVREE', 'ANNULEE'] }, createdAt: { gte: historyCutoff(now) } } } },
+    ],
+  };
+}
+
 export async function listOrders({ status, q }) {
   const auto = customerAutoEnabled();
-  const where = { AND: [statusWhere(status, { auto }), searchWhere(q)] };
+  const historyOpen = (await getFeatures()).HISTORIQUE;
+  const visible = visibleWhere(historyOpen, { auto });
+  const where = { AND: [statusWhere(status, { auto }), searchWhere(q), visible] };
   const thanks = thanksWhere({ auto });
   const [orders, groups, toThank] = await Promise.all([
     prisma.order.findMany({
@@ -56,7 +74,7 @@ export async function listOrders({ status, q }) {
         events: { where: { messageKey: { in: THANKS_KEYS } }, select: { type: true, messageKey: true, createdAt: true } },
       },
     }),
-    prisma.order.groupBy({ by: ['status'], _count: { _all: true } }),
+    prisma.order.groupBy({ by: ['status'], where: visible, _count: { _all: true } }),
     thanks ? prisma.order.count({ where: thanks }) : 0,
   ]);
   // Compteurs : les livrées à remercier ont leur propre étape, l'historique (LIVREE) compte les autres
@@ -87,6 +105,7 @@ export async function listOrders({ status, q }) {
       toThank: needsThanks(o, { auto }),
     })),
     counts,
+    historyOpen, // lot 4 : false = historique limité aux 24 dernières heures
   };
 }
 
@@ -211,9 +230,14 @@ const feeEvent = (order, amount, staff, reason) =>
     ? event(order.id, 'FRAIS_SAISIS', staff, { amount })
     : event(order.id, 'FRAIS_CORRIGES', staff, { amount, previousAmount: order.deliveryFee, reason: reason?.trim() || null });
 
-export async function getOrder(reference) {
+// Lot 4 : historique fermé, une ancienne commande ne s'ouvre plus (ni détail, ni bon)
+export async function getOrder(reference, { checkHistory = false } = {}) {
   const order = await prisma.order.findUnique({ where: { reference }, include: DETAIL_INCLUDE });
   if (!order) throw new AppError(404, 'Commande introuvable.', 'COMMANDE_INTROUVABLE');
+  if (checkHistory && !(await getFeatures()).HISTORIQUE) {
+    const visible = await prisma.order.count({ where: { id: order.id, ...visibleWhere(false, { auto: customerAutoEnabled() }) } });
+    if (!visible) throw featureClosedError();
+  }
   return toStaffOrder(order, (await loadGrid()).night);
 }
 

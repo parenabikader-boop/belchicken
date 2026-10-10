@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
-import { ROLE_LABEL, StaffProvider, useStaff } from './StaffContext.jsx';
+import { isPatronLevel, ROLE_LABEL, StaffProvider, useStaff } from './StaffContext.jsx';
+import { RequireFeature } from './FeatureGate.jsx';
 import { StaffScreen } from './StaffScreen.jsx';
 import Login from './pages/Login.jsx';
 import { OrdersFeedProvider, useOrdersFeed } from './orders/OrdersFeed.jsx';
@@ -20,6 +21,7 @@ import DeliveryFeesPage from './fees/DeliveryFeesPage.jsx';
 import SettingsPage from './settings/SettingsPage.jsx';
 import OrderSlip from './orders/OrderSlip.jsx';
 import NewOrder from './orders/NewOrder.jsx';
+import PrestatairePage from './prestataire/PrestatairePage.jsx';
 import InstallBanner from '../components/InstallBanner.jsx';
 import './staff.css';
 
@@ -80,7 +82,7 @@ function TeamRoutes() {
         <Route path="commandes/nouvelle" element={<NewOrder />} />
         <Route path="commandes/:reference" element={<OrderDetail />} />
         <Route path="menu" element={<MenuAdmin />} />
-        <Route path="caisse" element={<CashPage />} />
+        <Route path="caisse" element={<RequireFeature feature="CAISSE"><CashPage /></RequireFeature>} />
         <Route path="alertes" element={<AlertsPage />} />
         <Route path="mot-de-passe" element={<PasswordPage />} />
         <Route element={<RequirePatron />}>
@@ -89,10 +91,13 @@ function TeamRoutes() {
           <Route path="menu/categories/nouvelle" element={<CategoryForm />} />
           <Route path="menu/categories/:id" element={<CategoryForm />} />
           <Route path="accueil" element={<HomeAdmin />} />
-          <Route path="tableau-de-bord" element={<Dashboard />} />
+          <Route path="tableau-de-bord" element={<RequireFeature feature="TABLEAU_DE_BORD"><Dashboard /></RequireFeature>} />
           <Route path="equipe" element={<TeamPage />} />
-          <Route path="frais-livraison" element={<DeliveryFeesPage />} />
-          <Route path="reglages" element={<SettingsPage />} />
+          <Route path="frais-livraison" element={<RequireFeature feature="FRAIS_LIVRAISON"><DeliveryFeesPage /></RequireFeature>} />
+          <Route path="reglages" element={<RequireFeature feature="REGLAGES"><SettingsPage /></RequireFeature>} />
+        </Route>
+        <Route element={<RequirePrestataire />}>
+          <Route path="prestataire" element={<PrestatairePage />} />
         </Route>
       </Route>
       {/* Bon de commande à imprimer : page seule, sans l'en-tête de l'espace équipe */}
@@ -157,10 +162,16 @@ function RequireStaff() {
   return <Outlet />;
 }
 
-// Pages réservées au Patron (l'API le vérifie aussi) : l'Opérateur revient à la liste du menu
+// Pages réservées au Patron (et au Prestataire, lot 4 ; l'API le vérifie aussi) : l'Opérateur revient à la liste du menu
 function RequirePatron() {
   const { user } = useStaff();
-  return user.role === 'PATRON' ? <Outlet /> : <Navigate to="/equipe/menu" replace />;
+  return isPatronLevel(user.role) ? <Outlet /> : <Navigate to="/equipe/menu" replace />;
+}
+
+// Page Prestataire (lot 4) : Prestataire seulement
+function RequirePrestataire() {
+  const { user } = useStaff();
+  return user.role === 'PRESTATAIRE' ? <Outlet /> : <Navigate to="/equipe" replace />;
 }
 
 function StaffLayout() {
@@ -172,8 +183,10 @@ function StaffLayout() {
 }
 
 function StaffShell() {
-  const { user, logout } = useStaff();
+  const { user, logout, hasFeature } = useStaff();
   const { unseen, soundReady } = useOrdersFeed();
+  const patron = isPatronLevel(user.role);
+  const prestataire = user.role === 'PRESTATAIRE';
   const { pathname } = useLocation();
 
   // Chaque page s'ouvre en haut
@@ -194,22 +207,26 @@ function StaffShell() {
               {unseen.size > 0 && <span className="st-badge" aria-label={`${unseen.size} nouvelles`}>{unseen.size}</span>}
             </NavLink>
             <NavLink to="/equipe/menu">Menu</NavLink>
-            <NavLink to="/equipe/caisse">Caisse</NavLink>
-            {user.role === 'PATRON' && <NavLink to="/equipe/frais-livraison"><span className="st-lg">Frais de livraison</span><span className="st-sm">Frais</span></NavLink>}
-            {user.role === 'PATRON' && <NavLink to="/equipe/accueil">Accueil</NavLink>}
-            {user.role === 'PATRON' && <NavLink to="/equipe/tableau-de-bord"><span className="st-lg">Tableau de bord</span><span className="st-sm">Chiffres</span></NavLink>}
-            {user.role === 'PATRON' && <NavLink to="/equipe/equipe">Équipe</NavLink>}
-            {user.role === 'PATRON' && <NavLink to="/equipe/reglages">Réglages</NavLink>}
+            {hasFeature('CAISSE') && <NavLink to="/equipe/caisse">Caisse</NavLink>}
+            {patron && hasFeature('FRAIS_LIVRAISON') && <NavLink to="/equipe/frais-livraison"><span className="st-lg">Frais de livraison</span><span className="st-sm">Frais</span></NavLink>}
+            {patron && <NavLink to="/equipe/accueil">Accueil</NavLink>}
+            {patron && hasFeature('TABLEAU_DE_BORD') && <NavLink to="/equipe/tableau-de-bord"><span className="st-lg">Tableau de bord</span><span className="st-sm">Chiffres</span></NavLink>}
+            {patron && <NavLink to="/equipe/equipe">Équipe</NavLink>}
+            {patron && hasFeature('REGLAGES') && <NavLink to="/equipe/reglages">Réglages</NavLink>}
+            {prestataire && <NavLink to="/equipe/prestataire">Prestataire</NavLink>}
           </nav>
           <div className="st-user">
             <NavLink to="/equipe/mot-de-passe" className="st-name" title="Mon mot de passe">{user.name}<small>{ROLE_LABEL[user.role]}</small></NavLink>
             <NavLink to="/equipe/mot-de-passe" className="st-out st-bell st-sm-only" aria-label="Mon mot de passe">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
             </NavLink>
-            <NavLink to="/equipe/alertes" className="st-out st-bell" aria-label="Alertes sur ce téléphone">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-              <span className="st-lg">Alertes</span>
-            </NavLink>
+            {/* Le Prestataire ne reçoit pas les alertes de commande (lot 4) */}
+            {!prestataire && (
+              <NavLink to="/equipe/alertes" className="st-out st-bell" aria-label="Alertes sur ce téléphone">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+                <span className="st-lg">Alertes</span>
+              </NavLink>
+            )}
             <button type="button" className="st-out" onClick={logout}>Déconnexion</button>
           </div>
         </div>

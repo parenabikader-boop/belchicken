@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatPrice, plural } from '../../utils/format.js';
 import { useOrdersFeed } from './OrdersFeed.jsx';
+import { useStaff } from '../StaffContext.jsx';
 import AlertsPrompt from '../alerts/AlertsPrompt.jsx';
 import { useAppSettings } from '../settings/useAppSettings.js';
 import { FEE_METHOD_LABEL, feeText, formatTime, HISTORY, HISTORY_FILTERS, isPickup, METHOD_LABEL, STAGES, statusLabel, timeAgo } from './labels.js';
@@ -190,9 +191,12 @@ function useOrders(status, q) {
 
 function History({ status, counts, onStatus }) {
   const { orders, error } = useOrders(status, '');
+  // Lot 4 : historique fermé par le Prestataire, seules les commandes terminées depuis moins de 24 heures restent
+  const full = useStaff().hasFeature('HISTORIQUE');
   return (
     <section className="od-stage">
       <p className="od-hint">{HISTORY.hint}</p>
+      {!full && <p className="od-hint st-closed-note">Dernières 24 heures seulement : l’historique complet n’est pas inclus dans votre formule, contactez votre prestataire.</p>}
       <nav className="st-chips od-sub" aria-label="Historique">
         {HISTORY_FILTERS.map((f) => (
           <button key={f.id} type="button" className={`st-chip${f.id === status ? ' on' : ''}`} aria-pressed={f.id === status} onClick={() => onStatus(f.id)}>

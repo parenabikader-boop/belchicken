@@ -4,10 +4,10 @@ import { z } from 'zod';
 import { normalizePhone } from '../utils/phone.js';
 import { PASSWORD_MIN_LENGTH } from './staff-auth.js';
 
-const password = (label) =>
+const password = (label, min = PASSWORD_MIN_LENGTH) =>
   z
     .string({ required_error: `Indiquez ${label}.` })
-    .min(PASSWORD_MIN_LENGTH, `Mot de passe trop court : au moins ${PASSWORD_MIN_LENGTH} caractères.`)
+    .min(min, `Mot de passe trop court : au moins ${min} caractères.`)
     .max(200, 'Mot de passe trop long.');
 
 // Comptes créés depuis la page Équipe (les Patrons : npm run equipe:patron)
@@ -40,12 +40,16 @@ export const provisionalPasswordSchema = z.object({ password: password('le mot d
 
 // Changement de son propre mot de passe. L'ancien est demandé, sauf quand le mot de passe actuel
 // est provisoire : le membre vient de le taper pour se connecter.
-export const ownPasswordSchema = (mustChange) =>
+// Lot 4, Prestataire : 12 caractères au moins (min), et son code à 6 chiffres (code, vérifié ensuite).
+export const ownPasswordSchema = (mustChange, min) =>
   z.object({
     currentPassword: mustChange
       ? z.string().max(200).optional()
       : z.string({ required_error: 'Indiquez votre mot de passe actuel.' }).min(1, 'Indiquez votre mot de passe actuel.').max(200),
-    newPassword: password('le nouveau mot de passe'),
+    newPassword: password('le nouveau mot de passe', min),
+    code: min
+      ? z.string({ required_error: 'Tapez le code à 6 chiffres de votre application.' }).min(1, 'Tapez le code à 6 chiffres de votre application.').max(40)
+      : z.string().max(40).optional(),
   });
 
 // Ce que le Patron peut faire sur un compte depuis la page Équipe.
@@ -53,6 +57,8 @@ export const ownPasswordSchema = (mustChange) =>
 //   action : 'reset' (nouveau mot de passe provisoire), 'deactivate', 'reactivate'
 export function teamActionError(actor, target, action) {
   if (target.id === actor.id) return 'Pour votre propre compte, utilisez « Mon mot de passe ».';
+  // Lot 4 : le compte Prestataire ne se gère qu'avec npm run equipe:prestataire
+  if (target.role === 'PRESTATAIRE') return 'Le compte Prestataire ne se modifie pas depuis cette page.';
   // Un compte Patron ne se gère qu'avec npm run equipe:patron : un Patron ne peut pas en bloquer un autre
   if (!MEMBER_ROLES.includes(target.role)) return "Le compte d'un Patron ne se modifie pas depuis cette page.";
   if (action === 'reactivate') return target.isActive ? 'Ce compte est déjà actif.' : null;

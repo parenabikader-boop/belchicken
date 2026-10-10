@@ -12,6 +12,7 @@
 import { z } from 'zod';
 import { FEE_MAX } from './order-status.js';
 import { formatFcfa } from '../utils/format.js';
+import { isPatronLevel } from './roles.js';
 
 export const GRID_FEE_MIN = 0; // livraison offerte
 export const BAND_MIN_METERS = 100;
@@ -184,7 +185,7 @@ export function feeEditRight(order) {
 export function feeCorrectionError(order, role, amount, reason, nightFee = order.deliveryNightFee ?? null) {
   const right = feeEditRight(order);
   if (!right.who) return right.error;
-  if (right.who === 'PATRON' && role !== 'PATRON') return 'Le livreur est parti : seul le Patron peut encore corriger les frais.';
+  if (right.who === 'PATRON' && !isPatronLevel(role)) return 'Le livreur est parti : seul le Patron peut encore corriger les frais.';
   if (order.deliveryFee != null && (!reason || reason.trim().length < 3)) return 'Indiquez le motif de la correction des frais.';
   if (order.deliveryFee === amount && (order.deliveryNightFee ?? null) === nightFee) return 'Les frais sont déjà de ce montant.';
   return null;

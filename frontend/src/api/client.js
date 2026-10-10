@@ -52,8 +52,15 @@ export const api = {
 const staffRequest = (path, options) => request('/api/staff' + path, { credentials: 'same-origin', ...options }, '');
 
 export const staffApi = {
-  me: () => staffRequest('/me').then((d) => d.user),
-  login: (phone, password) => staffRequest('/login', { method: 'POST', body: JSON.stringify({ phone, password }) }).then((d) => d.user),
+  // { user, features } : features = fonctions ouvertes par le Prestataire (lot 4)
+  me: () => staffRequest('/me'),
+  // { user } ou, pour le compte Prestataire, { codeRequired: true } (lot 4)
+  login: (phone, password) => staffRequest('/login', { method: 'POST', body: JSON.stringify({ phone, password }) }),
+  loginCode: (code) => staffRequest('/login/code', { method: 'POST', body: JSON.stringify({ code }) }).then((d) => d.user),
+  // Page Prestataire (lot 4) : interrupteurs des fonctions et journal de sécurité
+  features: () => staffRequest('/prestataire/fonctions').then((d) => d.features),
+  setFeature: (key, enabled) => staffRequest(`/prestataire/fonctions/${key}`, { method: 'PUT', body: JSON.stringify({ enabled }) }).then((d) => d.features),
+  securityLog: (page = 1) => staffRequest(`/prestataire/journal?page=${page}`),
   logout: () => staffRequest('/logout', { method: 'POST' }),
   orders: ({ status, q } = {}) => {
     const params = new URLSearchParams();

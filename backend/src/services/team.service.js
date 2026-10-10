@@ -17,13 +17,17 @@ const toMember = (u, sessions) => ({
   devices: sessions, // appareils connectés en ce moment
 });
 
+// Lot 4 : le Patron voit qu'un compte Prestataire existe (transparence), sans son numéro, ses connexions
+// ni aucune action possible
+const toPrestataireLine = (u) => ({ id: u.id, name: u.name, role: u.role, isActive: u.isActive });
+
 export async function listMembers() {
   const [users, sessions] = await Promise.all([
     prisma.staffUser.findMany({ orderBy: [{ isActive: 'desc' }, { role: 'asc' }, { name: 'asc' }] }),
     prisma.staffSession.groupBy({ by: ['userId'], where: { expiresAt: { gt: new Date() } }, _count: { _all: true } }),
   ]);
   const count = new Map(sessions.map((s) => [s.userId, s._count._all]));
-  return users.map((u) => toMember(u, count.get(u.id) || 0));
+  return users.map((u) => (u.role === 'PRESTATAIRE' ? toPrestataireLine(u) : toMember(u, count.get(u.id) || 0)));
 }
 
 export async function createMember({ name, phone, role, password }) {

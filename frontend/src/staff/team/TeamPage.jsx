@@ -113,6 +113,25 @@ const lastLogin = (iso) => {
   return Date.now() - new Date(iso).getTime() < 24 * 60 * 60 * 1000 ? timeAgo(iso) : formatDateTime(iso);
 };
 
+// Lot 4 : le compte Prestataire est visible (transparence), sans numéro ni aucune action possible
+function PrestataireLine({ m }) {
+  return (
+    <li className="st-box tm-member tm-presta">
+      <div className="tm-top">
+        <b className="tm-name">Compte Prestataire</b>
+        <span className="tm-role r-PRESTATAIRE">{ROLE_LABEL.PRESTATAIRE}</span>
+        {!m.isActive && <span className="tm-off">Désactivé</span>}
+      </div>
+      <p className="tm-line">{m.name}</p>
+      <p className="tm-line st-muted">
+        Société qui fournit et entretient le logiciel. Il peut tout ce que peut le Patron et décide des fonctions
+        incluses dans votre formule. Chacune de ses connexions et de ses changements est notée dans un journal.
+        Ce compte ne se modifie pas depuis cette page.
+      </p>
+    </li>
+  );
+}
+
 function Member({ m, me, onChange }) {
   // null, 'reset', 'reactivate' ou 'deactivate' : l'action ouverte sous la fiche
   const [open, setOpen] = useState(null);
@@ -258,14 +277,14 @@ export default function TeamPage() {
 
       <h2 className="mn-section">Actifs <span>{plural(active.length, 'compte')}</span></h2>
       <ul className="tm-list">
-        {active.map((m) => <Member key={m.id} m={m} me={user} onChange={update} />)}
+        {active.map((m) => (m.role === 'PRESTATAIRE' ? <PrestataireLine key={m.id} m={m} /> : <Member key={m.id} m={m} me={user} onChange={update} />))}
       </ul>
 
       {inactive.length > 0 && (
         <>
           <h2 className="mn-section">Désactivés <span>{plural(inactive.length, 'compte')}</span></h2>
           <ul className="tm-list">
-            {inactive.map((m) => <Member key={m.id} m={m} me={user} onChange={update} />)}
+            {inactive.map((m) => (m.role === 'PRESTATAIRE' ? <PrestataireLine key={m.id} m={m} /> : <Member key={m.id} m={m} me={user} onChange={update} />))}
           </ul>
         </>
       )}

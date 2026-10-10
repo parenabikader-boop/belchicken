@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireStaff } from '../middlewares/staff-auth.js';
+import { requireFeature } from '../middlewares/feature.js';
 import { getCash, remitCash } from '../services/cash.service.js';
 
 // Page Caisse : Patron et Opérateur (frais à vérifier, espèces chez les livreurs, remises)
 export const staffCashRouter = Router();
-staffCashRouter.use(requireStaff('PATRON', 'OPERATEUR'));
+staffCashRouter.use(requireStaff('PATRON', 'OPERATEUR'), requireFeature('CAISSE')); // fonction fermable (lot 4)
 
 staffCashRouter.get('/', async (req, res, next) => {
   try {

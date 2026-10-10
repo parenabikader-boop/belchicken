@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireStaff } from '../middlewares/staff-auth.js';
+import { requireFeature } from '../middlewares/feature.js';
 import { orderSchema } from '../services/menu-edit.js';
 import { bandSchema, bandUpdateSchema, settingsSchema, zoneSchema, zoneUpdateSchema } from '../services/delivery-fees.js';
 import {
@@ -8,7 +9,8 @@ import {
 
 // Page « Frais de livraison » : Patron seulement (quartiers, tranches de distance, « Autre quartier »)
 export const staffDeliveryFeesRouter = Router();
-staffDeliveryFeesRouter.use(requireStaff('PATRON'));
+// Fermée par le Prestataire (lot 4) : seule la page est fermée, la grille continue de calculer les frais
+staffDeliveryFeesRouter.use(requireStaff('PATRON'), requireFeature('FRAIS_LIVRAISON'));
 
 const handle = (fn) => async (req, res, next) => {
   try {

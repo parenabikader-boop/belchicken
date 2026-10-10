@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import { hashToken, newSessionToken, verifyAgainstDummy, verifyPassword } from './staff-auth.js';
+import { passwordStep } from './prestataire.service.js';
 
 // Durée d'une connexion : l'équipe reste connectée 14 jours sur son téléphone
 export const SESSION_DAYS = 14;
@@ -10,20 +11,23 @@ const SEEN_REFRESH_MS = 5 * 60 * 1000;
 // mustChangePassword : mot de passe provisoire, l'écran demande d'en choisir un avant tout le reste
 export const toPublicStaff = (u) => ({ id: u.id, name: u.name, phone: u.phone, role: u.role, mustChangePassword: u.mustChangePassword });
 
-// Renvoie { user, token, expiresAt } ou null si le numéro ou le mot de passe est faux
-export async function login(phone, password, userAgent) {
+// Renvoie { user, token, expiresAt } ou null si le numéro ou le mot de passe est faux.
+// Lot 4, compte Prestataire : jamais de session ici, mais { challenge, expiresAt } (le code à 6 chiffres
+// est demandé ensuite, prestataire.service.js) ou { locked: true }.
+export async function login(phone, password, meta = {}) {
   const user = await prisma.staffUser.findUnique({ where: { phone } });
   if (!user || !user.isActive) {
     await verifyAgainstDummy(password);
     return null;
   }
+  if (user.role === 'PRESTATAIRE') return passwordStep(user, password, meta);
   if (!(await verifyPassword(password, user.passwordHash))) return null;
 
   const token = newSessionToken();
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
   await prisma.$transaction([
     prisma.staffSession.create({
-      data: { tokenHash: hashToken(token), userId: user.id, expiresAt, userAgent: userAgent?.slice(0, 300) || null },
+      data: { tokenHash: hashToken(token), userId: user.id, expiresAt, userAgent: meta.userAgent || null },
     }),
     prisma.staffUser.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } }),
     // Ménage : sessions expirées de ce compte

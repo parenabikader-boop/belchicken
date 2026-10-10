@@ -17,6 +17,7 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "equipe:patron": "node scripts/create-patron.js",
+    "equipe:prestataire": "node scripts/prestataire.js",
     "cloudinary:check": "node scripts/cloudinary-check.js"
   },
   "prisma": {
@@ -30,7 +31,9 @@
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.0.0",
+    "otpauth": "^9.5.2",
     "prisma": "^6.19.3",
+    "qrcode-terminal": "^0.12.0",
     "web-push": "^3.6.7",
     "zod": "^3.24.1"
   }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { staffApi } from '../../api/client.js';
 import { RESTAURANT } from '../../restaurant.js';
 import { formatPrice } from '../../utils/format.js';
+import { FEATURE_CLOSED } from '../FeatureGate.jsx';
 
 // Page « Frais de livraison » (Patron) : quartiers et leur prix, tranches de distance depuis le restaurant,
 // option « Autre quartier ». Les frais sont calculés par le serveur et copiés dans chaque commande.
@@ -305,10 +306,12 @@ function NightHours({ settings, run }) {
           Éteint, ou supplément à 0 F : aucun changement.
         </p>
         <Switch
-          checked={settings.nightEnabled} disabled={saving} onChange={() => save({ nightEnabled: !settings.nightEnabled })}
-          label="Supplément de nuit" on="Allumé" off="Éteint"
+          checked={settings.nightEnabled} disabled={saving || settings.nightIncluded === false} onChange={() => save({ nightEnabled: !settings.nightEnabled })}
+          label="Supplément de nuit" on="Allumé" off={settings.nightIncluded === false ? 'Non inclus' : 'Éteint'}
         />
       </div>
+      {/* Lot 4 : supplément de nuit fermé par le Prestataire */}
+      {settings.nightIncluded === false && <p className="st-closed-note">{FEATURE_CLOSED}</p>}
       <form className="fe-form fe-hours" onSubmit={submit} noValidate>
         <div className="fields">
           <div className="f">

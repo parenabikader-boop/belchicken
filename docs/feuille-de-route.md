@@ -26,10 +26,10 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 
 | Lot | Sujet | État |
 |-----|-------|------|
-| 1 | Parcours court (option) + bon de commande imprimable | En ligne depuis le 8 octobre 2026 (réglage « Parcours court » éteint en production) |
+| 1 | Parcours court (option) + bon de commande imprimable | En ligne depuis le 8 octobre 2026 (réglage « Parcours court » allumé en production par le client le 9 octobre, gardé allumé) |
 | 2 | Prise de commande par l'agent (appel, WhatsApp) | En ligne depuis le 9 octobre 2026 (réglage « Prise de commande par l'agent » éteint en production) |
 | 3 | Supplément de nuit dans la grille des frais | En ligne depuis le 9 octobre 2026 (réglage « Supplément de nuit » éteint en production) |
-| 4 | Compte Prestataire au-dessus du Patron | À faire |
+| 4 | Compte Prestataire au-dessus du Patron | Fait sur dev, essayé, en attente de l'accord pour la mise en ligne |
 | 5 | Livraison en deux modes (Restaurant / Prestataire) | À faire |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | À faire |
 | 7 | Avis des clients | À faire |
@@ -44,7 +44,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 - **Bon de commande imprimable** depuis le navigateur (ticket 80 mm et A4) : référence, heure, provenance, plats,
   formules, boissons, notes, livraison ou à emporter, quartier, téléphone du client. Disponible dans les deux parcours.
 
-Fait, en ligne depuis le 8 octobre 2026 (réglage éteint en production) : réglage `AppSettings.shortFlow` (page « Réglages » du Patron, `/equipe/reglages`), commande notée
+Fait, en ligne depuis le 8 octobre 2026 (réglage allumé en production par le client le 9 octobre 2026 pendant ses essais, gardé allumé pour l'instant) : réglage `AppSettings.shortFlow` (page « Réglages » du Patron, `/equipe/reglages`), commande notée
 `Order.shortFlow`, deux lignes d'historique (« Payée » puis « En préparation »), messages `PAIEMENT_PREPARATION`
 (et sa version « offerte ») et `PAIEMENT_PREPARATION_EMPORTER`. Bon de commande `/equipe/commandes/:reference/bon`
 (`?format=80` ou `a4`) avec les prix, « PAYÉ – opérateur » et le numéro qui a payé, les frais à part ; jamais le code
@@ -123,6 +123,34 @@ sans nouveau modèle Meta (phrase unique mise à jour dans CLAUDE.md).
 - Compte au-dessus du Patron, très protégé.
 - Interrupteurs pour ouvrir ou fermer des fonctions (historique, tableau de bord, relevés…). Cacher, jamais supprimer.
 - Chaque changement enregistré : qui, quand, quoi.
+
+Accord du client sur le plan le 9 octobre 2026, avec ces réponses : TOTP par une bibliothèque reconnue (`otpauth`), tests avec
+les exemples officiels RFC 6238, `qrcode-terminal` et la clé aussi en texte ; compte de production créé plus tard depuis le
+terminal de Render (Starter), le lot 4 peut partir avant, sans compte (tout ouvert) ; historique fermé = 24 heures ; frais de
+livraison fermés = option (a), seule la page est cachée ; deux niveaux (inclus par le Prestataire, allumé par le Patron) avec des
+interrupteurs à part pour `PARCOURS_COURT`, `PRISE_COMMANDE_AGENT`, `SUPPLEMENT_NUIT` ; ligne « Compte Prestataire » visible
+sur la page Équipe du Patron, sans action.
+
+**Avancement** :
+
+- [x] Base : rôle `PRESTATAIRE`, `StaffUser.totpSecretEnc/totpLastStep/failedLogins/lockedUntil`, tables `StaffRecoveryCode`,
+  `StaffLoginChallenge`, `FeatureSwitch`, `SecurityLog` (modification et suppression refusées par la base). Migration
+  `20261009220000_compte_prestataire` écrite sans aucune base, relue par le client, passée sur dev seulement le 10 octobre
+  (19 migrations, données d'avant intactes, base identique au schéma).
+- [x] Serveur : connexion en deux temps, code de secours, blocage en base, session de 8 heures, mot de passe avec le code,
+  interrupteurs (`requireFeature`), historique limité à 24 h, réglages non inclus, journal. Script `npm run equipe:prestataire`
+  (créer, téléphone perdu, nouveau mot de passe, débloquer). Clé `PRESTATAIRE_TOTP_KEY` ajoutée dans `backend/.env` (dev) ;
+  **à créer sur Render** avant la mise en ligne.
+- [x] Pages : connexion (code ou code de secours), page Prestataire (interrupteurs avec confirmation, journal), menus et pages
+  fermées (« Fonction non incluse… »), Réglages et Frais (« Non inclus »), historique 24 h, ligne sur la page Équipe, mot de passe.
+- [x] Tests `backend/test/prestataire.test.js`, 17 tests (dont les exemples officiels RFC 6238 en SHA-1, SHA-256 et SHA-512),
+  183 au total, tous passent (10 octobre).
+- [x] Essai de bout en bout sur dev (10 octobre) avec deux comptes d'essai à part, « Presta (essai) » (70 99 00 01) et
+  « Patron (essai) » (70 99 00 09), créés avec les vrais scripts ; codes calculés par le script d'essai, jamais affichés :
+  84 vérifications par l'API et les scripts, toutes bonnes. Comptes réels jamais utilisés. Toutes les fonctions rouvertes à la fin.
+- [x] Captures (19 images) dans `C:\Users\HP\Desktop\belchiken\captures-lot4-prestataire\`.
+- [ ] Accord du client, sauvegarde Neon, enregistrement, `PRESTATAIRE_TOTP_KEY` sur Render, mise en ligne. Compte Prestataire de
+  production : plus tard, depuis le terminal de Render.
 
 ### 5. Livraison en deux modes (réglés par le Prestataire)
 

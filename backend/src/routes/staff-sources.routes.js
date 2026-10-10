@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireStaff } from '../middlewares/staff-auth.js';
+import { requireFeature } from '../middlewares/feature.js';
 import { sourceActiveSchema, sourceInputSchema } from '../services/order-sources.js';
 import { createSource, deleteSource, listSources, reorderSources, setSourceActive, updateSource } from '../services/order-sources.service.js';
 
 // Provenances des commandes (lot 2), réglées par le Patron dans Réglages. Chaque appel renvoie la liste à jour.
 export const staffSourcesRouter = Router();
-staffSourcesRouter.use(requireStaff('PATRON'));
+staffSourcesRouter.use(requireStaff('PATRON'), requireFeature('REGLAGES')); // fonction fermable (lot 4)
 
 const reply = (fn) => async (req, res, next) => {
   try {

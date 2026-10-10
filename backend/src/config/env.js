@@ -54,6 +54,9 @@ export const env = {
     privateKey: process.env.VAPID_PRIVATE_KEY || '',
     subject: process.env.VAPID_SUBJECT || 'https://belchicken-api.onrender.com',
   },
+  // Lot 4 : clé qui chiffre en base la clé du code à 6 chiffres du Prestataire (32 octets en base64).
+  // Dans backend/.env et sur Render seulement. Vide = connexion du Prestataire impossible.
+  prestataireTotpKey: process.env.PRESTATAIRE_TOTP_KEY || '',
 };
 
 export const whatsappEnabled = () =>

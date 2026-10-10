@@ -3,13 +3,13 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatPrice } from '../../utils/format.js';
 import { photoUrl } from '../../utils/visuals.js';
-import { useStaff } from '../StaffContext.jsx';
+import { isPatronLevel, useStaff } from '../StaffContext.jsx';
 
 // Menu de l'espace équipe. Toute l'équipe : disponibilité d'un plat en un clic.
 // Patron : en plus, modifier, ajouter, ordonner et retirer plats et catégories.
 export default function MenuAdmin() {
   const { user } = useStaff();
-  const isPatron = user.role === 'PATRON';
+  const isPatron = isPatronLevel(user.role);
   const [params, setParams] = useSearchParams();
   const [menu, setMenu] = useState(null);
   const [error, setError] = useState(null);
