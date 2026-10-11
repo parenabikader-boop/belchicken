@@ -31,7 +31,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 3 | Supplément de nuit dans la grille des frais | En ligne depuis le 9 octobre 2026 (réglage « Supplément de nuit » éteint en production) |
 | 4 | Compte Prestataire au-dessus du Patron | En ligne depuis le 10 octobre 2026 (aucun compte Prestataire en production, tout ouvert) |
 | 5 | Livraison en deux modes (Restaurant / Prestataire) | Terminé : 5a, 5b, 5c en ligne depuis le 10 octobre 2026, 5d en ligne depuis le 11 octobre 2026 (production en mode Restaurant, réglage « Tournées et disponibilité » éteint, interrupteur `RELEVE` fermé, aucun Responsable livraison ni livreur de notre équipe : rien ne change en production) |
-| 6 | Ventes globales, par agent et par provenance, export Excel et PDF | Fait sur dev le 11 octobre 2026, essai et captures faits, **pas encore en ligne** (attend l'accord du client) |
+| 6 | Ventes globales, par agent et par provenance, export Excel et PDF | En ligne depuis le 11 octobre 2026 (enregistrement `6c005ce`, aucune migration, interrupteur `VENTES` ouvert : le Patron voit l'onglet « Ventes ») |
 | 7 | Avis des clients | À faire |
 | 8 | Langue FR/EN sur le site client | À faire |
 | 9 | WhatsApp automatique (API Meta), deux numéros | À faire |
@@ -404,7 +404,17 @@ vérification sur toutes les commandes et sur celles du site seules. Interrupteu
   fermé). Dev remise comme avant (commandes, provenances, comptes, réglages, interrupteurs identiques à l'instantané) ;
   seules restent 7 lignes du journal de sécurité (180 au lieu de 173, la base refuse de les effacer).
 - [x] Captures (12 images, 1 PDF, 1 fichier Excel) dans `C:\Users\HP\Desktop\belchiken\captures-lot6-ventes\`.
-- [ ] Accord du client, enregistrement Git, mise en ligne (aucune migration : rien à passer sur Render).
+- [x] Accord du client sur les captures, le PDF et l'Excel (11 octobre), pas de sauvegarde Neon (aucune migration,
+  accord du client), tests (260) et construction relancés, enregistrement `6c005ce`, mise en ligne le 11 octobre 2026.
+  Vérifié après la mise en ligne, sans rien écrire en production : la nouvelle adresse `/api/staff/ventes` répond 401
+  (connexion demandée) au lieu de 404, aussi par le site Vercel et pour l'Excel ; santé, menu (10 catégories, 51 plats),
+  codes ECOFOOD (Orange, Moov, Telecel), grille des frais et photos de l'accueil identiques octet pour octet à avant la
+  mise en ligne ; espace équipe protégé (401 sans connexion : commandes, caisse, tableau de bord, relevé, Prestataire,
+  livraison) ; connexion de l'équipe qui répond comme avant ; pages du site en ligne ; site Vercel à jour (nouvelle page
+  dans son code). Pas de migration : rien à vérifier dans le tableau de bord de Render.
+  En production : aucune ligne `VENTES` = ouvert, le Patron voit l'onglet « Ventes » de la page Tableau de bord.
+
+**Lot 6 terminé le 11 octobre 2026.**
 
 ### 7. Avis des clients
 
