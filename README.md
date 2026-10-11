@@ -93,6 +93,14 @@ Ouvrez alors **http://localhost:5173** dans le navigateur.
 
 On peut toujours lancer une seule partie avec `npm run dev` dans `backend/` ou `frontend/`.
 
+## Pages du site client
+
+Accueil `/`, Menu `/menu/:categorie`, Ma commande `/commande`, Vos informations `/valider`,
+Confirmation `/confirmation/:reference` (= suivi `/suivi/:reference`), Infos pratiques `/infos`.
+
+Photos d'origine : plats dans `frontend/public/menu/` (provisoires, de mauvaise qualité), accueil dans
+`frontend/public/accueil/`, logo dans `frontend/public/brand/`. Fichiers sources dans `docs/photos/` et `docs/`.
+
 ## API
 
 ### `GET /api/menu`
@@ -115,7 +123,7 @@ Catégories actives dans l'ordre du menu, avec leurs sous-groupes, produits et v
 }
 ```
 
-- `payment.method` : `ORANGE_MONEY` ou `MOOV_MONEY`. Le client paie avant la livraison : les espèces ne sont plus acceptées (la valeur `ESPECES` reste dans l'enum Prisma mais est refusée avec une erreur 400).
+- `payment.method` : `ORANGE_MONEY`, `MOOV_MONEY` ou `TELECEL_MONEY`. Le client paie avant la livraison : les espèces ne sont plus acceptées (la valeur `ESPECES` reste dans l'enum Prisma mais est refusée avec une erreur 400).
 - `payment.payerPhone` (le numéro qui a payé) est obligatoire. Il n'y a pas de numéro de transaction : l'équipe vérifie le paiement avec ce numéro et le montant.
 - Il faut `location` ou `addressNote` (5 caractères minimum), ou les deux.
 - Les prix sont recalculés côté serveur à partir de la base. Le client n'envoie jamais de prix.
@@ -327,6 +335,11 @@ Connexion par numéro de téléphone et mot de passe ; trois rôles : `PATRON` (
 - Commandes (Patron et Opérateur) : `GET /api/staff/orders?status=EN_COURS|TOUTES|<statut>&q=<recherche>`,
   `GET /api/staff/orders/:reference`, `POST /api/staff/orders/:reference/status` avec `{ from, to, reason }`.
   `from` est le statut affiché à l'écran : si un collègue l'a changé entre-temps, l'API répond 409 au lieu d'écraser.
+- Page Commandes (`frontend/src/staff/orders/OrdersList.jsx`) : une étape à la fois, dans l'ordre du travail (À vérifier,
+  Payées, En préparation, En livraison, Livrées · à remercier, puis Historique avec Livrées / Annulées), chaque étape avec
+  son compteur et la phrase de l'action à faire (`STAGES` dans `labels.js`). Onglets sur téléphone, les 4 étapes en
+  colonnes sur ordinateur (1024 px et plus). À l'ouverture, la première étape qui contient des commandes. Recherche dans
+  toutes les commandes, mise à jour toutes les 5 s, son et badge à chaque nouvelle commande.
 - Menu (`/equipe/menu`) : `GET /api/staff/menu` et `PATCH /api/staff/menu/products/:id/availability` `{ isAvailable }`
   pour le Patron et l'Opérateur. Réservé au Patron : `POST /api/staff/menu/products`, `PUT|DELETE /api/staff/menu/products/:id`,
   `POST /api/staff/menu/products/:id/restore`, `POST /api/staff/menu/categories`, `PUT|DELETE /api/staff/menu/categories/:id`,
@@ -396,6 +409,17 @@ Connexion par numéro de téléphone et mot de passe ; trois rôles : `PATRON` (
 - Le site appelle `/api/staff` sur sa propre adresse : Vite relaie vers l'API en local (`vite.config.js`), Vercel en ligne
   (`frontend/vercel.json`, à mettre à jour si l'adresse Render change). Ainsi le cookie n'est pas bloqué par Safari.
 
+## Application installable (PWA)
+
+Deux applications : « Belchicken » (`frontend/public/manifest.webmanifest`, tout le site) et « Belchicken Équipe »
+(`public/equipe.webmanifest`, sous `/equipe`, icône avec le badge « ÉQUIPE ») ; le choix se fait dans `index.html`.
+
+- Service worker `public/sw.js`, actif seulement après `npm run build` : il garde le code du site, les photos et les
+  polices, **jamais** `/api/...` ni les pages. Hors ligne : page `public/hors-ligne.html`. Il gère aussi les alertes
+  sur téléphone (`push`, `notificationclick`, voir « Espace équipe »).
+- Bandeau d'installation `src/components/InstallBanner.jsx` : bouton sur Android, guide sur iPhone ; refermé, il
+  revient après 5 jours.
+
 ## Mise en ligne
 
 Le code est sur GitHub ; Render (API) et Vercel (site) se mettent à jour tout seuls à chaque `git push`.
@@ -425,6 +449,12 @@ Render demande alors seulement :
 À chaque déploiement, le build applique les migrations (`npm run db:deploy`, qui réessaie si Neon dort) puis lance `npm run db:seed`.
 Le seed ne remplit le menu que si la base est **vide** (premier déploiement) ; sinon il ne modifie rien.
 Un déploiement n'écrase donc jamais les prix, photos et disponibilités changés dans l'espace équipe. Pas besoin du Shell Render.
+
+Réveil de Neon : pendant que la base se réveille, le serveur réessaie les requêtes qui n'ont pas pu la joindre
+(`withDbRetry()` dans `src/lib/db-retry.js`, après 1 s, 2 s puis 4 s), sans risque d'enregistrer une commande deux fois.
+Délai des transactions Prisma : 15 s pour tout le serveur (`TRANSACTION_TIMEOUT_MS`, `src/lib/prisma.js`).
+Régions d'après la configuration : Render en Ohio (`render.yaml`), Neon dev en us-east-2 (production : même projet,
+à confirmer dans Neon et Render).
 
 Offre gratuite : le service s'endort après 15 minutes sans visite et met jusqu'à une minute à se réveiller. Pour l'ouverture, passer au plan Starter.
 
@@ -545,6 +575,21 @@ sa page Équipe (« Compte Prestataire », sans numéro ni action), et `npm run 
 - Migration `20261009220000_compte_prestataire` : structure seulement (rôle, colonnes, 4 tables, règle du journal), aucune donnée.
   Sans compte Prestataire et sans ligne `FeatureSwitch`, tout fonctionne comme avant.
 
+## Mode de livraison (lot 5a)
+
+Réglé par le Prestataire (page Prestataire, section « Mode de livraison », `GET/PUT /api/staff/prestataire/livraison`,
+table `DeliveryCompany`, une ligne ; pas de ligne = mode Restaurant). Règles : `backend/src/services/delivery-mode.js`.
+
+- **Restaurant** = fonctionnement d'avant : frais de livraison sur les codes ECOFOOD.
+- **Prestataire** = notre équipe : frais sur nos codes marchands, avec notre nom affiché. Refusé tant que la société, le
+  nom affiché et les 3 codes ne sont pas remplis et valides (mode incomplet = Restaurant). Codes jamais vidés tant que
+  des commandes Prestataire attendent leurs frais.
+- Mode figé sur chaque commande à sa création (`Order.deliveryOperator`) ; à emporter = toujours Restaurant.
+- Commande Prestataire : nos codes dans les messages (mêmes modèles Meta), sur le suivi (« c'est bien le compte de notre
+  partenaire de livraison ») et sur le détail (badge « Livraison Prestataire »). Le paiement des plats reste toujours ECOFOOD.
+- Journal de sécurité : `MOT_DE_PASSE` (mot de passe du Prestataire changé dans l'application) et `LIVRAISON` (mode,
+  société, codes).
+
 ## Équipes de livraison et disponibilité (lot 5b)
 
 Suite du mode de livraison (5a, `Order.deliveryOperator`). Règles : `backend/src/services/courier-team.js`, base :
@@ -574,6 +619,27 @@ Suite du mode de livraison (5a, `Order.deliveryOperator`). Règles : `backend/sr
   Prestataire sont dans notre caisse (page Livraison). Une vérification ou une remise est refusée dans la mauvaise caisse
   (`CashRemittance.operator`). Tableau de bord : frais de notre partenaire comptés à part (`partnerFees`), jamais dans ceux du restaurant.
 - Migration `20261010180000_livraison_equipes_5b` : structure seulement, aucune ligne écrite.
+
+## Prête pour livraison, récupération et tournées (lot 5c)
+
+Règles : `backend/src/services/dispatch.js`, base : `dispatch.service.js`.
+
+- **Statut `PRETE_LIVRAISON`** (mode Prestataire seulement) : posé par l'équipe du restaurant, sans message au client, qui
+  voit toujours « En préparation » jusqu'à « En route ».
+- **Commande récupérée** : le livreur appuie sur « Commande récupérée » (`POST /api/staff/courses/:reference/recuperee`),
+  le code de remise est créé à ce moment. Sans lui (téléphone éteint) : l'agent (`POST /api/staff/orders/:reference/recuperee`)
+  ou le Responsable livraison (`POST /api/staff/livraison/courses/:reference/recuperee`) confirme à sa place avec un motif
+  (événement `RECUPEREE_SANS_LIVREUR`).
+- **Mode Prestataire** : le Responsable livraison confie une ou plusieurs commandes (tournée `DeliveryRun`, 10 au plus,
+  `POST /api/staff/livraison/tournees`) dès `EN_PREPARATION`, change ou retire le livreur avant la récupération
+  (`LIVREUR_RETIRE`), le remplace pendant la livraison. L'agent ne choisit plus le livreur d'une commande Prestataire.
+- **Mode Restaurant avec le réglage « Tournées et disponibilité »** : tournée de l'agent (`POST /api/staff/orders/tournee`),
+  tout ou rien, chaque commande avec son code, ses frais et son message « en route ».
+- **Preuves** : heure de chaque étape (`proofs`) pour l'équipe et le Responsable. La base refuse toute modification de
+  `OrderStatusChange` et `OrderEvent` (déclencheurs de la migration ; seule exception, `staffUserId` vidé à la suppression
+  d'un compte ; les suppressions restent possibles). Essai : `npm run test:db`, sur dev seulement, **jamais** sur Render.
+- Alertes : Responsable livraison (commande à attribuer, commande prête), livreur (course prête, course retirée).
+- Migration `20261010200000_livraison_tournees_5c` : structure et règle des preuves, aucune donnée.
 
 ## Relevé de livraison et contrat (lot 5d)
 
