@@ -40,6 +40,14 @@
 .st-nav{display:flex;gap:4px;margin-left:auto}
 .st-nav a{display:flex;align-items:center;gap:8px;color:#f3e7dd;text-decoration:none;font-weight:700;font-size:15px;padding:8px 10px;border-radius:var(--r)}
 .st-nav a.active{color:var(--yellow)}
+/* Lot 5d : écrans moyens, liens un peu plus serrés (Patron avec « Relevé », Prestataire : tout tient sur la ligne) */
+@media (min-width:1025px) and (max-width:1440px){
+  .st-nav{gap:0}
+  .st-nav a{padding:8px 6px;font-size:14px}
+  .st-top .st-wrap{gap:10px}
+  .st-user{gap:10px}
+}
+@media (min-width:1025px) and (max-width:1200px){.st-bell .st-lg{display:none}} /* la cloche seule, sans le mot « Alertes » */
 .st-badge{min-width:22px;height:22px;border-radius:999px;background:var(--brand);color:#fff;font-size:12px;font-weight:800;display:inline-grid;place-items:center;padding:0 6px;animation:st-pop .4s ease-out}
 @keyframes st-pop{from{transform:scale(.4)}to{transform:scale(1)}}
 /* Rappel « activer le son » : posé par-dessus la page, en bas, pour que sa disparition au premier toucher
@@ -947,3 +955,102 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .lv-pickup.wait{background:#fff1d6}
 .lv-pickup.ready{background:#e3f1e4;border:1.5px solid #9cc79a}
 .lv-pickup.ready .btn{margin-top:4px}
+
+/* ===== Lot 5d : relevé de livraison (page, onglet de la page Livraison, version à imprimer) ===== */
+.rl-page{display:grid;gap:14px;min-width:0}
+.rl-lead{margin:-6px 0 0}
+.rl-period{display:grid;gap:12px}
+.rl-shortcuts{display:flex;flex-wrap:wrap;gap:6px}
+.rl-dates{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px}
+.rl-dates .f{flex:1 1 150px}
+.rl-dates .btn{min-height:46px}
+.rl-exports{display:flex;flex-wrap:wrap;gap:10px;border-top:1px solid var(--line);padding-top:12px}
+.rl-exports .btn{text-decoration:none}
+.rl-box{padding:20px;min-width:0}
+.rl-loading{opacity:.55}
+.rl{display:grid;gap:22px;min-width:0;color:var(--text)}
+.rl-head{display:grid;gap:4px;border-bottom:3px solid var(--brand);padding-bottom:12px}
+.rl-kicker{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand)}
+.rl-title{font-family:var(--display);font-size:24px;font-weight:800;letter-spacing:-.02em}
+.rl-sub{margin:0;color:var(--muted);font-size:15px}
+.rl-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.rl-tile{display:flex;flex-direction:column;gap:2px;background:#fff8ea;border:1px solid #f1dcb4;border-radius:var(--r-lg);padding:12px 14px;min-width:0}
+.rl-tile-label{font-size:13px;font-weight:700;color:var(--muted)}
+.rl-tile-value{font-family:var(--display);font-size:26px;font-weight:800;line-height:1.15}
+.rl-tile small{font-size:12.5px;color:var(--muted)}
+.rl-tile.strong{background:var(--brand);border-color:var(--brand);color:#fff}
+.rl-tile.strong .rl-tile-label,.rl-tile.strong small{color:#fde4e4}
+.rl-sec{display:grid;gap:8px;min-width:0}
+.rl-sec h3{font-size:17px;font-weight:800;margin:0}
+.rl-intro{margin:-4px 0 2px;color:var(--muted);font-size:14px}
+.rl-empty{margin:0;color:var(--muted);font-size:14px;font-style:italic}
+.rl-scroll{overflow-x:auto;min-width:0;-webkit-overflow-scrolling:touch}
+.rl-table{width:100%;border-collapse:collapse;font-size:14px}
+.rl-table th{text-align:left;font-size:12px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--line-2);padding:6px 8px;white-space:nowrap}
+.rl-table td{border-bottom:1px solid var(--line);padding:8px;vertical-align:top}
+.rl-table .n{text-align:right;white-space:nowrap}
+.rl-table tfoot td{border-bottom:0;border-top:2px solid var(--ink);font-weight:800}
+.rl-table tr.muted td{color:var(--muted)}
+.rl-small{font-size:13px}
+.rl-note{display:block;font-size:12.5px;font-weight:400;color:var(--muted);margin-top:2px}
+.rl-due .rl-table tfoot td{font-size:17px;color:var(--brand)}
+.rl-warn{margin:0;background:#fff4d6;border-radius:var(--r);padding:8px 12px;font-size:14px;font-weight:600}
+.rl-terms{background:var(--panel-2);border-radius:var(--r);padding:10px 14px;font-size:14px}
+.rl-terms ul{margin:4px 0 0;padding-left:18px}
+.rl-bar{display:flex;height:16px;border-radius:999px;overflow:hidden;gap:2px}
+.rl-bar span{min-width:6px}
+.rl-bar-preparation{background:#e0a100}
+.rl-bar-wait{background:#8a6d5c}
+.rl-bar-ride{background:var(--brand)}
+.rl-delays{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.rl-delays li{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding:6px 0}
+.rl-delays li span{display:flex;flex-direction:column;flex:1;min-width:0}
+.rl-delays li small{color:var(--muted);font-size:12.5px}
+.rl-delays li.total{border-bottom:0;border-top:2px solid var(--ink)}
+.rl-dot{width:12px;height:12px;border-radius:50%;flex:none}
+.rl-delay-value{font-size:18px;white-space:nowrap}
+.rl-foot{color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);padding-top:10px}
+@media (max-width:640px){
+  .rl-box{padding:14px}
+  .rl-title{font-size:20px}
+  .rl-tiles{grid-template-columns:1fr 1fr}
+  .rl-tile-value{font-size:21px}
+  .rl-tile.strong{grid-column:1/-1}
+}
+/* Version à imprimer : A4, noir sur blanc, rien de coupé */
+.rl-print .slip-bar{max-width:186mm}
+.rl-print-help{max-width:186mm;margin:0 auto 12px;color:var(--muted);font-size:14px}
+.rl-sheet{max-width:186mm;margin:0 auto;background:#fff;box-shadow:0 0 0 1px #ddd;padding:10mm;font-family:var(--sans)}
+.rl-brand{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid #ccc;padding-bottom:6px;margin-bottom:12px;font-size:13px}
+.rl-brand b{font-size:16px;letter-spacing:.03em}
+/* Tableaux de la feuille A4 : plus serrés, en-têtes sur deux lignes, rien ne dépasse à droite */
+.rl-sheet .rl-table{font-size:11.5px}
+.rl-sheet .rl-table th{white-space:normal;font-size:10px;padding:5px 4px}
+.rl-sheet .rl-table td{padding:5px 4px}
+.rl-sheet .rl-table td.n{white-space:nowrap}
+.rl-sheet .rl-note{font-size:10.5px}
+.rl-sheet .rl-tiles{grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px}
+.rl-sheet .rl-tile{padding:8px 9px}
+.rl-sheet .rl-tile-value{font-size:19px}
+@media print{
+  .rl-print-help{display:none}
+  .rl-sheet{box-shadow:none;padding:0;max-width:none}
+  .rl-print .rl-scroll{overflow:visible}
+  .rl-print .rl-tile{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rl-print .rl-bar span{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rl-print .rl-sec,.rl-print .rl-table tr{break-inside:avoid}
+  .rl-print .rl-detail{break-inside:auto}
+  .rl-print .rl-table thead{display:table-header-group}
+}
+
+/* Contrat avec Belchicken (page Prestataire) */
+.ct-now{display:flex;flex-direction:column;gap:2px;background:#fff8ef;border:2px solid var(--brand);border-radius:12px;padding:12px 14px;margin-bottom:6px}
+.ct-now.none{border-color:#e3c999;background:#fff}
+.ct-now span{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.ct-now small{color:var(--muted)}
+.ct-list{list-style:none;margin:0 0 6px;padding:0;display:grid;gap:8px}
+.ct-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding:8px 0}
+.ct-row > div:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ct-row .pr-confirm{flex-basis:100%}
+.ct-form{display:grid;gap:12px}
+@media (max-width:640px){.ct-form .fields{grid-template-columns:1fr}}

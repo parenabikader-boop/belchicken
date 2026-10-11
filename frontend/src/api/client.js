@@ -51,6 +51,28 @@ export const api = {
 // reste ainsi un cookie « du site », que Safari ne bloque pas.
 const staffRequest = (path, options) => request('/api/staff' + path, { credentials: 'same-origin', ...options }, '');
 
+// Fichier à télécharger (Excel du relevé, lot 5d) : enregistré sous `name`, ou erreur lisible du serveur
+async function downloadFile(path, name) {
+  let res;
+  try {
+    res = await fetch(path, { credentials: 'same-origin' });
+  } catch {
+    throw new ApiError('Connexion impossible. Vérifiez votre connexion internet puis réessayez.');
+  }
+  if (!res.ok) {
+    const e = (await res.json().catch(() => null))?.error;
+    throw new ApiError(e?.message || 'Le fichier n’a pas pu être préparé. Réessayez dans un instant.', { status: res.status, code: e?.code });
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
 export const staffApi = {
   // { user, features } : features = fonctions ouvertes par le Prestataire (lot 4)
   me: () => staffRequest('/me'),
@@ -88,6 +110,13 @@ export const staffApi = {
     staffRequest('/livraison/caisse/remises', { method: 'POST', body: JSON.stringify({ courierId, references }) }),
   verifyDeliveryFee: (reference, verified) =>
     staffRequest(`/livraison/caisse/${encodeURIComponent(reference)}/verifie`, { method: 'POST', body: JSON.stringify({ verified }) }),
+  // Lot 5d : relevé de livraison (du, au : 'AAAA-MM-JJ'). Sans conditions ni montant dû pour le Responsable
+  // livraison (retirés par le serveur). Conditions du contrat : lues par le Prestataire et le Patron.
+  statement: (du, au) => staffRequest(`/releve?${new URLSearchParams({ du, au })}`).then((d) => d.statement),
+  statementExcel: (du, au) => downloadFile(`/api/staff/releve/excel?${new URLSearchParams({ du, au })}`, `releve-livraison-${du}-au-${au}.xlsx`),
+  contractTerms: () => staffRequest('/releve/conditions'),
+  createContractTerms: (body) => staffRequest('/releve/conditions', { method: 'POST', body: JSON.stringify(body) }),
+  deleteContractTerms: (id) => staffRequest(`/releve/conditions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   orders: ({ status, q } = {}) => {
     const params = new URLSearchParams();
     if (status) params.set('status', status);

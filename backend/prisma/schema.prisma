@@ -423,6 +423,7 @@ model OrderStatusChange {
   createdAt   DateTime     @default(now())
 
   @@index([orderId, createdAt])
+  @@index([toStatus, createdAt]) // lot 5d : livraisons d'une période (relevé)
 }
 
 // Historique d'une commande hors statut : frais de livraison et messages WhatsApp préparés pour le client.
@@ -595,6 +596,30 @@ model CourierAvailabilityChange {
   @@index([createdAt])
 }
 
+// Lot 5d : formule du contrat de livraison entre Belchicken et notre société (réglée par le Prestataire)
+enum ContractKind {
+  AUCUNE // rien à payer (essai)
+  PAR_LIVRAISON // prix par livraison
+  FORFAIT_MENSUEL // forfait mensuel, au prorata des jours
+}
+
+// Lot 5d : conditions du contrat, une ligne par version datée. Une version s'applique de validFrom jusqu'à la
+// version suivante. Date d'effet : aujourd'hui ou plus tard (un relevé déjà remis ne change jamais).
+// La base refuse toute MODIFICATION (déclencheur de la migration 20261010220000_releve_5d) ; l'API ne supprime
+// qu'une version pas encore commencée. Montant dû et conditions : jamais montrés au Responsable livraison.
+// Règles dans src/services/statement.js.
+model DeliveryContractTerms {
+  id                String       @id @default(cuid())
+  validFrom         DateTime     @unique // minuit du premier jour (heure du Burkina = UTC)
+  kind              ContractKind
+  perDeliveryPrice  Int? // PAR_LIVRAISON, en F
+  monthlyFee        Int? // FORFAIT_MENSUEL, en F
+  freeDeliveryPrice Int          @default(0) // par livraison offerte (0 F au client), avec toutes les formules
+  note              String? // ex. « Contrat signé le … »
+  createdByName     String // copie figée
+  createdAt         DateTime     @default(now())
+}
+
 // Une ligne par appareil connecté. Le navigateur garde le jeton dans un cookie httpOnly ;
 // la base n'en garde que l'empreinte (SHA-256), inutilisable si elle fuitait.
 model StaffSession {
@@ -655,6 +680,7 @@ enum SecurityLogType {
   MOT_DE_PASSE // lot 5 : le Prestataire a changé son mot de passe dans l'application
   LIVRAISON // lot 5 : mode de livraison, société ou codes marchands du Prestataire changés (avant -> après dans detail)
   COMPTE_LIVRAISON // lot 5b : compte Responsable livraison ou livreur de notre équipe créé, désactivé, réactivé, mot de passe provisoire
+  CONTRAT // lot 5d : version des conditions du contrat de livraison ajoutée ou supprimée (detail)
 }
 
 // Lot 4 : journal de sécurité. Aucune adresse ne le modifie, et la base refuse toute modification ou

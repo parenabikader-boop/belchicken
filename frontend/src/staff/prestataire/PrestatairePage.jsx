@@ -3,6 +3,7 @@ import { staffApi } from '../../api/client.js';
 import { useStaff } from '../StaffContext.jsx';
 import { formatDateTime } from '../orders/labels.js';
 import DeliveryMode from './DeliveryMode.jsx';
+import ContractTerms from './ContractTerms.jsx';
 
 // Lot 4 : page Prestataire (/equipe/prestataire, Prestataire seulement).
 // Interrupteurs des fonctions incluses dans la formule (confirmation avant chaque changement) et journal de
@@ -18,6 +19,7 @@ const TYPE_LABEL = {
   MOT_DE_PASSE: 'Mot de passe changé', // lot 5
   LIVRAISON: 'Mode de livraison', // lot 5 : mode, société ou codes marchands
   COMPTE_LIVRAISON: 'Équipe de livraison', // lot 5b : comptes du Responsable livraison et de nos livreurs
+  CONTRAT: 'Contrat de livraison', // lot 5d : version des conditions ajoutée ou supprimée
 };
 
 // Navigateur lisible : « Chrome sur Android », sinon le début du texte
@@ -117,7 +119,7 @@ function Journal() {
   return (
     <section className="st-box pr-sec">
       <h2>Journal de sécurité</h2>
-      <p className="st-muted pr-intro">Connexions, essais ratés, blocages, codes de secours, scripts, mots de passe, changements de fonctions et du mode de livraison. Il ne peut être ni modifié ni effacé.</p>
+      <p className="st-muted pr-intro">Connexions, essais ratés, blocages, codes de secours, scripts, mots de passe, changements de fonctions, du mode de livraison et du contrat. Il ne peut être ni modifié ni effacé.</p>
       {error && <div className="alert err" role="alert"><span>{error.message}</span></div>}
       {!data && !error && <p className="st-muted">Chargement…</p>}
       {data && data.entries.length === 0 && <p className="st-muted">Rien pour l’instant.</p>}
@@ -158,6 +160,7 @@ export default function PrestatairePage() {
       <div className="st-head"><h1 className="st-title">Prestataire</h1></div>
       <Features />
       <DeliveryMode />
+      <ContractTerms />
       <Journal />
     </div>
   );

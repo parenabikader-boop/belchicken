@@ -23,6 +23,9 @@ import OrderSlip from './orders/OrderSlip.jsx';
 import NewOrder from './orders/NewOrder.jsx';
 import PrestatairePage from './prestataire/PrestatairePage.jsx';
 import DeliveryPage from './delivery/DeliveryPage.jsx';
+import StatementPage from './statement/StatementPage.jsx';
+import StatementPrint from './statement/StatementPrint.jsx';
+import { FeatureClosed } from './FeatureGate.jsx';
 import InstallBanner from '../components/InstallBanner.jsx';
 import './staff.css';
 
@@ -71,6 +74,8 @@ function DeliveryManagerRoutes() {
         <Route path="livraison" element={<DeliveryPage />} />
         <Route path="mot-de-passe" element={<PasswordPage />} />
       </Route>
+      {/* Lot 5d : relevé à imprimer (sans conditions ni montant dû : le serveur ne les lui envoie pas) */}
+      <Route path="livraison/releve/imprimer" element={<StatementPrint />} />
       <Route path="*" element={<Navigate to="/equipe/livraison" replace />} />
     </Routes>
   );
@@ -116,7 +121,10 @@ function TeamRoutes() {
           <Route path="prestataire" element={<PrestatairePage />} />
           <Route path="livraison" element={<DeliveryPage />} />
         </Route>
+        <Route path="releve" element={<RequireStatement><StatementPage /></RequireStatement>} />
       </Route>
+      {/* Lot 5d : relevé de livraison à imprimer ou enregistrer en PDF : page seule */}
+      <Route path="releve/imprimer" element={<RequireStatement><StatementPrint /></RequireStatement>} />
       {/* Bon de commande à imprimer : page seule, sans l'en-tête de l'espace équipe */}
       <Route path="commandes/:reference/bon" element={<OrderSlip />} />
       <Route path="*" element={<Navigate to="/equipe" replace />} />
@@ -194,6 +202,15 @@ function RequirePrestataire() {
   return user.role === 'PRESTATAIRE' ? <Outlet /> : <Navigate to="/equipe" replace />;
 }
 
+// Lot 5d : relevé de livraison. Prestataire toujours ; Patron si le Prestataire a ouvert RELEVE (l'API le
+// vérifie aussi) ; Opérateur jamais.
+function RequireStatement({ children }) {
+  const { user, hasFeature } = useStaff();
+  if (user.role === 'PRESTATAIRE') return children;
+  if (user.role !== 'PATRON') return <Navigate to="/equipe" replace />;
+  return hasFeature('RELEVE') ? children : <FeatureClosed title="Relevé de livraison" />;
+}
+
 function StaffLayout() {
   return (
     <OrdersFeedProvider>
@@ -235,6 +252,8 @@ function StaffShell() {
             {patron && hasFeature('REGLAGES') && <NavLink to="/equipe/reglages">Réglages</NavLink>}
             {prestataire && <NavLink to="/equipe/prestataire">Prestataire</NavLink>}
             {prestataire && <NavLink to="/equipe/livraison">Livraison</NavLink>}
+            {/* Lot 5d : le Patron (RELEVE ouvert) ; le Prestataire passe par l'onglet « Relevé » de la page Livraison */}
+            {!prestataire && patron && hasFeature('RELEVE') && <NavLink to="/equipe/releve">Relevé</NavLink>}
           </nav>
           <div className="st-user">
             <NavLink to="/equipe/mot-de-passe" className="st-name" title="Mon mot de passe">{user.name}<small>{ROLE_LABEL[user.role]}</small></NavLink>

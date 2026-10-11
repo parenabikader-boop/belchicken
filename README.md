@@ -575,6 +575,40 @@ Suite du mode de livraison (5a, `Order.deliveryOperator`). Règles : `backend/sr
   (`CashRemittance.operator`). Tableau de bord : frais de notre partenaire comptés à part (`partnerFees`), jamais dans ceux du restaurant.
 - Migration `20261010180000_livraison_equipes_5b` : structure seulement, aucune ligne écrite.
 
+## Relevé de livraison et contrat (lot 5d)
+
+Relevé du travail de notre équipe de livraison (commandes en mode Prestataire, à domicile) sur une période libre
+(366 jours au plus, fin au plus tard aujourd'hui), lisible par quelqu'un qui n'est pas informaticien : il sert aussi à
+la présentation à Belchicken. Règles dans `backend/src/services/statement.js`, lectures dans `statement.service.js`,
+Excel dans `statement-excel.js`.
+
+- **Contenu** : livraisons (comptées à leur date de livraison), frais encaissés (espèces remises ou encore chez les
+  livreurs, mobile money vérifié ou à vérifier, livraisons offertes, supplément de nuit), délais moyens (payée → prête,
+  prête → récupérée, récupérée → livrée, payée → livrée), annulations (étape, motif), par livreur, par tournée, détail des
+  livraisons. **Jamais** les ventes de Belchicken (plats, total, paiement des plats) ni le nom ou le téléphone du client.
+- **Conditions du contrat** (page Prestataire, section « Contrat avec Belchicken ») : versions datées
+  (`DeliveryContractTerms`), formule « Rien à payer », « Prix par livraison » ou « Forfait mensuel », plus un prix fixe par
+  livraison offerte (avec toutes les formules ; avec le prix par livraison, Belchicken paie les deux, en deux lignes).
+  Date d'effet aujourd'hui ou plus tard ; une version ne se modifie jamais (la base le refuse) et ne se supprime que si
+  elle n'a pas encore commencé. Chaque ajout ou suppression est noté au journal (`CONTRAT`).
+- **Montant dû** : calculé jour par jour avec la version en vigueur ce jour-là, une ligne par version et par mois, le
+  calcul écrit en clair (« 33 livraisons × 500 F », « 155 000 F × 10 jours ÷ 31 jours »), arrondi au franc par ligne.
+  Jours sans conditions : signalés, rien n'est calculé.
+- **Qui voit quoi** : Prestataire, tout ; Responsable livraison, son relevé **sans** conditions ni montant dû (retirés par
+  le serveur, ni dans la page, ni dans le PDF, ni dans l'Excel : `forViewer()`, testé) ; Patron, tout en lecture seule
+  si le Prestataire a ouvert l'interrupteur `RELEVE` (seul interrupteur **fermé** sans ligne, et qui ne concerne que le
+  Patron) ; Opérateur et Livreur, jamais.
+- **Pages** : onglet « Relevé » de la page Livraison (Prestataire, Responsable livraison), `/equipe/releve` et lien
+  « Relevé » dans l'en-tête (Patron, `RELEVE` ouvert). PDF : page A4 à imprimer (`/equipe/releve/imprimer`,
+  `/equipe/livraison/releve/imprimer`), « Imprimer » puis « Enregistrer au format PDF ». Excel : vrai fichier `.xlsx`
+  (bibliothèque `exceljs`), feuilles Résumé, Montant dû, Conditions, Livraisons, Par jour, Livreurs, Tournées,
+  Annulations (sans Montant dû ni Conditions pour le Responsable livraison), montants en nombres.
+- **API** : `GET /api/staff/releve?du=AAAA-MM-JJ&au=AAAA-MM-JJ`, `GET /api/staff/releve/excel?du=…&au=…`,
+  `GET /api/staff/releve/conditions` (Prestataire, Patron si `RELEVE` ouvert), `POST /api/staff/releve/conditions`
+  `{ validFrom, kind, perDeliveryPrice, monthlyFee, freeDeliveryPrice, note }` et `DELETE /api/staff/releve/conditions/:id`
+  (Prestataire seulement).
+- Migration `20261010220000_releve_5d` : structure seulement (table, type, index, règle qui refuse les modifications).
+
 ## Parcours court et bon de commande (lot 1)
 
 - Réglages du logiciel : table `AppSettings` (une ligne, id = 1 ; pas de ligne = tout éteint), `GET /api/staff/reglages`

@@ -7,6 +7,7 @@ import { TeamManager } from '../team/TeamPage.jsx';
 import { formatPhone, timeAgo } from '../orders/labels.js';
 import { plural } from '../../utils/format.js';
 import DispatchBoard from './DispatchBoard.jsx';
+import StatementPage from '../statement/StatementPage.jsx';
 
 const REFRESH_MS = 15000;
 
@@ -15,11 +16,12 @@ const REFRESH_MS = 15000;
 //   - Caisse : frais des commandes livrées par notre équipe (mode Prestataire), jamais celles du restaurant.
 //   - Équipe : comptes de nos livreurs (le Prestataire crée aussi les Responsables livraison).
 // Jamais les ventes de Belchicken : ni plats, ni totaux, ni paiement des plats (l'API ne les donne pas).
-// Adresse : ?onglet=livreurs|caisse|equipe, ?caisse=verifier|livreurs
+// Adresse : ?onglet=livreurs|caisse|equipe|releve, ?caisse=verifier|livreurs, ?du=&au= (relevé)
 const TABS = [
   { key: 'livreurs', label: 'Livreurs' },
   { key: 'caisse', label: 'Caisse' },
   { key: 'equipe', label: 'Comptes' },
+  { key: 'releve', label: 'Relevé' }, // lot 5d : sans conditions ni montant dû pour le Responsable livraison
 ];
 
 const PARTNER_CASH = { load: staffApi.deliveryCash, verify: staffApi.verifyDeliveryFee, remit: staffApi.remitDeliveryCash };
@@ -70,6 +72,7 @@ export default function DeliveryPage() {
           cashApi={PARTNER_CASH}
         />
       )}
+      {tab === 'releve' && <StatementPage embedded />}
       {tab === 'equipe' && (
         <TeamManager
           heading="h2"

@@ -30,7 +30,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 2 | Prise de commande par l'agent (appel, WhatsApp) | En ligne depuis le 9 octobre 2026 (réglage « Prise de commande par l'agent » éteint en production) |
 | 3 | Supplément de nuit dans la grille des frais | En ligne depuis le 9 octobre 2026 (réglage « Supplément de nuit » éteint en production) |
 | 4 | Compte Prestataire au-dessus du Patron | En ligne depuis le 10 octobre 2026 (aucun compte Prestataire en production, tout ouvert) |
-| 5 | Livraison en deux modes (Restaurant / Prestataire) | En cours : 5a en ligne depuis le 10 octobre 2026 (mode Restaurant en production) ; 5b en ligne depuis le 10 octobre 2026 (réglage « Tournées et disponibilité » éteint, aucun Responsable livraison en production) ; 5c en ligne depuis le 10 octobre 2026 (mode Restaurant, réglage éteint : rien ne change en production) ; 5d à faire |
+| 5 | Livraison en deux modes (Restaurant / Prestataire) | En cours : 5a en ligne depuis le 10 octobre 2026 (mode Restaurant en production) ; 5b en ligne depuis le 10 octobre 2026 (réglage « Tournées et disponibilité » éteint, aucun Responsable livraison en production) ; 5c en ligne depuis le 10 octobre 2026 (mode Restaurant, réglage éteint : rien ne change en production) ; 5d fait sur dev, captures à valider |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | À faire |
 | 7 | Avis des clients | À faire |
 | 8 | Langue FR/EN sur le site client | À faire |
@@ -188,7 +188,7 @@ Mode figé sur chaque commande à sa création (`Order.deliveryOperator`). Quatr
 | 5a | Fondations : mode Restaurant / Prestataire, notre société et nos codes (page Prestataire), codes des frais selon le mode de la commande, journal `MOT_DE_PASSE` et `LIVRAISON` | En ligne depuis le 10 octobre 2026 (enregistrement `c8b4b78`), mode Restaurant en production |
 | 5b | Disponibilité des livreurs, livreurs du restaurant ou de notre équipe, rôle `RESPONSABLE_LIVRAISON`, caisse séparée | En ligne depuis le 10 octobre 2026 (enregistrement `6ed214d`), réglage éteint, aucun compte de notre équipe en production |
 | 5c | « Prête pour livraison », « Commande récupérée », tournées, preuves horaires | En ligne depuis le 10 octobre 2026 (enregistrement `a47b27e`), mode Restaurant et réglage éteint en production |
-| 5d | Conditions du contrat (versions datées), relevé par période, PDF et Excel, interrupteur `RELEVE` | À faire |
+| 5d | Conditions du contrat (versions datées), relevé par période, PDF et Excel, interrupteur `RELEVE` | Fait sur dev, captures à valider (10 octobre 2026) |
 
 **Avancement 5a** :
 
@@ -318,6 +318,47 @@ relevé (5d) ; en 5b, l'agent choisit toujours le livreur ; livreur « En pause 
   espace équipe protégé (401 sans connexion, y compris les nouvelles adresses : tournées, « Commande récupérée »).
   En production : mode Restaurant (aucune société de livraison), réglage « Tournées et disponibilité » éteint, aucun Responsable
   livraison ni livreur de notre équipe : tout fonctionne comme avant.
+
+**Plan 5d** accepté par le client le 10 octobre 2026 (plan, schéma, API), avec ces réponses : livraison offerte avec la
+formule « Prix par livraison » = Belchicken paie les deux, en deux lignes séparées et expliquées ; date d'effet d'une
+version aujourd'hui ou plus tard seulement (un relevé remis ne change jamais) ; Excel en vrai `.xlsx` avec `exceljs` ;
+livraison comptée à sa date de livraison. Modification du client : le Responsable livraison voit le relevé de son
+travail (livraisons, frais encaissés, délais, livreurs, tournées, annulations) mais **jamais** les conditions du contrat
+ni le montant dû (page, PDF, Excel ; vérifié par le serveur et par un test). Le Prestataire voit tout ; le Patron voit
+tout si l'interrupteur `RELEVE` est ouvert (fermé par défaut, ne cache le relevé qu'au Patron).
+
+**Avancement 5d** :
+
+- [x] Schéma : enum `ContractKind`, table `DeliveryContractTerms` (versions datées, modification refusée par la base),
+  journal `CONTRAT`, index `OrderStatusChange(toStatus, createdAt)`. Migration `20261010220000_releve_5d` écrite sans
+  aucune base (`prisma migrate diff` entre deux fichiers de schéma).
+- [x] Migration relue et acceptée par le client (10 octobre), passée sur dev (`npm run db:deploy`, serveur revérifié juste
+  avant) : 23 migrations, base identique au schéma (vérifié en lecture seule), mêmes nombres de lignes qu'avant.
+- [x] Serveur : `statement.js` (période, conditions, montant dû jour par jour, relevé, `forViewer()`), `statement.service.js`
+  (ne lit jamais les ventes ; conditions jamais lues pour le Responsable livraison), `statement-excel.js` (`exceljs`),
+  adresses `/api/staff/releve`, `/excel`, `/conditions`, interrupteur `RELEVE` (fermé sans ligne, Patron seulement :
+  `featureDefault()` dans `features.js`), journal `CONTRAT`.
+- [x] Pages : section « Contrat avec Belchicken » de la page Prestataire (versions, nouvelle version avec confirmation,
+  suppression d'une version future), onglet « Relevé » de la page Livraison (Prestataire, Responsable livraison), page
+  `/equipe/releve` et lien « Relevé » du Patron (`RELEVE` ouvert ; fermé : « Fonction non incluse »), page A4 à imprimer
+  en PDF, bouton « Télécharger Excel ». En-tête un peu resserré entre 1025 et 1440 px (le lien « Relevé » du Patron tient ;
+  corrige aussi en partie le débordement de l'en-tête du Prestataire, qui existait avant 5d). Compilé.
+- [x] Tests : `statement.test.js` (16 tests, dont le Responsable livraison qui ne reçoit jamais les conditions ni le montant
+  dû, page et Excel), `route-access.test.js` (relevé ouvert au Responsable, conditions jamais), `prestataire.test.js`
+  (`RELEVE` fermé sans ligne). 248 au total, tous passent.
+- [x] Essai de bout en bout sur dev (10 octobre), serveur local avec WhatsApp et alertes coupés, comptes d'essai à part
+  (« Essai5d … ») créés par le script, codes calculés par le script, jamais affichés : historique antidaté du 1er au
+  9 octobre (33 livraisons, 2 annulations, 3 tournées, 1 version des conditions antidatée, seulement pour l'essai) et
+  4 vraies commandes du jour par l'API (paiement vérifié avec les frais, tournée du Responsable, prête, récupérée par le
+  livreur ou par l'agent avec motif, livrée avec le code, espèces et mobile money, une annulée) : 54 vérifications bonnes,
+  plus le contrôle « aucune donnée de vente ni du client » (sa 1re version cherchait le nombre 6500 et tombait par hasard
+  sur des montants de frais : remplacée par un contrôle exact des champs). Montant dû recalculé à part : identique.
+  Excel relu par `exceljs` et par Python (archives et XML valides) ; Microsoft Excel n'est pas installé sur ce PC :
+  fichiers à ouvrir par le client. Dev remise comme avant (comptes, commandes, tournées, remises, conditions,
+  interrupteur, société de livraison, sessions : identiques à l'instantané d'avant l'essai) ; seules restent 33 lignes du
+  journal de sécurité (173 au lieu de 140, la base refuse de les effacer).
+- [x] Captures (12 images, 2 PDF, 3 fichiers Excel) dans `C:\Users\HP\Desktop\belchiken\captures-lot5d-releve\`.
+- [ ] Accord du client sur les captures, puis mise en ligne (STOP avant).
 
 ### 6. Ventes
 

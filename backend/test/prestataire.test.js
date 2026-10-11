@@ -174,7 +174,8 @@ test('jeton entre le mot de passe et le code : cookie httpOnly limité à l’ad
 test('interrupteurs : pas de ligne = ouvert, fermer ne touche que la fonction fermée', () => {
   const all = featureMap([]);
   assert.deepEqual(Object.keys(all), FEATURE_KEYS);
-  assert.ok(Object.values(all).every(Boolean));
+  // Lot 5d : seule exception, RELEVE (relevé de livraison vu par le Patron) est fermé sans ligne
+  assert.ok(Object.entries(all).every(([key, open]) => open === (key !== 'RELEVE')));
   const map = featureMap([{ key: 'CAISSE', enabled: false }, { key: 'HISTORIQUE', enabled: true }, { key: 'INCONNUE', enabled: false }]);
   assert.equal(map.CAISSE, false);
   assert.equal(map.HISTORIQUE, true);

@@ -39,8 +39,9 @@ const PUBLIC = ['POST /login', 'POST /login/code', 'POST /logout'];
 
 // Les seules adresses ouvertes au Responsable livraison. Lot 5c : ses alertes sur téléphone (/push : activer,
 // couper, essayer ; il ne reçoit que les siennes, commande prête ou sans livreur, voir push.service.js)
+// Lot 5d : son relevé (page et Excel), jamais les conditions du contrat (/releve/conditions)
 const RESPONSABLE_ALLOWED = (r) =>
-  ['GET /me', 'POST /password'].includes(key(r)) || r.path === '/livraison' || r.path.startsWith('/livraison/') || r.path === '/push' || r.path.startsWith('/push/');
+  ['GET /me', 'POST /password', 'GET /releve', 'GET /releve/excel'].includes(key(r)) || r.path === '/livraison' || r.path.startsWith('/livraison/') || r.path === '/push' || r.path.startsWith('/push/');
 
 test('la liste des adresses est bien lue (toutes les pages de l’espace équipe)', () => {
   assert.ok(ROUTES.length > 60, `${ROUTES.length} adresses seulement`);
@@ -56,7 +57,7 @@ test('chaque adresse est protégée par une connexion, sauf la connexion elle-m�
   }
 });
 
-test('Responsable livraison : refusé sur TOUTES les adresses, sauf sa page Livraison, ses alertes, « qui suis-je » et son mot de passe', () => {
+test('Responsable livraison : refusé sur TOUTES les adresses, sauf sa page Livraison, son relevé, ses alertes, « qui suis-je » et son mot de passe', () => {
   let refused = 0;
   for (const r of ROUTES) {
     if (PUBLIC.includes(key(r))) continue;
@@ -111,5 +112,21 @@ test('lot 5c : récupération et tournées, chacun sur ses adresses', () => {
   for (const p of ['POST /livraison/tournees', 'PUT /livraison/courses/:reference/livreur', 'DELETE /livraison/courses/:reference/livreur', 'POST /livraison/courses/:reference/recuperee']) {
     assert.equal(allowed(get(p), 'RESPONSABLE_LIVRAISON'), true, p);
     assert.equal(allowed(get(p), 'OPERATEUR'), false, p);
+  }
+});
+
+test('lot 5d : relevé et conditions du contrat, chacun ses droits', () => {
+  const get = (p) => ROUTES.find((r) => key(r) === p);
+  for (const p of ['GET /releve', 'GET /releve/excel']) {
+    for (const role of ['PRESTATAIRE', 'RESPONSABLE_LIVRAISON', 'PATRON']) assert.equal(allowed(get(p), role), true, `${p} ${role}`);
+    for (const role of ['OPERATEUR', 'LIVREUR']) assert.equal(allowed(get(p), role), false, `${p} ${role}`);
+  }
+  // Conditions : jamais le Responsable livraison, même en lecture
+  assert.equal(allowed(get('GET /releve/conditions'), 'RESPONSABLE_LIVRAISON'), false);
+  assert.equal(allowed(get('GET /releve/conditions'), 'PATRON'), true);
+  assert.equal(allowed(get('GET /releve/conditions'), 'PRESTATAIRE'), true);
+  for (const p of ['POST /releve/conditions', 'DELETE /releve/conditions/:id']) {
+    assert.equal(allowed(get(p), 'PRESTATAIRE'), true, p);
+    for (const role of ['PATRON', 'RESPONSABLE_LIVRAISON', 'OPERATEUR', 'LIVREUR']) assert.equal(allowed(get(p), role), false, `${p} ${role}`);
   }
 });

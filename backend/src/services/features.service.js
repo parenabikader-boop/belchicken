@@ -1,7 +1,7 @@
 // Lot 4 : interrupteurs des fonctions en base (règles dans features.js)
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
-import { FEATURE_CLOSED, FEATURE_KEYS, FEATURES, featureMap } from './features.js';
+import { FEATURE_CLOSED, FEATURE_KEYS, FEATURES, featureDefault, featureMap } from './features.js';
 import { logSecurity } from './security-log.service.js';
 
 export const getFeatures = async (db = prisma) => featureMap(await db.featureSwitch.findMany());
@@ -16,7 +16,7 @@ export async function listFeatures() {
   const byKey = new Map(rows.map((r) => [r.key, r]));
   return FEATURES.map((f) => {
     const row = byKey.get(f.key);
-    return { ...f, enabled: row?.enabled ?? true, updatedByName: row?.updatedByName ?? null, updatedAt: row?.updatedAt ?? null };
+    return { ...f, enabled: row?.enabled ?? featureDefault(f.key), updatedByName: row?.updatedByName ?? null, updatedAt: row?.updatedAt ?? null };
   });
 }
 
