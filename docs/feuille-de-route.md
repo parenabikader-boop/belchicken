@@ -30,7 +30,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 2 | Prise de commande par l'agent (appel, WhatsApp) | En ligne depuis le 9 octobre 2026 (réglage « Prise de commande par l'agent » éteint en production) |
 | 3 | Supplément de nuit dans la grille des frais | En ligne depuis le 9 octobre 2026 (réglage « Supplément de nuit » éteint en production) |
 | 4 | Compte Prestataire au-dessus du Patron | En ligne depuis le 10 octobre 2026 (aucun compte Prestataire en production, tout ouvert) |
-| 5 | Livraison en deux modes (Restaurant / Prestataire) | En cours : 5a en ligne depuis le 10 octobre 2026 (mode Restaurant en production) ; 5b en ligne depuis le 10 octobre 2026 (réglage « Tournées et disponibilité » éteint, aucun Responsable livraison en production) ; 5c en ligne depuis le 10 octobre 2026 (mode Restaurant, réglage éteint : rien ne change en production) ; 5d fait sur dev, captures à valider |
+| 5 | Livraison en deux modes (Restaurant / Prestataire) | Terminé : 5a, 5b, 5c en ligne depuis le 10 octobre 2026, 5d en ligne depuis le 11 octobre 2026 (production en mode Restaurant, réglage « Tournées et disponibilité » éteint, interrupteur `RELEVE` fermé, aucun Responsable livraison ni livreur de notre équipe : rien ne change en production) |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | À faire |
 | 7 | Avis des clients | À faire |
 | 8 | Langue FR/EN sur le site client | À faire |
@@ -188,7 +188,7 @@ Mode figé sur chaque commande à sa création (`Order.deliveryOperator`). Quatr
 | 5a | Fondations : mode Restaurant / Prestataire, notre société et nos codes (page Prestataire), codes des frais selon le mode de la commande, journal `MOT_DE_PASSE` et `LIVRAISON` | En ligne depuis le 10 octobre 2026 (enregistrement `c8b4b78`), mode Restaurant en production |
 | 5b | Disponibilité des livreurs, livreurs du restaurant ou de notre équipe, rôle `RESPONSABLE_LIVRAISON`, caisse séparée | En ligne depuis le 10 octobre 2026 (enregistrement `6ed214d`), réglage éteint, aucun compte de notre équipe en production |
 | 5c | « Prête pour livraison », « Commande récupérée », tournées, preuves horaires | En ligne depuis le 10 octobre 2026 (enregistrement `a47b27e`), mode Restaurant et réglage éteint en production |
-| 5d | Conditions du contrat (versions datées), relevé par période, PDF et Excel, interrupteur `RELEVE` | Fait sur dev, captures à valider (10 octobre 2026) |
+| 5d | Conditions du contrat (versions datées), relevé par période, PDF et Excel, interrupteur `RELEVE` | En ligne depuis le 11 octobre 2026 (enregistrement `f4f6f12`), interrupteur `RELEVE` fermé, aucune version des conditions en production |
 
 **Avancement 5a** :
 
@@ -358,7 +358,24 @@ tout si l'interrupteur `RELEVE` est ouvert (fermé par défaut, ne cache le rele
   interrupteur, société de livraison, sessions : identiques à l'instantané d'avant l'essai) ; seules restent 33 lignes du
   journal de sécurité (173 au lieu de 140, la base refuse de les effacer).
 - [x] Captures (12 images, 2 PDF, 3 fichiers Excel) dans `C:\Users\HP\Desktop\belchiken\captures-lot5d-releve\`.
-- [ ] Accord du client sur les captures, puis mise en ligne (STOP avant).
+- [x] Accord du client sur les captures, le PDF et les fichiers Excel (11 octobre), sauvegarde Neon `sauvegarde-lot5d`
+  (faite et vérifiée par le client), tests (248) et construction relancés, migration relue (seulement `CREATE` et `ALTER` :
+  aucun `INSERT`, `UPDATE` ni `DELETE` ; le mot « UPDATE » du fichier est la règle qui refuse les modifications), inchangée
+  depuis dev (même empreinte que celle enregistrée sur dev), enregistrement `f4f6f12`, mise en ligne le 11 octobre 2026.
+  Migration passée par Render au déploiement (**non vérifié dans le tableau de bord de Render** ; la nouvelle adresse du
+  relevé répond 401 au lieu de 404, la nouvelle version tourne donc). Site Vercel à jour.
+  Vérifié après la mise en ligne, sans rien écrire en production : serveur en bonne santé, menu (10 catégories, 51 plats),
+  codes ECOFOOD et menu identiques octet pour octet à avant la mise en ligne, connexion de l'équipe qui répond comme avant,
+  espace équipe protégé (401 sans connexion, y compris relevé, Excel et conditions), pages du site (accueil, menu, infos,
+  espace équipe) en ligne. En production : interrupteur `RELEVE` fermé (pas de ligne), aucune version des conditions,
+  aucun compte Prestataire ni Responsable livraison : tout fonctionne comme avant.
+
+**Lot 5 terminé le 11 octobre 2026.**
+
+**À faire plus tard** (noté par le client le 11 octobre 2026, après 5d) :
+
+- [ ] En-tête de l'espace équipe du **Prestataire** : déborde sur téléphone.
+- [ ] En-tête de l'espace équipe du **Patron** : déborde sur tablette (moins de 1024 px).
 
 ### 6. Ventes
 
