@@ -50,7 +50,7 @@ Lots de la feuille de route :
   - 5b, équipes et disponibilité des livreurs, Responsable livraison (ne voit **jamais** les ventes, `test/route-access.test.js`) : `courier-team.js`. README « Équipes de livraison ».
   - 5c, prête pour livraison, récupération, tournées, preuves (la base refuse de modifier l'historique) : `dispatch.js`, `dispatch.service.js`. README « Prête pour livraison ».
   - 5d, contrat et relevé (PDF, Excel) : `statement.js`. README « Relevé de livraison et contrat ».
-- **Prochain : lot 6, ventes.**
+- **Lot 6, ventes** (Patron et Prestataire, interrupteur `VENTES` ouvert par défaut) : fait sur dev le 11 octobre 2026, **pas encore en ligne**. Règles : `sales.js`. README « Ventes ».
 
 ## Repères pour travailler
 

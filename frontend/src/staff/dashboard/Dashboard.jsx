@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatPrice, plural } from '../../utils/format.js';
+import { ChiffresTabs } from './ChiffresTabs.jsx';
 
 // Tableau de bord du Patron (l'API le réserve au Patron). Pensé d'abord pour le téléphone :
 // une colonne, chiffres clés en haut, graphiques en barres simples (toucher une barre affiche sa valeur).
@@ -243,6 +244,7 @@ export default function Dashboard() {
       <div className="st-head">
         <h1 className="st-title">Tableau de bord</h1>
       </div>
+      <ChiffresTabs />
 
       <div className="db-period" role="group" aria-label="Période">
         {PERIODS.map((p) => (

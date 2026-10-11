@@ -115,6 +115,9 @@ export const staffApi = {
   statement: (du, au) => staffRequest(`/releve?${new URLSearchParams({ du, au })}`).then((d) => d.statement),
   statementExcel: (du, au) => downloadFile(`/api/staff/releve/excel?${new URLSearchParams({ du, au })}`, `releve-livraison-${du}-au-${au}.xlsx`),
   contractTerms: () => staffRequest('/releve/conditions'),
+  // Lot 6 : ventes par période (du, au : 'AAAA-MM-JJ'), Patron et Prestataire
+  sales: (du, au) => staffRequest(`/ventes?${new URLSearchParams({ du, au })}`).then((d) => d.sales),
+  salesExcel: (du, au) => downloadFile(`/api/staff/ventes/excel?${new URLSearchParams({ du, au })}`, `ventes-${du}-au-${au}.xlsx`),
   createContractTerms: (body) => staffRequest('/releve/conditions', { method: 'POST', body: JSON.stringify(body) }),
   deleteContractTerms: (id) => staffRequest(`/releve/conditions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   orders: ({ status, q } = {}) => {

@@ -558,7 +558,8 @@ sa page Équipe (« Compte Prestataire », sans numéro ni action), et `npm run 
   chaque nouvel échec jusqu'à une connexion réussie. Réponse 429 `TROP_DE_TENTATIVES`. Déblocage : choix 4 du script.
 - **Mot de passe dans l'application** (`POST /api/staff/password`) : 12 caractères et `code` (6 chiffres ou code de secours) en plus.
 - **Interrupteurs** (`FeatureSwitch`, liste dans `backend/src/services/features.js`) : `HISTORIQUE`, `TABLEAU_DE_BORD`, `CAISSE`,
-  `FRAIS_LIVRAISON`, `REGLAGES`, `PARCOURS_COURT`, `PRISE_COMMANDE_AGENT`, `SUPPLEMENT_NUIT`. Pas de ligne = ouvert. Fermé :
+  `FRAIS_LIVRAISON`, `REGLAGES`, `PARCOURS_COURT`, `PRISE_COMMANDE_AGENT`, `SUPPLEMENT_NUIT` (puis `TOURNEES_RESTAURANT`, lot 5b ;
+  `RELEVE`, lot 5d, fermé sans ligne ; `VENTES`, lot 6). Pas de ligne = ouvert. Fermé :
   403 `FONCTION_NON_INCLUSE` « Fonction non incluse dans votre formule, contactez votre prestataire », pour tout le monde,
   Prestataire compris (`requireFeature()`), et page cachée. Rien n'est supprimé. Détails : historique fermé = commandes en cours,
   à remercier et terminées depuis moins de 24 h (liste, recherche, détail et bon) ; frais de livraison fermés = seule la page du
@@ -674,6 +675,30 @@ Excel dans `statement-excel.js`.
   `{ validFrom, kind, perDeliveryPrice, monthlyFee, freeDeliveryPrice, note }` et `DELETE /api/staff/releve/conditions/:id`
   (Prestataire seulement).
 - Migration `20261010220000_releve_5d` : structure seulement (table, type, index, règle qui refuse les modifications).
+
+## Ventes (lot 6)
+
+Ventes de Belchicken par période, pour le Patron et le Prestataire. Règles : `backend/src/services/sales.js`
+(testées dans `test/sales.test.js`), lectures : `sales.service.js`, Excel : `sales-excel.js`. Aucune migration.
+
+- **Période** : dates libres (« du » et « au » compris, 366 jours au plus, jamais après aujourd'hui, même règle que
+  le relevé), raccourcis Aujourd'hui, Cette semaine (du lundi), Ce mois, Mois dernier. Une commande compte le jour où
+  elle a été passée, comme sur le tableau de bord. Heure du Burkina = UTC.
+- **Ventes** = commandes payées et au-delà ; **chiffre d'affaires = total des plats**. Annulées et paiements à
+  vérifier comptés à part, jamais dans le chiffre d'affaires. Frais de livraison du restaurant affichés à part
+  (« hors ventes ») ; ceux de notre partenaire (mode Prestataire) n'apparaissent jamais ici.
+- **Contenu** : commandes, chiffre d'affaires, panier moyen, Orange / Moov / Telecel (ligne « Espèces (anciennes
+  commandes) » seulement s'il y en a), livraison / à emporter ; par provenance (Site = provenance vide, puis les
+  provenances du Patron, une provenance désactivée seulement si elle a servi) ; par agent, deux tableaux :
+  commandes saisies (`Order.createdByName`) et paiements vérifiés (premier passage à « Payée » dans l'historique,
+  parcours court compris), avec le délai moyen de vérification (toutes les commandes, celles du site seules) et le
+  plus long ; commandes annulées (étape, motif, qui). **Jamais** le nom ni le téléphone du client.
+- **Pages** : onglet « Ventes » de la page Tableau de bord (`/equipe/ventes`, un seul lien « Tableau de bord » dans
+  l'en-tête), page A4 à imprimer `/equipe/ventes/imprimer` (« Imprimer » puis « Enregistrer au format PDF »).
+  Excel : feuilles Résumé, Par provenance, Agents – saisies, Agents – vérifications, Annulées, Commandes.
+- **API** : `GET /api/staff/ventes?du=AAAA-MM-JJ&au=AAAA-MM-JJ`, `GET /api/staff/ventes/excel?du=…&au=…`.
+  Patron et Prestataire seulement ; Opérateur, Livreur et Responsable livraison refusés (`test/route-access.test.js`).
+  Interrupteur du Prestataire `VENTES` (ouvert sans ligne) : fermé, 403 `FONCTION_NON_INCLUSE` pour tout le monde.
 
 ## Parcours court et bon de commande (lot 1)
 

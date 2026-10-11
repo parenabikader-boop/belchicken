@@ -31,7 +31,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 3 | Supplément de nuit dans la grille des frais | En ligne depuis le 9 octobre 2026 (réglage « Supplément de nuit » éteint en production) |
 | 4 | Compte Prestataire au-dessus du Patron | En ligne depuis le 10 octobre 2026 (aucun compte Prestataire en production, tout ouvert) |
 | 5 | Livraison en deux modes (Restaurant / Prestataire) | Terminé : 5a, 5b, 5c en ligne depuis le 10 octobre 2026, 5d en ligne depuis le 11 octobre 2026 (production en mode Restaurant, réglage « Tournées et disponibilité » éteint, interrupteur `RELEVE` fermé, aucun Responsable livraison ni livreur de notre équipe : rien ne change en production) |
-| 6 | Ventes globales, par agent et par provenance, export Excel et PDF | À faire |
+| 6 | Ventes globales, par agent et par provenance, export Excel et PDF | Fait sur dev le 11 octobre 2026, essai et captures faits, **pas encore en ligne** (attend l'accord du client) |
 | 7 | Avis des clients | À faire |
 | 8 | Langue FR/EN sur le site client | À faire |
 | 9 | WhatsApp automatique (API Meta), deux numéros | À faire |
@@ -381,6 +381,30 @@ tout si l'interrupteur `RELEVE` est ouvert (fermé par défaut, ne cache le rele
 
 - Ventes globales, par agent et par provenance, avec le mode de paiement, par période.
 - Export Excel et PDF.
+
+Plan accepté par le client le 11 octobre 2026 (aucun schéma, aucune migration), avec ces réponses : frais de
+livraison du restaurant affichés à part (« hors ventes »), ceux de notre partenaire jamais ; onglet « Ventes » dans
+la page Tableau de bord plutôt qu'un lien de plus dans l'en-tête ; Excel sans nom ni téléphone du client ; délai de
+vérification sur toutes les commandes et sur celles du site seules. Interrupteur `VENTES` ouvert par défaut.
+
+**Avancement** :
+
+- [x] Serveur : `sales.js` (règles), `sales.service.js` (lecture seule), `sales-excel.js` (`exceljs`), adresses
+  `GET /api/staff/ventes` et `/ventes/excel` (Patron et Prestataire, `requireFeature('VENTES')`), interrupteur `VENTES`.
+  `feeCounted` du tableau de bord exporté (même règle des frais). Rien d'autre ne change.
+- [x] Pages : `frontend/src/staff/sales/` (page, vue, page A4), onglets `ChiffresTabs.jsx` (Tableau de bord / Ventes),
+  lien « Tableau de bord » de l'en-tête vers les ventes si seul `VENTES` est ouvert. Compilé.
+- [x] Tests : `sales.test.js` (11) et `route-access.test.js` (ventes refusées à l'Opérateur, au Livreur et au
+  Responsable livraison), 260 au total, tous passent.
+- [x] Essai de bout en bout sur dev (11 octobre), serveur local avec WhatsApp et alertes coupés, comptes d'essai à
+  part (« Essai6 … », Prestataire compris, codes calculés par le script, jamais affichés) : 9 commandes du jour par
+  l'API (site et agent, 4 provenances dont une nouvelle, vérifiées par 3 personnes, parcours court, 2 annulées, 1 à
+  vérifier, frais du restaurant et du partenaire) et 6 commandes antidatées : 86 vérifications sur 86 (chiffres
+  recalculés à part depuis la base pour 5 périodes, agents, délais, provenances, Excel, accès des 5 rôles, interrupteur
+  fermé). Dev remise comme avant (commandes, provenances, comptes, réglages, interrupteurs identiques à l'instantané) ;
+  seules restent 7 lignes du journal de sécurité (180 au lieu de 173, la base refuse de les effacer).
+- [x] Captures (12 images, 1 PDF, 1 fichier Excel) dans `C:\Users\HP\Desktop\belchiken\captures-lot6-ventes\`.
+- [ ] Accord du client, enregistrement Git, mise en ligne (aucune migration : rien à passer sur Render).
 
 ### 7. Avis des clients
 

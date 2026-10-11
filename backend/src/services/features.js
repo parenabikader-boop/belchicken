@@ -17,6 +17,8 @@ export const FEATURES = [
   { key: 'PRISE_COMMANDE_AGENT', label: 'Prise de commande par l’agent', help: 'Fermé : comme si le Patron l’avait éteinte. Les commandes déjà saisies gardent leur provenance.' },
   { key: 'SUPPLEMENT_NUIT', label: 'Supplément de nuit', help: 'Fermé : comme si le Patron l’avait éteint. Les commandes déjà passées gardent leurs frais.' },
   { key: 'TOURNEES_RESTAURANT', label: 'Tournées et disponibilité des livreurs du restaurant', help: 'Fermé : comme si le Patron l’avait éteint. Les livreurs du restaurant fonctionnent comme avant ; notre équipe de livraison n’est pas concernée.' },
+  // Lot 6 : ventes par période, provenance et agent (Patron et Prestataire), ouvert sans ligne
+  { key: 'VENTES', label: 'Ventes', help: 'Ventes par période, par provenance et par agent, avec l’export Excel et PDF (Patron).' },
   // Lot 5d : seul interrupteur fermé sans ligne (defaultOpen: false), et qui ne concerne que le Patron :
   // le Prestataire et le Responsable livraison voient toujours le relevé (le Responsable sans les conditions
   // du contrat ni le montant dû, statement.js).

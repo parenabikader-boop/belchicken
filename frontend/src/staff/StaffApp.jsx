@@ -25,6 +25,9 @@ import PrestatairePage from './prestataire/PrestatairePage.jsx';
 import DeliveryPage from './delivery/DeliveryPage.jsx';
 import StatementPage from './statement/StatementPage.jsx';
 import StatementPrint from './statement/StatementPrint.jsx';
+import SalesPage from './sales/SalesPage.jsx';
+import SalesPrint from './sales/SalesPrint.jsx';
+import { chiffresHome } from './dashboard/ChiffresTabs.jsx';
 import { FeatureClosed } from './FeatureGate.jsx';
 import InstallBanner from '../components/InstallBanner.jsx';
 import './staff.css';
@@ -113,6 +116,7 @@ function TeamRoutes() {
           <Route path="menu/categories/:id" element={<CategoryForm />} />
           <Route path="accueil" element={<HomeAdmin />} />
           <Route path="tableau-de-bord" element={<RequireFeature feature="TABLEAU_DE_BORD"><Dashboard /></RequireFeature>} />
+          <Route path="ventes" element={<RequireFeature feature="VENTES"><SalesPage /></RequireFeature>} />
           <Route path="equipe" element={<TeamPage />} />
           <Route path="frais-livraison" element={<RequireFeature feature="FRAIS_LIVRAISON"><DeliveryFeesPage /></RequireFeature>} />
           <Route path="reglages" element={<RequireFeature feature="REGLAGES"><SettingsPage /></RequireFeature>} />
@@ -125,6 +129,10 @@ function TeamRoutes() {
       </Route>
       {/* Lot 5d : relevé de livraison à imprimer ou enregistrer en PDF : page seule */}
       <Route path="releve/imprimer" element={<RequireStatement><StatementPrint /></RequireStatement>} />
+      {/* Lot 6 : ventes à imprimer ou enregistrer en PDF : page seule (Patron et Prestataire, VENTES ouvert) */}
+      <Route element={<RequirePatron />}>
+        <Route path="ventes/imprimer" element={<RequireFeature feature="VENTES"><SalesPrint /></RequireFeature>} />
+      </Route>
       {/* Bon de commande à imprimer : page seule, sans l'en-tête de l'espace équipe */}
       <Route path="commandes/:reference/bon" element={<OrderSlip />} />
       <Route path="*" element={<Navigate to="/equipe" replace />} />
@@ -225,6 +233,7 @@ function StaffShell() {
   const patron = isPatronLevel(user.role);
   const prestataire = user.role === 'PRESTATAIRE';
   const { pathname } = useLocation();
+  const chiffres = chiffresHome(hasFeature);
 
   // Chaque page s'ouvre en haut
   useEffect(() => {
@@ -247,7 +256,12 @@ function StaffShell() {
             {hasFeature('CAISSE') && <NavLink to="/equipe/caisse">Caisse</NavLink>}
             {patron && hasFeature('FRAIS_LIVRAISON') && <NavLink to="/equipe/frais-livraison"><span className="st-lg">Frais de livraison</span><span className="st-sm">Frais</span></NavLink>}
             {patron && <NavLink to="/equipe/accueil">Accueil</NavLink>}
-            {patron && hasFeature('TABLEAU_DE_BORD') && <NavLink to="/equipe/tableau-de-bord"><span className="st-lg">Tableau de bord</span><span className="st-sm">Chiffres</span></NavLink>}
+            {/* Lot 6 : un seul lien pour le tableau de bord et les ventes (onglets dans la page) */}
+            {patron && chiffres && (
+              <NavLink to={chiffres} className={() => (/^\/equipe\/(tableau-de-bord|ventes)/.test(pathname) ? 'active' : '')}>
+                <span className="st-lg">Tableau de bord</span><span className="st-sm">Chiffres</span>
+              </NavLink>
+            )}
             {patron && <NavLink to="/equipe/equipe">Équipe</NavLink>}
             {patron && hasFeature('REGLAGES') && <NavLink to="/equipe/reglages">Réglages</NavLink>}
             {prestataire && <NavLink to="/equipe/prestataire">Prestataire</NavLink>}

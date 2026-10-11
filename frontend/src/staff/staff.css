@@ -1054,3 +1054,14 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .ct-row .pr-confirm{flex-basis:100%}
 .ct-form{display:grid;gap:12px}
 @media (max-width:640px){.ct-form .fields{grid-template-columns:1fr}}
+
+/* Lot 6 : ventes (reprend la mise en page du relevé, .rl-*) */
+.ct-tabs{margin-top:-6px}
+.sv-two{display:grid;gap:18px;min-width:0}
+@media (min-width:900px){.sv-two{grid-template-columns:1fr 1fr}}
+.rl-sheet .sv-two{grid-template-columns:1fr 1fr}
+.ct-tabs .od-tab{text-decoration:none}
+.sv td b{overflow-wrap:normal}
+.sv .rl-table td:first-child{white-space:nowrap}
+.sv-methods span{display:block;white-space:nowrap;font-size:13px}
+.sv-methods small{color:var(--muted)}

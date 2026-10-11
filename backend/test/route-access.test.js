@@ -130,3 +130,12 @@ test('lot 5d : relevé et conditions du contrat, chacun ses droits', () => {
     for (const role of ['PATRON', 'RESPONSABLE_LIVRAISON', 'OPERATEUR', 'LIVREUR']) assert.equal(allowed(get(p), role), false, `${p} ${role}`);
   }
 });
+
+test('lot 6 : ventes réservées au Patron et au Prestataire (jamais Opérateur, Livreur ni Responsable livraison)', () => {
+  const list = ROUTES.filter((r) => r.path === '/ventes' || r.path.startsWith('/ventes/'));
+  assert.deepEqual(list.map(key).sort(), ['GET /ventes', 'GET /ventes/excel']);
+  for (const r of list) {
+    for (const role of ['PATRON', 'PRESTATAIRE']) assert.equal(allowed(r, role), true, `${key(r)} ${role}`);
+    for (const role of ['OPERATEUR', 'LIVREUR', 'RESPONSABLE_LIVRAISON']) assert.equal(allowed(r, role), false, `${key(r)} ouverte à ${role}`);
+  }
+});
