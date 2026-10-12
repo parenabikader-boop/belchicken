@@ -32,7 +32,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 4 | Compte Prestataire au-dessus du Patron | En ligne depuis le 10 octobre 2026 (aucun compte Prestataire en production, tout ouvert) |
 | 5 | Livraison en deux modes (Restaurant / Prestataire) | Terminé : 5a, 5b, 5c en ligne depuis le 10 octobre 2026, 5d en ligne depuis le 11 octobre 2026 (production en mode Restaurant, réglage « Tournées et disponibilité » éteint, interrupteur `RELEVE` fermé, aucun Responsable livraison ni livreur de notre équipe : rien ne change en production) |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | En ligne depuis le 11 octobre 2026 (enregistrement `6c005ce`, aucune migration, interrupteur `VENTES` ouvert : le Patron voit l'onglet « Ventes ») |
-| 7 | Avis des clients | Fait sur dev le 11 octobre 2026 (migration passée sur dev, essai et captures faits) : en attente de l’accord du client avant la mise en ligne |
+| 7 | Avis des clients | Terminé : en ligne le 12 octobre 2026, réglage « Demander l’avis des clients » éteint en production |
 | 8 | Langue FR/EN sur le site client | À faire |
 | 9 | WhatsApp automatique (API Meta), deux numéros | À faire |
 | 10 | Application Play Store | À faire |
@@ -462,7 +462,16 @@ non modifiable ; la base laisse passer seulement le rappel et le lien vidé à l
 - [x] Accord du client sur les captures (12 octobre), sauvegarde Neon `sauvegarde-lot7` (faite et vérifiée par le
   client), tests (278) et construction relancés, migration relue (aucune donnée écrite, `reviewsEnabled` éteint par
   défaut).
-- [ ] Enregistrement, mise en ligne.
+- [x] Enregistrement `2b2ddba`, mise en ligne le 12 octobre 2026 (Render à jour en ~1 min). Vérifié après la mise en
+  ligne, sans rien écrire en production : `/api/staff/avis`, `/api/staff/avis/commande/…` et
+  `/api/staff/livraison/avis` répondent 401 (connexion demandée) au lieu de 404, aussi par le site Vercel ; un lien
+  d’avis inconnu répond « Ce lien d’avis n’existe pas » (la colonne de la migration existe donc en production) ; santé,
+  menu, codes ECOFOOD et accueil identiques octet pour octet à avant ; espace équipe protégé (401) ; site Vercel à jour
+  (page `/avis/…` dans son code). Migration non vérifiée dans le tableau de bord de Render.
+  En production : réglage « Demander l’avis des clients » **éteint** (valeur par défaut de la migration), aucune ligne
+  `AVIS` = ouvert. Rien ne change pour les clients tant que le Patron n’allume pas le réglage.
+
+**Lot 7 terminé le 12 octobre 2026.**
 
 ### 8. Langue FR/EN
 
