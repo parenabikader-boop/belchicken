@@ -63,6 +63,7 @@ Lots de la feuille de route :
 
 ## Règles
 
+- Ne JAMAIS envoyer sur GitHub (git push) sans l'accord écrit du client dans le message en cours : chaque envoi met le site en ligne.
 - **Ne jamais tester sur la base de production.** Les essais, migrations et serveurs locaux utilisent seulement la branche Neon « dev ». Avant tout essai, regarder le nom du serveur dans `backend/.env` (afficher seulement le nom du serveur, jamais l'adresse complète ni le mot de passe). S'il s'agit du serveur de production, ou en cas de doute, prévenir le client et s'arrêter. Serveurs Neon (vérifiés par le client le 5 octobre 2026) : **dev** = `ep-nameless-band-b4vetndd` (seul autorisé en local) ; **production** = `ep-damp-lab-b44k8hrf` (Render seulement, jamais en local).
 - **Ne jamais afficher `DATABASE_URL` ni `DIRECT_URL`, même en partie** (pas de `grep`, `cat` ou `sed` sur ces lignes de `backend/.env`, ni dans les journaux) : seulement le nom du serveur (ex. `ep-nameless-band-b4vetndd`), lu par un petit script qui découpe l'adresse (`new URL(...).hostname.split('.')[0]`) et n'imprime rien d'autre. Le 10 octobre 2026, une commande mal filtrée a affiché l'adresse complète de dev dans la conversation ; le client a changé les mots de passe Neon de dev et de production.
 - **Règle absolue Prisma (depuis le 9 octobre 2026, la base dev a été vidée par erreur ce jour-là) :**
