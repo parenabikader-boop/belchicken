@@ -19,7 +19,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 - backend : Node.js 20+, Express, Prisma 6, PostgreSQL (Neon), Zod. Port 3006. Déploiement Render.
 - frontend : React + Vite. Port 5173. Déploiement Vercel.
 - Tout le texte visible par les clients est en français.
-- `npm run dev` à la racine lance les deux ; `npm test` dans `backend/` (278 tests au 11 octobre 2026).
+- `npm run dev` à la racine lance les deux ; `npm test` dans `backend/` (283 tests au 12 octobre 2026).
 
 ## État actuel (12 octobre 2026)
 

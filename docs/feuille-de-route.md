@@ -459,6 +459,14 @@ non modifiable ; la base laisse passer seulement le rappel et le lien vidé à l
   lot 7 : la lecture du détail (`getOrder`) n’a pas changé, l’avis est lu par une requête à part dont l’échec ne
   bloque jamais le détail. `P1017` n’est pas dans les codes réessayés par `db-retry.js` ; le détail se recharge tout
   seul toutes les 5 s. Piste proposée, à faire plus tard et à part : réessayer `P1017` pour les lectures seulement.
+- [x] Réessai des lectures après `P1017` (12 octobre, à part du lot 7, aucune migration) : une lecture (`READ_OPERATIONS`)
+  est réessayée tout de suite, 10 fois au plus ; jamais un enregistrement ni une requête écrite à la main. 283 tests.
+  Essais sur dev, en lecture seule : (1) trois pauses de 7 min sans activité, avec et sans durée de vie de 1 min des
+  connexions inutilisées (`max_idle_connection_lifetime=60`) : aucune coupure dans les deux cas, la mise en veille seule
+  ne la provoque pas ici ; la durée de vie de 1 min n'a donc rien montré et **n'est pas ajoutée**. (2) Relais local coupé
+  entre deux lectures : même erreur `P1017` que pendant l'essai du lot 7 ; avec 5 connexions coupées, un seul réessai ne
+  suffisait pas (d'où 10), la lecture réussit au 6e essai, 3 tours sur 3 ; une requête écrite à la main (`SELECT 1`)
+  n'est pas réessayée. Pas encore enregistré ni mis en ligne.
 - [x] Accord du client sur les captures (12 octobre), sauvegarde Neon `sauvegarde-lot7` (faite et vérifiée par le
   client), tests (278) et construction relancés, migration relue (aucune donnée écrite, `reviewsEnabled` éteint par
   défaut).
@@ -493,6 +501,9 @@ Chaque point se fait avec l'accord du client, et chaque action sur la production
   menu, les photos, les comptes de l'équipe, les réglages, la grille des frais ni les provenances. Le script affiche
   d'abord ce qu'il va supprimer (nombre de commandes, références) et attend une confirmation ; sauvegarde Neon juste avant.
 - [ ] **Passer Render en offre Starter** (le serveur ne s'endort plus : pas d'attente au premier client du matin).
+- [ ] **Passer Neon en offre payante** pour désactiver la mise en veille de la base de production (offre gratuite :
+  veille après 5 minutes sans requête, qui ferme les connexions ouvertes, erreur `P1017` ; les lectures sont réessayées
+  depuis le 12 octobre 2026, pas les enregistrements).
 - [x] **Changer le mot de passe Neon de production**, puis mettre à jour `DATABASE_URL` sur Render : fait par le client le
   10 octobre 2026 (dev et production, `backend/.env` et Render mis à jour ; dev et production répondent).
 - [ ] **Nettoyer les variables Render** : retirer celles qui ne servent plus ou d'essai, vérifier les autres

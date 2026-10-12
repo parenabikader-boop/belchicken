@@ -476,6 +476,10 @@ Un déploiement n'écrase donc jamais les prix, photos et disponibilités chang�
 
 Réveil de Neon : pendant que la base se réveille, le serveur réessaie les requêtes qui n'ont pas pu la joindre
 (`withDbRetry()` dans `src/lib/db-retry.js`, après 1 s, 2 s puis 4 s), sans risque d'enregistrer une commande deux fois.
+Connexion fermée par Neon (`P1017`, par exemple à la mise en veille de la base) : une **lecture** est réessayée tout de
+suite, 10 fois au plus (`READ_OPERATIONS`, `CLOSED_RETRIES`) : Prisma garde plusieurs connexions et ne jette une connexion
+coupée qu'en tombant dessus. Un **enregistrement** jamais, car on ne sait pas s'il a été gardé (risque de double).
+Le journal du serveur l'indique : « [base] … connexion fermée par Neon, nouvel essai ».
 Délai des transactions Prisma : 15 s pour tout le serveur (`TRANSACTION_TIMEOUT_MS`, `src/lib/prisma.js`).
 Régions d'après la configuration : Render en Ohio (`render.yaml`), Neon dev en us-east-2 (production : même projet,
 à confirmer dans Neon et Render).
