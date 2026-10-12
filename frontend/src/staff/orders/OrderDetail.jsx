@@ -100,6 +100,8 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
           {isPickup(o) && <span className="st-pill p-EMPORTER">À emporter</span>}
           {/* Lot 5 : livrée par notre équipe, frais sur les codes du Prestataire */}
           {o.deliveryOperator === 'PRESTATAIRE' && <span className="st-pill p-PRESTATAIRE">Livraison Prestataire</span>}
+          {/* Lot 8 : commande passée sur le site en anglais (les messages WhatsApp restent en français) */}
+          {o.language === 'EN' && <span className="st-pill p-ANGLAIS" title="Commande passée sur le site en anglais">Client anglophone</span>}
           <span className={`st-pill p-${o.status}`}>{statusLabel(o)}</span>
         </span>
         {/* Bon de commande à imprimer (caisse, puis cuisine), dans les deux parcours */}

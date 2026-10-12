@@ -33,7 +33,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 5 | Livraison en deux modes (Restaurant / Prestataire) | Terminé : 5a, 5b, 5c en ligne depuis le 10 octobre 2026, 5d en ligne depuis le 11 octobre 2026 (production en mode Restaurant, réglage « Tournées et disponibilité » éteint, interrupteur `RELEVE` fermé, aucun Responsable livraison ni livreur de notre équipe : rien ne change en production) |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | En ligne depuis le 11 octobre 2026 (enregistrement `6c005ce`, aucune migration, interrupteur `VENTES` ouvert : le Patron voit l'onglet « Ventes ») |
 | 7 | Avis des clients | Terminé : en ligne le 12 octobre 2026, réglage « Demander l’avis des clients » éteint en production |
-| 8 | Langue FR/EN sur le site client | À faire |
+| 8 | Langue FR/EN sur le site client | Fait sur dev le 12 octobre 2026, en attente de l’accord du client (réglage « Site en anglais » éteint par défaut) |
 | 9 | WhatsApp automatique (API Meta), deux numéros | À faire |
 | 10 | Application Play Store | À faire |
 
@@ -484,6 +484,26 @@ non modifiable ; la base laisse passer seulement le rappel et le lien vidé à l
 ### 8. Langue FR/EN
 
 - Sur le site client, français par défaut.
+
+Décisions du client (12 octobre 2026) : seul le site client passe en anglais (espace équipe en français) ; messages
+WhatsApp en français (aucun nouveau modèle Meta) ; noms et descriptions des plats, catégories et boissons tels qu'en
+base ; tout le reste du site client traduit, y compris les erreurs du serveur (d'après leur code) ; français par
+défaut, bouton FR / EN bien visible, choix retenu. **Pas d'anglais automatique** selon la langue du téléphone.
+**Langue notée sur la commande**, avec la mention « Client anglophone » dans le détail de la commande.
+
+Fait sur dev (voir README « Langue du site client, FR/EN ») :
+
+- [x] Migration `20261012120000_langue_site` écrite sans base, relue par le client, appliquée sur dev avec son accord
+  (`db:deploy`) ; données d'avant vérifiées intactes en lecture seule (empreinte de chaque table).
+- [x] Réglage du Patron « Site en anglais » (`AppSettings.englishSite`, éteint) et interrupteur `ANGLAIS` (ouvert sans
+  ligne) ; `GET /api/site` ; `Order.language` et pastille « Client anglophone ».
+- [x] Textes `frontend/src/i18n/fr.js` et `en.js`, contrôle `npm run langues`. Tests : 288 (283 + 5).
+- [x] Captures FR AVANT / APRÈS (réglage éteint) : 14 pages sur téléphone, texte et pixels identiques.
+- [x] Essai complet sur dev en anglais : commande livrée (paiement, frais, en route, livrée, avis), commande à emporter
+  (prête, retirée), commande française annulée, erreurs du serveur traduites (`erreurs-serveur-fr-en.txt`). Dev remis
+  dans son état d'avant (commandes et session d'essai supprimées, réglages remis ; chaque table identique à avant).
+- [x] Captures (39 fichiers) dans `C:\Users\HP\Desktop\belchiken\captures-lot8-langue\`.
+- [ ] Accord du client sur les captures, sauvegarde Neon, enregistrement Git et mise en ligne (STOP).
 
 ### 9. WhatsApp automatique
 

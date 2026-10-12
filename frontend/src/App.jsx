@@ -7,6 +7,7 @@ import Commande from './pages/Commande.jsx';
 import Valider from './pages/Valider.jsx';
 import Confirmation from './pages/Confirmation.jsx';
 import Infos from './pages/Infos.jsx';
+import { LanguageProvider } from './i18n/index.jsx';
 
 // Espace équipe : fichier séparé, téléchargé seulement en allant sur /equipe
 const StaffApp = lazy(() => import('./staff/StaffApp.jsx'));
@@ -17,8 +18,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="equipe/*" element={<Suspense fallback={null}><StaffApp /></Suspense>} />
-      <Route path="avis/:token" element={<Suspense fallback={null}><Review /></Suspense>} />
-      <Route element={<Layout />}>
+      {/* Lot 8 : français ou anglais sur le site client seulement (l'espace équipe reste en français) */}
+      <Route path="avis/:token" element={<LanguageProvider><Suspense fallback={null}><Review /></Suspense></LanguageProvider>} />
+      <Route element={<LanguageProvider><Layout /></LanguageProvider>}>
         <Route index element={<Home />} />
         <Route path="menu/:categorie?" element={<Menu />} />
         <Route path="commande" element={<Commande />} />

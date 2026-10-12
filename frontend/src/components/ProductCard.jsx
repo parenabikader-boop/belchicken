@@ -2,11 +2,14 @@ import { useCart } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils/format.js';
 import { displayPrice, isMultiSize, priceSub } from '../utils/product.js';
 import { isWide, photoBg, sizedPhoto } from '../utils/visuals.js';
+import { useT } from '../i18n/index.jsx';
 
 // layout : 'big' (burgers, wraps, salades), 'wide' (plateaux et box, composition visible),
 // 'row' (extras, liste compacte) ou 'std' (poulet)
 export default function ProductCard({ product: p, onOpen, layout = 'std' }) {
   const { lines } = useCart();
+  const t = useT();
+  const T = t.card;
   const added = lines.filter((l) => l.productId === p.id).reduce((s, l) => s + l.quantity, 0);
   const sub = priceSub(p, formatPrice);
   const off = !p.isAvailable;
@@ -14,14 +17,14 @@ export default function ProductCard({ product: p, onOpen, layout = 'std' }) {
   const isMenu = p.variants[0].code === 'menu';
 
   let flag = null;
-  if (off) flag = <span className="flag off">Indisponible</span>;
-  else if (added) flag = <span className="flag in">{added} ajouté{added > 1 ? 's' : ''}</span>;
-  else if (p.isSpicy) flag = <span className="flag hot">Épicé</span>;
+  if (off) flag = <span className="flag off">{t.common.unavailable}</span>;
+  else if (added) flag = <span className="flag in">{T.added(added)}</span>;
+  else if (p.isSpicy) flag = <span className="flag hot">{t.common.spicy}</span>;
 
-  const price = <b>{isMultiSize(p) ? 'Dès ' : ''}{formatPrice(displayPrice(p))}</b>;
+  const price = <b>{isMultiSize(p) ? T.from : ''}{formatPrice(displayPrice(p))}</b>;
   const addButton = (
-    <button className="add" onClick={open} disabled={off} aria-label={off ? `${p.name} indisponible` : `Ajouter ${p.name}`}>
-      {off ? 'Indisponible' : 'Ajouter'}
+    <button className="add" onClick={open} disabled={off} aria-label={off ? T.unavailableAria(p.name) : T.addAria(p.name)}>
+      {off ? t.common.unavailable : T.add}
     </button>
   );
 
@@ -29,7 +32,7 @@ export default function ProductCard({ product: p, onOpen, layout = 'std' }) {
     return (
       <article className={`xrow${off ? ' off' : ''}`} aria-disabled={off || undefined}>
         <div className="xph" style={p.imageUrl ? { background: photoBg(p.imageUrl) } : undefined} onClick={open}>
-          {p.imageUrl ? <img {...sizedPhoto(p.imageUrl, 'row')} alt="" loading="lazy" /> : <span>Photo à venir</span>}
+          {p.imageUrl ? <img {...sizedPhoto(p.imageUrl, 'row')} alt="" loading="lazy" /> : <span>{T.photoSoon}</span>}
         </div>
         <div className="xbody">
           <h4>{p.name}</h4>
@@ -49,9 +52,9 @@ export default function ProductCard({ product: p, onOpen, layout = 'std' }) {
       <div className="ph" style={p.imageUrl ? { background: photoBg(p.imageUrl) } : undefined} onClick={open}>
         {p.imageUrl
           ? <img {...sizedPhoto(p.imageUrl, 'card')} alt={p.name} loading="lazy" className={isWide(p.imageUrl) ? 'wide' : undefined} />
-          : <div className="noimg">Photo à venir</div>}
+          : <div className="noimg">{T.photoSoon}</div>}
       </div>
-      {p.number != null && <span className="num">N° {p.number}</span>}
+      {p.number != null && <span className="num">{t.common.number(p.number)}</span>}
       {flag}
       <div className="body">
         <h4>{p.name}</h4>
@@ -62,7 +65,7 @@ export default function ProductCard({ product: p, onOpen, layout = 'std' }) {
         )}
         <div className="foot">
           <div className="price">
-            {layout === 'big' && isMenu && <small className="lbl">Menu</small>}
+            {layout === 'big' && isMenu && <small className="lbl">{T.menuLabel}</small>}
             {price}
             {sub && <small>{sub}</small>}
           </div>

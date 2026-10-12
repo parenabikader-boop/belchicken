@@ -23,7 +23,7 @@ export const whatsappHref = (phone, text) =>
   `https://wa.me/${phone.replace(/\D/g, '')}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
 
 // Horaires (heure de Ouagadougou = UTC toute l'année) : dimanche à jeudi 6 h – 23 h,
-// vendredi et samedi 24 h/24
+// vendredi et samedi 24 h/24. Texte affiché sur le site : i18n/fr.js et en.js (restaurant.hours).
 export const HOURS = [
   { days: 'Dimanche – jeudi', time: '6 h – 23 h' },
   { days: 'Vendredi – samedi', time: '24 h/24' },
@@ -34,18 +34,18 @@ const CLOSES = 23;
 
 const isOpenAt = (day, hour) => OPEN_ALL_DAY.includes(day) || (hour >= OPENS && hour < CLOSES);
 
-// Bandeau du haut : { open, text }
-export function openStatus(now = new Date()) {
+// Bandeau du haut : { open, key, hour }. Le texte est dans i18n/fr.js et en.js (layout.status[key]).
+export function openState(now = new Date()) {
   const day = now.getUTCDay();
   const hour = now.getUTCHours();
   if (isOpenAt(day, hour)) {
     if (OPEN_ALL_DAY.includes(day)) {
       // Samedi : ouvert jusqu'à minuit, puis réouverture dimanche à 6 h
-      return { open: true, text: day === 6 ? 'ouvert 24 h/24 aujourd’hui, jusqu’à minuit' : 'ouvert 24 h/24 aujourd’hui' };
+      return { open: true, key: day === 6 ? 'allDaySaturday' : 'allDay' };
     }
     // Jeudi soir : fermeture à 23 h, réouverture à minuit (vendredi 24 h/24)
-    return { open: true, text: `jusqu’à ${CLOSES} h` };
+    return { open: true, key: 'until', hour: CLOSES };
   }
   // Fermé : jeudi de 23 h à minuit (réouverture à minuit), sinon réouverture à 6 h
-  return { open: false, text: day === 4 && hour >= CLOSES ? 'réouverture à minuit' : `réouverture à ${OPENS} h` };
+  return day === 4 && hour >= CLOSES ? { open: false, key: 'midnight' } : { open: false, key: 'reopen', hour: OPENS };
 }

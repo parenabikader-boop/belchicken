@@ -2,23 +2,22 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { TunnelHead } from '../components/PageParts.jsx';
-import { DIRECTIONS_URL, HOURS, RESTAURANT } from '../restaurant.js';
+import { DIRECTIONS_URL, RESTAURANT } from '../restaurant.js';
 import PayCode from '../components/PayCode.jsx';
 import { useCart, useCartDetails } from '../context/CartContext.jsx';
 import { useMenu } from '../context/MenuContext.jsx';
-import { formatPrice, plural } from '../utils/format.js';
+import { formatPrice } from '../utils/format.js';
 import { fillCode, MOBILE_MONEY, usePaymentCodes } from '../utils/payment.js';
-import { FEE_PAID_TO_COURIER, FEE_TO_CONFIRM, feeLabel, hourLabel, nightLine, normalize } from '../utils/deliveryFee.js';
+import { normalize } from '../utils/deliveryFee.js';
+import { Rich, useLang } from '../i18n/index.jsx';
 
 const DRAFT_KEY = 'belchicken.infos.v1';
 // zone : quartier choisi dans la grille des frais ({ id, name }) ; other : « Autre quartier »
 const EMPTY = { name: '', phone: '', method: null, payer: '', mode: 'LIVRAISON', addr: '', geo: null, zone: null, other: false };
 
-// Livraison à domicile, ou à emporter (retrait au restaurant, sans frais de livraison)
-const MODES = [
-  { id: 'LIVRAISON', label: 'Livraison', sub: 'Chez vous ou au bureau, frais selon le quartier' },
-  { id: 'A_EMPORTER', label: 'À emporter', sub: 'Vous retirez la commande au restaurant, sans frais' },
-];
+// Livraison à domicile, ou à emporter (retrait au restaurant, sans frais de livraison).
+// Libellés : i18n, checkout.modes
+const MODES = [{ id: 'LIVRAISON' }, { id: 'A_EMPORTER' }];
 
 const METHODS = MOBILE_MONEY;
 
@@ -74,26 +73,26 @@ function isPhone(value) {
   return intl && !digits.startsWith('226') && digits.length >= 10 && digits.length <= 15;
 }
 
-function validate(f, grid) {
+function validate(f, grid, C) {
   const fields = {};
   const summary = [];
   const fail = (key, msg, short) => {
     if (key) fields[key] = msg;
     summary.push(short || msg);
   };
-  if (f.name.trim().length < 2) fail('name', 'Indiquez votre nom complet.');
-  if (!isPhone(f.phone)) fail('phone', 'Indiquez un numéro WhatsApp valide.');
-  if (!f.method) fail('method', 'Choisissez votre opérateur mobile money.', 'Choisissez le moyen de paiement.');
+  if (f.name.trim().length < 2) fail('name', C.errName);
+  if (!isPhone(f.phone)) fail('phone', C.errPhone);
+  if (!f.method) fail('method', C.errMethod, C.errMethodShort);
   {
-    if (!isPhone(f.payer)) fail('payer', 'Indiquez le numéro ayant payé.');
+    if (!isPhone(f.payer)) fail('payer', C.errPayer);
   }
   // Grille des frais remplie : le client choisit son quartier (ou « Autre quartier »), ou partage sa position
   if (f.mode === 'LIVRAISON' && grid?.active && !f.zone && !f.other && !(f.geo && grid.gps)) {
-    fail('zone', grid.gps ? 'Choisissez votre quartier ou partagez votre position.' : 'Choisissez votre quartier.', 'Choisissez votre quartier.');
+    fail('zone', grid.gps ? C.errZoneGps : C.errZone, C.errZone);
   }
   if (f.mode === 'LIVRAISON' && !f.geo && f.addr.trim().length < 5) {
-    fields.geo = 'Partagez votre position ou indiquez votre quartier et un repère.';
-    fail('addr', 'Indiquez au moins un quartier et un repère.', 'Indiquez votre lieu de livraison.');
+    fields.geo = C.errGeo;
+    fail('addr', C.errAddr, C.errAddrShort);
   }
   return { fields, summary };
 }
@@ -117,6 +116,8 @@ const PinIcon = () => (
 
 // Liste des quartiers de la grille, avec recherche, et « Autre quartier » si le Patron le propose
 function ZonePicker({ grid, form, onPick, error }) {
+  const { t } = useLang();
+  const C = t.checkout;
   const [q, setQ] = useState('');
   const search = normalize(q);
   const zones = grid.zones.filter((z) => normalize(z.name).includes(search));
@@ -124,11 +125,11 @@ function ZonePicker({ grid, form, onPick, error }) {
   const isNight = Boolean(grid.night?.isNight);
   return (
     <div className={`zone${error ? ' bad' : ''}`}>
-      <label htmlFor="c-zone-q" className="zone-l">Votre quartier {!grid.gps && <i>*</i>}</label>
-      <span className="hint">{grid.gps ? 'Choisissez votre quartier, ou partagez votre position ci-dessous : les frais suivent alors la distance.' : 'Les frais de livraison dépendent du quartier.'}</span>
-      {isNight && <span className="hint night-hint">Supplément de nuit compris dans les prix, de {hourLabel(grid.night.from)} à {hourLabel(grid.night.to)}.</span>}
-      <input id="c-zone-q" type="search" className="zone-q" placeholder="Rechercher votre quartier" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" aria-controls="c-zone-list" />
-      <div className="zone-list" id="c-zone-list" role="radiogroup" aria-label="Quartier" aria-describedby={error ? 'c-zone-err' : undefined}>
+      <label htmlFor="c-zone-q" className="zone-l">{C.zoneLabel}{!grid.gps && <i>*</i>}</label>
+      <span className="hint">{grid.gps ? C.zoneHintGps : C.zoneHint}</span>
+      {isNight && <span className="hint night-hint">{C.nightHint(t.fees.hour(grid.night.from), t.fees.hour(grid.night.to))}</span>}
+      <input id="c-zone-q" type="search" className="zone-q" placeholder={C.zoneSearch} value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" aria-controls="c-zone-list" />
+      <div className="zone-list" id="c-zone-list" role="radiogroup" aria-label={C.zoneAria} aria-describedby={error ? 'c-zone-err' : undefined}>
         {zones.map((z) => {
           const on = form.zone?.id === z.id;
           const night = isNight ? z.nightFee || 0 : 0;
@@ -136,17 +137,17 @@ function ZonePicker({ grid, form, onPick, error }) {
           return (
             <button key={z.id} type="button" role="radio" aria-checked={on} className={`zone-opt${on ? ' on' : ''}`} onClick={() => onPick(on ? null : { id: z.id, name: z.name }, false)}>
               <span className="rd" aria-hidden="true" />
-              <span className="zone-n">{z.name}{night > 0 && <small>{nightLine(night)}</small>}</span>
-              <b className={fee === 0 ? 'free' : undefined}>{feeLabel(fee)}</b>
+              <span className="zone-n">{z.name}{night > 0 && <small>{t.fees.nightLine(night)}</small>}</span>
+              <b className={fee === 0 ? 'free' : undefined}>{t.fees.feeLabel(fee)}</b>
             </button>
           );
         })}
-        {!zones.length && <p className="zone-none">Aucun quartier ne correspond à « {q.trim()} ».{grid.allowOther ? ' Choisissez « Autre quartier ».' : ''}</p>}
+        {!zones.length && <p className="zone-none">{C.zoneNone(q.trim(), grid.allowOther)}</p>}
         {grid.allowOther && (
           <button type="button" role="radio" aria-checked={form.other} className={`zone-opt other${form.other ? ' on' : ''}`} onClick={() => onPick(null, !form.other)}>
             <span className="rd" aria-hidden="true" />
-            <span className="zone-n">Autre quartier<small>Vous ne trouvez pas le vôtre dans la liste</small></span>
-            <b>À confirmer</b>
+            <span className="zone-n">{C.otherZone}<small>{C.otherZoneSub}</small></span>
+            <b>{C.toConfirm}</b>
           </button>
         )}
       </div>
@@ -155,27 +156,29 @@ function ZonePicker({ grid, form, onPick, error }) {
   );
 }
 
-const km = (d) => `environ ${String(d).replace('.', ',')} km du restaurant`;
-
 // Frais de livraison dans le récapitulatif, avant la validation
 function FeeSummary({ grid, quote }) {
-  let value = grid.gps ? 'Choisissez votre quartier ou partagez votre position' : 'Choisissez votre quartier';
-  let note = FEE_PAID_TO_COURIER;
+  const { t } = useLang();
+  const C = t.checkout;
+  const { km } = C;
+  const paid = t.fees.paidToCourier;
+  let value = grid.gps ? C.feeChooseGps : C.feeChoose;
+  let note = paid;
   let night = null; // lot 3 : « dont 500 F de supplément de nuit »
-  if (quote?.loading) value = 'Calcul…';
-  else if (quote?.error) [value, note] = ['Indisponibles', quote.error];
+  if (quote?.loading) value = C.feeLoading;
+  else if (quote?.error) [value, note] = [C.feeUnavailable, quote.error];
   else if (quote?.source === 'A_CONFIRMER') {
-    value = 'À confirmer';
-    note = `${FEE_TO_CONFIRM}${quote.distanceKm != null ? ` (${km(quote.distanceKm)})` : ''}${grid.night?.isNight ? ', supplément de nuit compris' : ''}. ${FEE_PAID_TO_COURIER}`;
+    value = C.toConfirm;
+    note = `${t.fees.toConfirm}${quote.distanceKm != null ? ` (${km(quote.distanceKm)})` : ''}${grid.night?.isNight ? C.feeNightIncluded : ''}. ${paid}`;
   } else if (quote && quote.fee != null) {
-    value = feeLabel(quote.fee);
-    if (quote.nightFee) night = nightLine(quote.nightFee);
+    value = t.fees.feeLabel(quote.fee);
+    if (quote.nightFee) night = t.fees.nightLine(quote.nightFee);
     const where = quote.zoneName || (quote.distanceKm != null ? km(quote.distanceKm) : '');
-    note = quote.fee === 0 ? `${where ? `${where} : ` : ''}rien à payer au livreur.` : `${where ? `${where}. ` : ''}${FEE_PAID_TO_COURIER}`;
+    note = quote.fee === 0 ? `${where ? `${where} : ` : ''}${C.feeNothing}` : `${where ? `${where}. ` : ''}${paid}`;
   }
   return (
     <div className="sum-fee" aria-live="polite">
-      <div><span>Frais de livraison</span><b className={quote?.fee === 0 ? 'free' : undefined}>{value}</b></div>
+      <div><span>{t.common.deliveryFee}</span><b className={quote?.fee === 0 ? 'free' : undefined}>{value}</b></div>
       {night && <div className="sum-night"><span>{night}</span></div>}
       <p>{note}</p>
     </div>
@@ -184,27 +187,26 @@ function FeeSummary({ grid, quote }) {
 
 // Après le choix de l'opérateur : le code marchand avec le montant des plats déjà rempli
 function PayStep({ method, total, payment }) {
+  const { t } = useLang();
+  const C = t.checkout;
   if (!method) {
-    return <p className="pay-hint">Choisissez votre opérateur : le code de paiement s’affiche avec le montant déjà rempli.</p>;
+    return <p className="pay-hint">{C.payHint}</p>;
   }
   if (payment.error) {
     return (
       <div className="alert err pay-how" role="alert">
-        <span>Le code de paiement n’a pas pu être chargé. <button type="button" className="lnk" onClick={payment.retry}>Réessayer</button></span>
+        <span>{C.payLoadFailed}<button type="button" className="lnk" onClick={payment.retry}>{t.common.retry}</button></span>
       </div>
     );
   }
-  if (!payment.data) return <p className="pay-hint">Chargement du code de paiement…</p>;
+  if (!payment.data) return <p className="pay-hint">{C.payLoading}</p>;
   const op = payment.data.operators.find((o) => o.method === method);
   return (
     <div className="pay-step">
-      <p className="pay-step-t">Payez <b>{formatPrice(total)}</b> par {op.label} avec ce code&nbsp;:</p>
+      <p className="pay-step-t"><Rich text={C.payWith} amount={formatPrice(total)} operator={op.label} /></p>
       <PayCode code={fillCode(op.code, total)} />
       <div className="alert info pay-how">
-        <span>
-          Votre confirmation affichera le nom <b>{payment.data.merchantName}</b> : c’est bien le compte de Belchicken. Paiement sans frais.
-          Une fois payé, indiquez ci-dessous le numéro qui a payé : votre commande est préparée dès que le paiement est vérifié.
-        </span>
+        <span><Rich text={C.payMerchant} merchant={payment.data.merchantName} /></span>
       </div>
     </div>
   );
@@ -214,8 +216,15 @@ export default function Valider() {
   const navigate = useNavigate();
   const { lines } = useCart();
   const { items, total, ready } = useCartDetails();
-  const { status, error: menuError, reload } = useMenu();
+  const { status, error: menuError, reload, products } = useMenu();
   const payment = usePaymentCodes();
+  const { t, lang, enabled: langEnabled } = useLang();
+  const C = t.checkout;
+  // Erreurs du serveur dans la langue du site : le plat en cause est nommé d'après le menu chargé
+  const errorText = (err) => t.error(err, {
+    productName: (id) => products.get(id)?.name,
+    nameAt: (i) => products.get(lines[i]?.productId)?.name,
+  });
   const [form, setForm] = useState(readDraft);
   const [errors, setErrors] = useState({});
   const [alert, setAlert] = useState('');
@@ -328,7 +337,7 @@ export default function Valider() {
       (q) => alive && setQuote(q),
       (e) => {
         if (!alive) return;
-        setQuote({ error: e.message });
+        setQuote({ error: errorText(e) });
         if (e.code === 'FRAIS_LIVRAISON') loadGrid(); // quartier retiré entre-temps
       },
     );
@@ -344,20 +353,22 @@ export default function Valider() {
 
   const submit = async () => {
     if (sending) return;
-    const { fields, summary } = validate(form, gridOn ? grid : null);
+    const { fields, summary } = validate(form, gridOn ? grid : null, C);
     if (gridOn && quote?.error && !fields.zone) {
       fields.zone = quote.error;
       summary.push(quote.error);
     }
     setErrors(fields);
     if (summary.length) {
-      setAlert(`${plural(summary.length, 'information')} à compléter : ${summary.join(' ')}`);
+      setAlert(C.toComplete(summary.length, summary.join(' ')));
       return;
     }
     const payload = {
       customer: { name: form.name.trim(), phone: form.phone.trim() },
       payment: { method: form.method, payerPhone: form.payer.trim() },
       mode: form.mode,
+      // Lot 8 : langue du site, seulement quand le bouton FR / EN est affiché (sinon : comme avant)
+      ...(langEnabled && { language: lang.toUpperCase() }),
       ...(delivery && form.geo && {
         location: { latitude: form.geo.latitude, longitude: form.geo.longitude, accuracy: form.geo.accuracy },
       }),
@@ -406,7 +417,7 @@ export default function Valider() {
       const fieldErrors = {};
       for (const d of Array.isArray(err.details) ? err.details : []) {
         const key = API_FIELDS[d.path] || (d.path?.startsWith('location') ? 'geo' : null);
-        if (key && !fieldErrors[key]) fieldErrors[key] = d.message;
+        if (key && !fieldErrors[key]) fieldErrors[key] = t.fieldError(d, err);
       }
       // Un plat est passé indisponible entre-temps : on recharge le menu pour le griser
       if (err.code === 'PRODUIT_INDISPONIBLE') reload();
@@ -418,60 +429,60 @@ export default function Valider() {
       }
       if (err.code === 'FRAIS_LIVRAISON') loadGrid();
       setErrors(fieldErrors);
-      setAlert(err.message);
+      setAlert(errorText(err));
     }
   };
 
   if (status === 'error') {
     return (
       <div className="wrap pagebody tunnel-body">
-        <TunnelHead title="Vos informations" />
+        <TunnelHead title={C.title} />
         <div className="empty-page">
-          <h2>Menu indisponible</h2><p>{menuError.message}</p>
-          <button className="btn btn-p" onClick={reload}>Réessayer</button>
+          <h2>{t.common.menuUnavailable}</h2><p>{t.error(menuError)}</p>
+          <button className="btn btn-p" onClick={reload}>{t.common.retry}</button>
         </div>
       </div>
     );
   }
   if (ready && !items.length) return <Navigate to="/commande" replace />;
 
-  let geoTitle = 'Partager ma position';
-  let geoSub = 'Recommandé : le livreur arrive directement chez vous.';
-  if (geoState === 'searching') geoTitle = 'Recherche de votre position…';
-  else if (geoState === 'denied') [geoTitle, geoSub] = ['Position non disponible', 'Autorisez la localisation, ou indiquez vos repères ci-dessous.'];
-  else if (geoState === 'unsupported') geoSub = 'Partage indisponible. Indiquez vos repères ci-dessous.';
-  else if (form.geo) [geoTitle, geoSub] = ['Position partagée', `Précision d'environ ${form.geo.accuracy} m`];
+  let geoTitle = C.geoShare;
+  let geoSub = C.geoShareSub;
+  if (geoState === 'searching') geoTitle = C.geoSearching;
+  else if (geoState === 'denied') [geoTitle, geoSub] = [C.geoDenied, C.geoDeniedSub];
+  else if (geoState === 'unsupported') geoSub = C.geoUnsupported;
+  else if (form.geo) [geoTitle, geoSub] = [C.geoDone, C.geoAccuracy(form.geo.accuracy)];
 
   return (
     <>
       <div className="wrap pagebody tunnel-body" style={{ maxWidth: 1160 }}>
-        <TunnelHead title="Vos informations" step={2}>
-          Les champs marqués d'un astérisque <i className="req-star">*</i> sont obligatoires.
+        <TunnelHead title={C.title} step={2}>
+          <Rich text={C.required} star={<i className="req-star">*</i>} />
         </TunnelHead>
         {alert && <div className="alert err" role="alert" ref={alertRef}><span>{alert}</span></div>}
 
         {!ready ? (
-          <div className="empty-page"><p>Chargement de votre commande…</p></div>
+          <div className="empty-page"><p>{t.common.loadingOrder}</p></div>
         ) : (
           <form className="co" noValidate onSubmit={(e) => { e.preventDefault(); submit(); }}>
             <div>
               <section className="box">
-                <div className="box-h"><span className="n">1</span><h2>Coordonnées</h2></div>
+                <div className="box-h"><span className="n">1</span><h2>{C.contact}</h2></div>
                 <div className="box-b"><div className="fields">
-                  <Field id="c-name" label="Nom complet" required error={errors.name}>
+                  <Field id="c-name" label={C.name} required error={errors.name}>
                     <input {...input('name')} autoComplete="name" placeholder="Awa Ouédraogo" maxLength={80} />
                   </Field>
-                  <Field id="c-phone" label="Numéro WhatsApp" required error={errors.phone}>
+                  <Field id="c-phone" label={C.phone} required error={errors.phone}>
                     <input {...input('phone')} type="tel" inputMode="tel" autoComplete="tel" placeholder="+226 76 12 34 56" />
                   </Field>
                 </div></div>
               </section>
 
               <section className="box">
-                <div className="box-h"><span className="n">2</span><h2>Paiement</h2></div>
+                <div className="box-h"><span className="n">2</span><h2>{C.payment}</h2></div>
                 <div className="box-b">
                   <fieldset>
-                    <legend>Votre opérateur <i style={{ color: 'var(--bad)', fontStyle: 'normal' }}>*</i></legend>
+                    <legend>{C.operator}<i style={{ color: 'var(--bad)', fontStyle: 'normal' }}>*</i></legend>
                     <div className="methods" role="radiogroup">
                       {METHODS.map((m) => (
                         <button
@@ -483,7 +494,7 @@ export default function Valider() {
                           onClick={() => set('method', m.id)}
                         >
                           <span className={m.cls}>{m.logo}</span>
-                          <span className="l"><b>{m.label}</b><small>Code marchand</small></span>
+                          <span className="l"><b>{m.label}</b><small>{C.merchantCode}</small></span>
                         </button>
                       ))}
                     </div>
@@ -491,7 +502,7 @@ export default function Valider() {
                   {errors.method && <p className="err-line">{errors.method}</p>}
                   <PayStep method={form.method} total={total} payment={payment} />
                   <div className="fields" style={{ marginTop: 16 }}>
-                    <Field id="c-payer" label="Numéro ayant payé" required error={errors.payer}>
+                    <Field id="c-payer" label={C.payer} required error={errors.payer}>
                       <input {...input('payer')} type="tel" inputMode="tel" placeholder="+226 76 12 34 56" />
                     </Field>
                   </div>
@@ -499,13 +510,13 @@ export default function Valider() {
               </section>
 
               <section className="box">
-                <div className="box-h"><span className="n">3</span><h2>Livraison ou à emporter</h2></div>
+                <div className="box-h"><span className="n">3</span><h2>{C.mode}</h2></div>
                 <div className="box-b">
-                  <div className="methods modes" role="radiogroup" aria-label="Livraison ou à emporter">
+                  <div className="methods modes" role="radiogroup" aria-label={C.mode}>
                     {MODES.map((m) => (
                       <button key={m.id} type="button" role="radio" aria-checked={form.mode === m.id} className={`opt${form.mode === m.id ? ' on' : ''}`} onClick={() => set('mode', m.id)}>
                         <span className="rd" aria-hidden="true" />
-                        <span className="l"><b>{m.label}</b><small>{m.sub}</small></span>
+                        <span className="l"><b>{C.modes[m.id][0]}</b><small>{C.modes[m.id][1]}</small></span>
                       </button>
                     ))}
                   </div>
@@ -516,13 +527,13 @@ export default function Valider() {
                         <div className="ic"><PinIcon /></div>
                         <div style={{ flex: 1 }} aria-live="polite"><b>{geoTitle}</b><span>{geoSub}</span></div>
                         <button type="button" className="btn btn-s" style={{ padding: '9px 16px' }} onClick={locate} disabled={geoState === 'searching'}>
-                          {form.geo ? 'Actualiser' : 'Partager'}
+                          {form.geo ? C.geoRefresh : C.geoButton}
                         </button>
                       </div>
                       {errors.geo && <p className="err-line">{errors.geo}</p>}
                       <div className="fields" style={{ marginTop: 16 }}>
-                        <Field id="c-addr" label={gridOn ? 'Points de repère' : 'Quartier et points de repère'} hint="Obligatoire si vous ne partagez pas votre position" error={errors.addr} full>
-                          <textarea {...input('addr')} placeholder={gridOn ? 'Portail bleu après la pharmacie' : 'Patte d’Oie, portail bleu après la pharmacie'} maxLength={300} />
+                        <Field id="c-addr" label={gridOn ? C.landmarks : C.zoneLandmarks} hint={C.landmarksHint} error={errors.addr} full>
+                          <textarea {...input('addr')} placeholder={gridOn ? C.landmarksPh : C.zoneLandmarksPh} maxLength={300} />
                         </Field>
                       </div>
                     </>
@@ -531,11 +542,11 @@ export default function Valider() {
                       <div className="ic"><PinIcon /></div>
                       <div className="pickup-t">
                         <b>{RESTAURANT.name}</b>
-                        <span>{RESTAURANT.address}, {RESTAURANT.city}</span>
-                        <small>{HOURS.map((h) => `${h.days} : ${h.time}`).join(' · ')}</small>
-                        <small>Nous vous écrivons sur WhatsApp dès que votre commande est prête.</small>
+                        <span>{t.restaurant.address}, {RESTAURANT.city}</span>
+                        <small>{t.restaurant.hours.map((h) => `${h.days} : ${h.time}`).join(' · ')}</small>
+                        <small>{C.pickupWrite}</small>
                       </div>
-                      <a className="btn btn-s" href={DIRECTIONS_URL} target="_blank" rel="noreferrer">Itinéraire</a>
+                      <a className="btn btn-s" href={DIRECTIONS_URL} target="_blank" rel="noreferrer">{t.common.directions}</a>
                     </div>
                   )}
                 </div>
@@ -543,7 +554,7 @@ export default function Valider() {
             </div>
 
             <aside className="box sum">
-              <div className="box-h"><h2>Votre commande</h2></div>
+              <div className="box-h"><h2>{C.yourOrder}</h2></div>
               <div className="box-b">
                 <table><tbody>
                   {items.map((i) => (
@@ -552,21 +563,21 @@ export default function Valider() {
                       <td>{formatPrice(i.amount)}</td>
                     </tr>
                   ))}
-                  <tr className="tot"><td>Total des plats</td><td>{formatPrice(total)}</td></tr>
+                  <tr className="tot"><td>{t.common.itemsTotal}</td><td>{formatPrice(total)}</td></tr>
                 </tbody></table>
                 {gridOn ? (
                   <FeeSummary grid={grid} quote={quote} />
                 ) : delivery ? (
-                  <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>Frais de livraison selon votre quartier : indiqués après la vérification de votre paiement, sur WhatsApp et sur la page de suivi. Vous les payez au livreur à la réception, en espèces ou par mobile money avec le code marchand.</p>
+                  <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>{C.feeLater}</p>
                 ) : (
-                  <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>À emporter : pas de frais de livraison. Vous retirez votre commande au restaurant, {RESTAURANT.address}.</p>
+                  <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>{C.pickupNote(t.restaurant.address)}</p>
                 )}
-                {blocked && <p className="err-line" style={{ marginTop: 12 }}>Un plat n'est plus disponible. Retirez-le dans Ma commande pour continuer.</p>}
+                {blocked && <p className="err-line" style={{ marginTop: 12 }}>{C.blocked}</p>}
                 <button type="submit" className="btn btn-p btn-block" style={{ marginTop: 16 }} disabled={sending || blocked}>
-                  {sending ? 'Envoi en cours…' : 'Envoyer ma commande'}
+                  {sending ? C.sending : C.send}
                 </button>
-                {slow && <div className="alert info" role="status" style={{ marginTop: 12 }}><span>Envoi en cours, merci de patienter…</span></div>}
-                <Link className="lnk lnk-center" to="/commande">‹ Retour à ma commande</Link>
+                {slow && <div className="alert info" role="status" style={{ marginTop: 12 }}><span>{C.slow}</span></div>}
+                <Link className="lnk lnk-center" to="/commande">{C.back}</Link>
               </div>
             </aside>
           </form>

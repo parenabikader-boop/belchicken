@@ -19,7 +19,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 - backend : Node.js 20+, Express, Prisma 6, PostgreSQL (Neon), Zod. Port 3006. Déploiement Render.
 - frontend : React + Vite. Port 5173. Déploiement Vercel.
 - Tout le texte visible par les clients est en français.
-- `npm run dev` à la racine lance les deux ; `npm test` dans `backend/` (283 tests au 12 octobre 2026).
+- `npm run dev` à la racine lance les deux ; `npm test` dans `backend/` (288 tests au 12 octobre 2026).
 
 ## État actuel (12 octobre 2026)
 
@@ -52,6 +52,8 @@ Lots de la feuille de route :
   - 5d, contrat et relevé (PDF, Excel) : `statement.js`. README « Relevé de livraison et contrat ».
 - **Lot 6, ventes** (Patron et Prestataire, onglet de la page Tableau de bord) : en ligne depuis le 11 octobre 2026 (enregistrement `6c005ce`, aucune migration), interrupteur `VENTES` **ouvert en production**. Règles : `sales.js`. README « Ventes ».
 - **Lot 7, avis des clients** : en ligne depuis le 12 octobre 2026 (enregistrement `2b2ddba`, migration `20261011120000_avis_clients`), réglage du Patron « Demander l'avis des clients » **éteint en production**, interrupteur `AVIS` ouvert (sans ligne). Migration non vérifiée dans le tableau de bord de Render. Règles : `review.js`, `review.service.js`. README « Avis des clients ».
+
+- **Lot 8, langue FR/EN du site client** : fait sur dev le 12 octobre 2026 (migration `20261012120000_langue_site` appliquée sur dev seulement), **pas encore enregistré ni en ligne**. Réglage du Patron « Site en anglais » éteint par défaut (site identique, sans bouton), interrupteur `ANGLAIS` ouvert sans ligne, `GET /api/site`, `Order.language` (« Client anglophone »). Textes : `frontend/src/i18n/fr.js` et `en.js` (`npm run langues`). Espace équipe et messages WhatsApp toujours en français. README « Langue du site client, FR/EN ».
 
 ## Repères pour travailler
 

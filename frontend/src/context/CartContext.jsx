@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useMenu } from './MenuContext.jsx';
-import { drinksLabel } from '../utils/drinks.js';
+import { useT } from '../i18n/index.jsx';
 
 const STORAGE_KEY = 'belchicken.panier.v1';
 // Limite de l'API par ligne de commande
@@ -71,6 +71,8 @@ export const useCart = () => useContext(CartContext);
 export function useCartDetails() {
   const { lines, count } = useCart();
   const { products, status } = useMenu();
+  // Lot 8 : textes dans la langue du site (espace équipe : toujours en français)
+  const t = useT();
   return useMemo(() => {
     const items = [];
     for (const l of lines) {
@@ -83,18 +85,18 @@ export function useCartDetails() {
       const options = [];
       if (product.variants.length > 1) options.push(variant.label);
       if (l.choice) options.push(l.choice);
-      if (named.length) options.push(drinksLabel(named, l.quantity));
-      if (l.note) options.push(`« ${l.note} »`);
+      if (named.length) options.push(t.fees.drinks(named, l.quantity));
+      if (l.note) options.push(t.cart.note(l.note));
       // Ce qui empêche de commander cette ligne (retirée par le client, pas en silence)
       const chosen = drinks.reduce((n, d) => n + d.quantity, 0);
       const offDrink = drinks.find((d) => d.product && !d.product.isAvailable);
       let problem = null;
-      if (!product.isAvailable) problem = 'Plus disponible pour le moment';
-      else if (chosen !== (variant.drinkCount || 0) || drinks.some((d) => !d.product)) problem = 'Formule modifiée : retirez ce plat, puis ajoutez-le à nouveau';
-      else if (offDrink) problem = `${offDrink.product.name} n'est plus disponible : retirez ce plat et choisissez une autre boisson`;
+      if (!product.isAvailable) problem = t.cart.gone;
+      else if (chosen !== (variant.drinkCount || 0) || drinks.some((d) => !d.product)) problem = t.cart.changed;
+      else if (offDrink) problem = t.cart.drinkGone(offDrink.product.name);
       items.push({ ...l, product, variant, problem, options: options.join(' · '), amount: variant.price * l.quantity });
     }
     const total = items.reduce((s, i) => s + i.amount, 0);
     return { items, total, count, ready: status === 'ready' };
-  }, [lines, count, products, status]);
+  }, [lines, count, products, status, t]);
 }

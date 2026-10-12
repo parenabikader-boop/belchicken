@@ -703,6 +703,7 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .st-pill.p-PRETE{background:#e3f1e4;color:#2b6e2f}
 .st-pill.p-EMPORTER{background:#f6cf76;color:#5c3900}
 .st-pill.p-PRESTATAIRE{background:#dde8f6;color:#1f4e8c} /* lot 5 : livrée par l'équipe du Prestataire */
+.st-pill.p-ANGLAIS{background:#ece4f5;color:#55308a} /* lot 8 : commande passée sur le site en anglais */
 .st-pickup{font-size:11px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;background:#fff1d6;color:#8a5a00;border-radius:999px;padding:2px 8px}
 .od-col.s-PRETE.has{background:#eef7ec;border-color:#9cc79a}
 .od-col.s-PRETE.has .od-count{background:#2b6e2f}

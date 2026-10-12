@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { canPromptInstall, isIos, isStandalone, justInstalled, promptInstall, subscribeInstall } from '../pwa.js';
+import { Rich, useT } from '../i18n/index.jsx';
 
 // Bandeau discret « Installer l'application », jamais bloquant :
 // - Android : bouton qui ouvre la fenêtre d'installation du téléphone ;
@@ -8,7 +9,8 @@ import { canPromptInstall, isIos, isStandalone, justInstalled, promptInstall, su
 const PAUSE_DAYS = 5;
 
 const APPS = {
-  client: { name: 'Belchicken', icon: '/icons/client-192.png', text: 'Commandez depuis votre écran d’accueil' },
+  // Lot 8 : texte du site client dans sa langue (i18n, install.text)
+  client: { name: 'Belchicken', icon: '/icons/client-192.png', text: null },
   equipe: { name: 'Belchicken Équipe', icon: '/icons/equipe-192.png', text: 'L’espace équipe en un geste' },
 };
 
@@ -35,6 +37,7 @@ export default function InstallBanner({ app = 'client' }) {
   const [, refresh] = useState(0);
   const [closed, setClosed] = useState(() => recentlyClosed(app));
   const [guide, setGuide] = useState(false);
+  const { install: I } = useT(); // espace équipe : toujours en français
 
   useEffect(() => subscribeInstall(() => refresh((n) => n + 1)), []);
 
@@ -43,7 +46,8 @@ export default function InstallBanner({ app = 'client' }) {
   const ios = !android && isIos();
   if (!android && !ios) return null;
 
-  const { name, icon, text } = APPS[app];
+  const { name, icon } = APPS[app];
+  const text = APPS[app].text ?? I.text;
 
   const close = () => {
     rememberClosed(app);
@@ -60,25 +64,23 @@ export default function InstallBanner({ app = 'client' }) {
   };
 
   return (
-    <aside className="install" aria-label="Installer l'application">
+    <aside className="install" aria-label={I.aria}>
       <div className="install-row">
         <img src={icon} alt="" width="44" height="44" />
         <div className="install-txt">
-          <b>Installer l’application</b>
+          <b>{I.title}</b>
           <span><span className="install-name">{name}</span><span className="install-more"> · {text}</span></span>
         </div>
         <button type="button" className="install-go" onClick={install} aria-expanded={ios ? guide : undefined}>
-          {ios ? 'Comment ?' : 'Installer'}
+          {ios ? I.how : I.install}
         </button>
-        <button type="button" className="install-x" onClick={close} aria-label="Fermer">×</button>
+        <button type="button" className="install-x" onClick={close} aria-label={I.close}>×</button>
       </div>
       {ios && guide && (
         <ol className="install-guide">
-          <li>
-            Touchez le bouton <b>Partager</b> <ShareIcon /> en bas de l’écran (ou en haut sur iPad).
-          </li>
-          <li>Faites défiler, puis touchez <b>Sur l’écran d’accueil</b>.</li>
-          <li>Touchez <b>Ajouter</b> : l’icône {name} apparaît sur votre écran d’accueil.</li>
+          <li><Rich text={I.step1} icon={<ShareIcon label={I.shareIcon} />} /></li>
+          <li><Rich text={I.step2} /></li>
+          <li><Rich text={I.step3} name={name} /></li>
         </ol>
       )}
     </aside>
@@ -86,9 +88,9 @@ export default function InstallBanner({ app = 'client' }) {
 }
 
 // Icône « Partager » d'iPhone : un carré ouvert avec une flèche vers le haut
-function ShareIcon() {
+function ShareIcon({ label }) {
   return (
-    <svg className="install-share" viewBox="0 0 24 24" width="18" height="18" aria-label="(carré avec une flèche vers le haut)" role="img">
+    <svg className="install-share" viewBox="0 0 24 24" width="18" height="18" aria-label={label} role="img">
       <path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M8 11H6v10h12V11h-2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );

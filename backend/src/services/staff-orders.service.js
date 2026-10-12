@@ -154,6 +154,8 @@ export function toStaffOrder(order, night = null, ctx = messageContext()) {
     // agent qui a vérifié le paiement, et numéro WhatsApp du restaurant depuis lequel écrire au client
     source: sourceLabel(o),
     enteredBy: enteredBy(o),
+    // Lot 8 : langue du site au moment de la commande (EN = « Client anglophone »), null = français
+    language: o.language ?? null,
     paymentVerified: verified && { by: verified.by, at: verified.at },
     sendFrom: from,
     itemsTotal: o.itemsTotal,

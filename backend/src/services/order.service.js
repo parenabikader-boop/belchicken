@@ -46,6 +46,8 @@ export async function createOrder(input, agent = null) {
     longitude: delivery ? input.location?.longitude ?? null : null,
     locationAccuracy: delivery && input.location?.accuracy != null ? Math.round(input.location.accuracy) : null,
     addressNote: delivery ? input.addressNote ?? null : null,
+    // Lot 8 : langue du site (jamais pour une commande saisie par l'agent)
+    ...(!agent && input.language && { language: input.language }),
     itemsTotal,
     ...fee,
     items: { create: lines.map(({ drinks, ...l }) => ({ ...l, drinks: { create: drinks } })) },

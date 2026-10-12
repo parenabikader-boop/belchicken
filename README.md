@@ -153,6 +153,11 @@ envoyée sur WhatsApp). Même page (`frontend/src/pages/Confirmation.jsx`) : fri
 quand ils sont saisis, bouton « Nous contacter sur WhatsApp ». Elle relit la commande toutes les 20 s
 (et au retour sur la page) tant que la commande n'est ni livrée ni annulée.
 
+### `GET /api/site`
+
+Lot 8 : `{ anglais: true|false }` = bouton FR / EN affiché sur le site client (réglage du Patron « Site en anglais »,
+inclus par le Prestataire). Voir « Langue du site client, FR/EN ».
+
 ### `GET /api/payment`
 
 Codes marchands mobile money (USSD) des 3 opérateurs, avec `MONTANT` à remplacer par le montant :
@@ -764,6 +769,33 @@ Le client note sa commande livrée ou retirée depuis un lien du message de reme
   `GET /api/staff/avis?du=&au=`, `GET /api/staff/avis/commande/:reference`, `POST /api/staff/avis/:id/rappel`
   (Patron et Prestataire) ; `GET /api/staff/livraison/avis?du=&au=` (Responsable livraison et Prestataire). Toutes
   derrière `AVIS` (`test/route-access.test.js`).
+
+## Langue du site client, FR/EN (lot 8)
+
+Le site client peut se lire en anglais. **Seul le site client** change : l'espace équipe, les messages WhatsApp
+(aucun nouveau modèle Meta) et les noms et descriptions des plats, catégories et boissons (en base) restent en
+français. Textes : `frontend/src/i18n/fr.js` (les phrases exactes d'avant le lot 8) et `en.js`, mêmes clés,
+contrôlées par `npm run langues` (dans `frontend/`). Socle : `frontend/src/i18n/index.jsx`.
+
+- **Deux niveaux** : interrupteur du Prestataire `ANGLAIS` (ouvert sans ligne) et réglage du Patron « Site en
+  anglais » (`AppSettings.englishSite`, **éteint par défaut** : site en français, sans bouton, exactement comme avant ;
+  vérifié par des captures comparées au pixel près).
+- **`GET /api/site`** (public) : `{ anglais: true|false }`, rien d'autre. Allumé : bouton **FR / EN** dans l'en-tête
+  (sur téléphone, dans le bandeau brun du haut ; pages de commande et page d'avis : dans leur en-tête). Français par
+  défaut, jamais d'anglais automatique ; le choix du client est gardé dans son téléphone (`belchicken.langue`).
+- **Traduit** : boutons, titres, étapes, paiement (codes USSD), frais de livraison, suivi, avis, Infos pratiques
+  (horaires, adresse « Kamsonghin, opposite Sonia Hôtel »), bandeau « Installer l'application », dates (« 12 October
+  2026 at 14:05 »). Prix toujours « 5 500 F ». Le message prérempli « Nous contacter sur WhatsApp » reste en français
+  (c'est le call center qui le lit), comme le motif d'annulation écrit par l'équipe.
+- **Erreurs du serveur** : toujours en français côté serveur ; en anglais, le site les traduit d'après leur code
+  (`error` dans `en.js`, le plat en cause nommé d'après le menu). En français, la phrase du serveur est affichée telle
+  quelle, comme avant.
+- **Langue sur la commande** : `Order.language` (`FR` ou `EN`), envoyée par le site seulement quand le bouton est
+  affiché (`language` dans `POST /api/orders`, facultatif) ; vide = français (anciennes commandes, commandes saisies
+  par l'agent, qui n'en ont jamais). `EN` : pastille **« Client anglophone »** dans le détail de la commande (espace
+  équipe). Prépare des messages en anglais au lot 9.
+- Migration `20261012120000_langue_site` : structure seulement (enum `Langue`, `AppSettings.englishSite` éteint,
+  `Order.language` vide), aucune donnée écrite. Tests : `test/langue.test.js`.
 
 ## Parcours court et bon de commande (lot 1)
 

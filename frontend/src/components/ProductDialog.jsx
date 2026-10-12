@@ -4,18 +4,20 @@ import { useMenu } from '../context/MenuContext.jsx';
 import { menuDrinks } from '../utils/drinks.js';
 import { formatPrice } from '../utils/format.js';
 import { photoBg, sizedPhoto } from '../utils/visuals.js';
+import { useT } from '../i18n/index.jsx';
 
 // Une boisson et son compteur (− 2 +)
 function DrinkCounter({ drink, count, onChange, canAdd, price }) {
   const off = !drink.isAvailable;
+  const t = useT();
   return (
     <div className={off ? 'drk off' : 'drk'}>
-      <span className="l"><b>{drink.name}</b>{off && <small>Indisponible</small>}</span>
+      <span className="l"><b>{drink.name}</b>{off && <small>{t.common.unavailable}</small>}</span>
       {price != null && !off && <span className="pp">{formatPrice(price)}</span>}
       <span className="qty">
-        <button type="button" onClick={() => onChange(count - 1)} disabled={off || count === 0} aria-label={`Retirer un ${drink.name}`}>−</button>
+        <button type="button" onClick={() => onChange(count - 1)} disabled={off || count === 0} aria-label={t.dialog.removeOne(drink.name)}>−</button>
         <span aria-live="polite">{count}</span>
-        <button type="button" onClick={() => onChange(count + 1)} disabled={off || !canAdd} aria-label={`Ajouter un ${drink.name}`}>+</button>
+        <button type="button" onClick={() => onChange(count + 1)} disabled={off || !canAdd} aria-label={t.dialog.addOne(drink.name)}>+</button>
       </span>
     </div>
   );
@@ -26,6 +28,8 @@ function DrinkCounter({ drink, count, onChange, canAdd, price }) {
 export default function ProductDialog({ product: p, onClose }) {
   const { add } = useCart();
   const { categories } = useMenu();
+  const t = useT();
+  const D = t.dialog;
   const drinks = menuDrinks(categories);
   // Boissons comprises dans la formule, pour une formule : { productId: nombre }
   const [included, setIncluded] = useState({});
@@ -66,7 +70,7 @@ export default function ProductDialog({ product: p, onClose }) {
     onClose();
   };
 
-  const meta = [p.category.name, p.number != null && `N° ${p.number}`, p.isSpicy && 'Épicé'].filter(Boolean).join(' · ');
+  const meta = [p.category.name, p.number != null && t.common.number(p.number), p.isSpicy && t.common.spicy].filter(Boolean).join(' · ');
 
   return (
     <div className="overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -77,7 +81,7 @@ export default function ProductDialog({ product: p, onClose }) {
         <div className="in">
           <div className="top">
             <div><div className="meta">{meta}</div><h3 id="dlgT">{p.name}</h3></div>
-            <button ref={closeRef} className="x" onClick={onClose} aria-label="Fermer">×</button>
+            <button ref={closeRef} className="x" onClick={onClose} aria-label={t.common.close}>×</button>
           </div>
 
           {p.composition.length > 0 ? (
@@ -90,7 +94,7 @@ export default function ProductDialog({ product: p, onClose }) {
           {p.category.description && <p className="dlg-note">{p.category.description}</p>}
 
           {p.variants.length > 1 && (
-            <fieldset><legend>Formule</legend>
+            <fieldset><legend>{D.formula}</legend>
               <div className="opts" role="radiogroup">
                 {p.variants.map((v) => (
                   <button key={v.id} type="button" className={v.id === variantId ? 'opt on' : 'opt'} role="radio" aria-checked={v.id === variantId} onClick={() => pickVariant(v.id)}>
@@ -104,7 +108,7 @@ export default function ProductDialog({ product: p, onClose }) {
           )}
 
           {p.choices.length > 0 && (
-            <fieldset><legend>{p.choiceLabel || 'Votre choix'}</legend>
+            <fieldset><legend>{p.choiceLabel || D.yourChoice}</legend>
               <div className="opts row" role="radiogroup">
                 {p.choices.map((o) => (
                   <button key={o} type="button" className={o === choice ? 'opt on' : 'opt'} role="radio" aria-checked={o === choice} onClick={() => setChoice(o)}>
@@ -116,12 +120,12 @@ export default function ProductDialog({ product: p, onClose }) {
           )}
 
           {drinkCount === 1 && (
-            <fieldset><legend>Votre boisson <span className="muted" style={{ fontWeight: 400 }}>(comprise)</span></legend>
+            <fieldset><legend>{D.yourDrink}<span className="muted" style={{ fontWeight: 400 }}>{D.included}</span></legend>
               <div className="opts drk-opts" role="radiogroup">
                 {drinks.map((d) => (
                   <button key={d.id} type="button" className={included[d.id] ? 'opt on' : 'opt'} role="radio" aria-checked={Boolean(included[d.id])}
                     disabled={!d.isAvailable} onClick={() => setIncluded({ [d.id]: 1 })}>
-                    <span className="rd"></span><span className="l"><b>{d.name}</b>{!d.isAvailable && <small>Indisponible</small>}</span>
+                    <span className="rd"></span><span className="l"><b>{d.name}</b>{!d.isAvailable && <small>{t.common.unavailable}</small>}</span>
                   </button>
                 ))}
               </div>
@@ -129,7 +133,7 @@ export default function ProductDialog({ product: p, onClose }) {
           )}
 
           {drinkCount > 1 && (
-            <fieldset><legend>Vos {drinkCount} boissons <span className="muted" style={{ fontWeight: 400 }}>(comprises) · {chosen}/{drinkCount}</span></legend>
+            <fieldset><legend>{D.yourDrinks(drinkCount)}<span className="muted" style={{ fontWeight: 400 }}>{D.includedCount(chosen, drinkCount)}</span></legend>
               <div className="drks">
                 {drinks.map((d) => (
                   <DrinkCounter key={d.id} drink={d} count={included[d.id] || 0} canAdd={missing > 0}
@@ -142,7 +146,7 @@ export default function ProductDialog({ product: p, onClose }) {
           {/* Boissons en plus, au prix normal (pas sur la fiche d'une boisson) */}
           {!p.category.isDrinks && drinks.some((d) => d.isAvailable) && (
             showExtras ? (
-              <fieldset><legend>Ajouter une boisson <span className="muted" style={{ fontWeight: 400 }}>(en plus, prix normal)</span></legend>
+              <fieldset><legend>{D.addDrinkLegend}<span className="muted" style={{ fontWeight: 400 }}>{D.addDrinkNote}</span></legend>
                 <div className="drks">
                   {drinks.map((d) => (
                     <DrinkCounter key={d.id} drink={d} count={extras[d.id] || 0} canAdd={(extras[d.id] || 0) < MAX_QTY} price={d.variants[0].price}
@@ -151,25 +155,25 @@ export default function ProductDialog({ product: p, onClose }) {
                 </div>
               </fieldset>
             ) : (
-              <button type="button" className="lnk drk-more" onClick={() => setShowExtras(true)}>+ Ajouter une boisson</button>
+              <button type="button" className="lnk drk-more" onClick={() => setShowExtras(true)}>{D.addDrinkButton}</button>
             )
           )}
 
           <div>
             <label htmlFor="dn" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
-              Note pour la cuisine <span className="muted" style={{ fontWeight: 400 }}>(facultatif)</span>
+              {D.kitchenNote}<span className="muted" style={{ fontWeight: 400 }}>{t.common.optional}</span>
             </label>
-            <textarea id="dn" placeholder="Sans oignon, sauce à part…" maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} />
+            <textarea id="dn" placeholder={D.notePlaceholder} maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} />
           </div>
 
           <div className="add-row">
             <span className="qty">
-              <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Diminuer">−</button>
+              <button onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label={t.common.decrease}>−</button>
               <span>{qty}</span>
-              <button onClick={() => setQty((q) => Math.min(MAX_QTY, q + 1))} aria-label="Augmenter">+</button>
+              <button onClick={() => setQty((q) => Math.min(MAX_QTY, q + 1))} aria-label={t.common.increase}>+</button>
             </span>
             <button className="btn btn-p" onClick={submit} disabled={missing > 0}>
-              <span>{missing > 0 ? (drinkCount === 1 ? 'Choisissez votre boisson' : `Encore ${missing} boisson${missing > 1 ? 's' : ''}`) : 'Ajouter'}</span>
+              <span>{missing > 0 ? (drinkCount === 1 ? D.chooseDrink : D.moreDrinks(missing)) : D.add}</span>
               <span>{formatPrice(variant.price * qty + extrasTotal)}</span>
             </button>
           </div>

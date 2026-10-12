@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { photoProps } from '../utils/visuals.js';
+import { useT } from '../i18n/index.jsx';
 
 // Photos de l'accueil, changées par le Patron depuis l'espace équipe (API /api/home) :
 // grande image à gauche (case 1), deux petites à droite (cases 2 et 3).
@@ -33,16 +34,18 @@ function useHomePhotos() {
 
 export default function Home() {
   const photos = useHomePhotos();
+  const t = useT();
+  const h = t.home;
   return (
     <>
       <section className="hero">
         <div className="wrap">
           <div>
-            <h1>Commandez votre repas Belchicken en ligne</h1>
-            <p className="lead">Choisissez vos plats, envoyez votre commande, et notre équipe vous confirme tout sur WhatsApp.</p>
+            <h1>{h.title}</h1>
+            <p className="lead">{h.lead}</p>
             <div className="cta">
-              <Link className="btn btn-p" to="/menu">Voir le menu</Link>
-              <Link className="lnk" to="/infos">Livraison et paiement ›</Link>
+              <Link className="btn btn-p" to="/menu">{t.common.seeMenu}</Link>
+              <Link className="lnk" to="/infos">{h.deliveryPayment}</Link>
             </div>
           </div>
           <div className="mosaic">
@@ -83,22 +86,19 @@ export default function Home() {
           />
           <div className="brand-txt">
             <span className="brand-script">Finest Fried Chicken & More</span>
-            <h2>Le chef Belchicken vous régale</h2>
-            <p>Poulet croustillant, burgers et buckets, préparés à la commande.</p>
-            <Link className="btn brand-btn" to="/menu">Voir le menu</Link>
+            <h2>{h.chefTitle}</h2>
+            <p>{h.chefText}</p>
+            <Link className="btn brand-btn" to="/menu">{t.common.seeMenu}</Link>
           </div>
         </div>
       </section>
 
       <section className="wrap home-steps">
-        <div className="sec-h"><div><h2>Comment commander</h2></div></div>
+        <div className="sec-h"><div><h2>{h.howTo}</h2></div></div>
         <div className="steps-wrap">
-          <img className="steps-ph" src="/accueil/livraison.webp" width="763" height="301" alt="Un livreur Belchicken remet une commande à une cliente" loading="lazy" />
+          <img className="steps-ph" src="/accueil/livraison.webp" width="763" height="301" alt={h.stepsPhotoAlt} loading="lazy" />
           <div className="steps">
-          <div className="step"><b>Choisissez vos plats</b><p>Parcourez le menu par catégorie.</p></div>
-          <div className="step"><b>Vérifiez votre commande</b><p>Ajustez les quantités si besoin.</p></div>
-          <div className="step"><b>Indiquez vos informations</b><p>Coordonnées, paiement et position.</p></div>
-          <div className="step"><b>Recevez la confirmation</b><p>Notre équipe vous contacte sur WhatsApp.</p></div>
+          {h.steps.map(([title, text]) => <div className="step" key={title}><b>{title}</b><p>{text}</p></div>)}
           </div>
         </div>
       </section>

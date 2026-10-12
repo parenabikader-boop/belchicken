@@ -80,7 +80,11 @@ const hasPlace = [
   { message: 'Partagez votre position ou indiquez votre quartier et un repère.', path: ['addressNote'] },
 ];
 
-export const createOrderSchema = z.object(orderFields).refine(...hasPlace);
+// Lot 8 : langue du site client au moment de la commande (absente = ancienne version du site, ou bouton
+// FR / EN caché). Seulement sur le site : une commande saisie par l'agent n'a pas de langue.
+export const createOrderSchema = z
+  .object({ ...orderFields, language: z.enum(['FR', 'EN']).optional() })
+  .refine(...hasPlace);
 
 // Commande saisie par un agent (appel, WhatsApp) : les mêmes informations que sur le site, plus la
 // provenance choisie dans la liste du Patron (jamais « Site », vérifié par le serveur)

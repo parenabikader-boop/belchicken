@@ -2,16 +2,17 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
 import InstallBanner from './InstallBanner.jsx';
-import { DIRECTIONS_URL, openStatus, RESTAURANT, telHref, whatsappHref } from '../restaurant.js';
+import { DIRECTIONS_URL, openState, RESTAURANT, telHref, whatsappHref } from '../restaurant.js';
+import { LangSwitch, useT } from '../i18n/index.jsx';
 
 // Informations du restaurant : src/restaurant.js
 export const WHATSAPP = RESTAURANT.whatsapp;
 
 // « Commandes ouvertes » ou « Fermé », selon les horaires (mis à jour chaque minute)
 function useOpenStatus() {
-  const [status, setStatus] = useState(() => openStatus());
+  const [status, setStatus] = useState(() => openState());
   useEffect(() => {
-    const t = setInterval(() => setStatus(openStatus()), 60000);
+    const t = setInterval(() => setStatus(openState()), 60000);
     return () => clearInterval(t);
   }, []);
   return status;
@@ -41,6 +42,14 @@ export default function Layout() {
   const { count } = useCart();
   const { pathname } = useLocation();
   const status = useOpenStatus();
+  const t = useT();
+  const L = t.layout;
+  const statusText = typeof L.status[status.key] === 'function' ? L.status[status.key](status.hour) : L.status[status.key];
+
+  // Lot 8 : titre de l'onglet dans la langue du site (en français, le même que dans index.html)
+  useEffect(() => {
+    document.title = L.docTitle;
+  }, [L]);
 
   // Chaque page s'ouvre en haut, comme dans la maquette
   useEffect(() => {
@@ -55,10 +64,11 @@ export default function Layout() {
       <>
         <header className="top tunnel">
           <div className="wrap">
-            <Link className="brand" to="/" aria-label="Belchicken Burkina, accueil" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <Brand subtitle="Commande en ligne" />
+            <Link className="brand" to="/" aria-label={L.homeAria} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <Brand subtitle={L.subtitle} />
             </Link>
-            <Link className="back" to="/menu">‹ Retour au menu</Link>
+            <Link className="back" to="/menu">{L.backToMenu}</Link>
+            <LangSwitch />
           </div>
         </header>
         <main className={pageClass(pathname)}>
@@ -72,23 +82,26 @@ export default function Layout() {
     <>
       <div className="util"><div className="wrap">
         <span className={status.open ? undefined : 'closed'}>
-          <span className="dot"></span><b>{status.open ? 'Commandes ouvertes' : 'Fermé'}</b> · {status.text}
+          <span className="dot"></span><b>{status.open ? L.open : L.closed}</b> · {statusText}
         </span>
-        <span className="r hide-s">WhatsApp : <b>{WHATSAPP}</b></span>
+        <span className="r hide-s">{L.whatsapp}<b>{WHATSAPP}</b></span>
+        {/* Lot 8 : sur téléphone, le bouton FR / EN est ici (l'en-tête garde sa place) */}
+        <LangSwitch className="in-util" />
       </div></div>
 
       <header className="top">
         <div className="wrap">
-          <Link className="brand" to="/" aria-label="Belchicken Burkina, accueil" style={{ textDecoration: 'none', color: 'inherit' }}>
-            <Brand subtitle="Commande en ligne" />
+          <Link className="brand" to="/" aria-label={L.homeAria} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <Brand subtitle={L.subtitle} />
           </Link>
-          <nav className="nav" aria-label="Navigation principale">
-            <NavLink to="/" end className={navClass}>Accueil</NavLink>
-            <NavLink to="/menu" className={navClass}>Menu</NavLink>
-            <NavLink to="/infos" className={navClass}>Infos pratiques</NavLink>
+          <nav className="nav" aria-label={L.navAria}>
+            <NavLink to="/" end className={navClass}>{L.home}</NavLink>
+            <NavLink to="/menu" className={navClass}>{L.menu}</NavLink>
+            <NavLink to="/infos" className={navClass}>{L.infos}</NavLink>
           </nav>
+          <LangSwitch />
           <Link className="hbtn" to="/commande" style={{ textDecoration: 'none' }}>
-            Ma commande <span className="n">{count}</span>
+            {L.myOrder} <span className="n">{count}</span>
           </Link>
         </div>
       </header>
@@ -103,18 +116,18 @@ export default function Layout() {
       <footer>
         <div className="wrap">
           <div><div className="brand"><Brand subtitle="Finest Fried Chicken & More" /></div></div>
-          <div><h4>Commander</h4><ul><li><Link to="/menu">Menu</Link></li><li><Link to="/commande">Ma commande</Link></li></ul></div>
-          <div><h4>Aide</h4><ul><li><Link to="/infos">Livraison et paiement</Link></li><li><Link to="/infos">Horaires</Link></li></ul></div>
+          <div><h4>{L.footOrder}</h4><ul><li><Link to="/menu">{L.menu}</Link></li><li><Link to="/commande">{L.myOrder}</Link></li></ul></div>
+          <div><h4>{L.footHelp}</h4><ul><li><Link to="/infos">{L.footDeliveryPayment}</Link></li><li><Link to="/infos">{L.footHours}</Link></li></ul></div>
           <div>
-            <h4>Contact</h4>
+            <h4>{L.footContact}</h4>
             <ul>
-              <li>Restaurant : <a href={telHref(RESTAURANT.phone)}>{RESTAURANT.phone}</a></li>
-              <li>WhatsApp (commandes et suivi) : <a href={whatsappHref(WHATSAPP)} target="_blank" rel="noreferrer">{WHATSAPP}</a></li>
-              <li>{RESTAURANT.address}, {RESTAURANT.city}</li>
-              <li><a href={DIRECTIONS_URL} target="_blank" rel="noreferrer">Itinéraire Google Maps</a></li>
+              <li>{L.footRestaurant}<a href={telHref(RESTAURANT.phone)}>{RESTAURANT.phone}</a></li>
+              <li>{L.footWhatsapp}<a href={whatsappHref(WHATSAPP)} target="_blank" rel="noreferrer">{WHATSAPP}</a></li>
+              <li>{t.restaurant.address}, {RESTAURANT.city}</li>
+              <li><a href={DIRECTIONS_URL} target="_blank" rel="noreferrer">{L.footMaps}</a></li>
             </ul>
           </div>
-          <div className="legal"><span>© {new Date().getFullYear()} {RESTAURANT.name}</span><span>Prix en francs CFA</span></div>
+          <div className="legal"><span>© {new Date().getFullYear()} {RESTAURANT.name}</span><span>{L.footCfa}</span></div>
         </div>
       </footer>
     </>

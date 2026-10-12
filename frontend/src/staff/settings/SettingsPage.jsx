@@ -114,6 +114,23 @@ export default function SettingsPage() {
             </div>
             <SettingSwitch settings={settings} name="reviewsEnabled" label="Demander l’avis des clients" saving={saving} onToggle={toggle} />
           </div>
+          <div className="rg-row rg-sep">
+            <div className="rg-text">
+              <h2>Site en anglais</h2>
+              <p>
+                Un bouton <b>FR / EN</b> s’affiche en haut du site : le client peut le lire en anglais (boutons, étapes, paiement,
+                frais de livraison, suivi, avis, infos pratiques). Le site s’ouvre toujours en français, et le choix du client
+                est retenu pour sa prochaine visite.
+              </p>
+              <ul className="rg-list">
+                <li><b>Éteint</b> : le site reste en français, sans bouton, comme aujourd’hui.</li>
+                <li>Les noms et descriptions des plats, catégories et boissons restent tels que vous les écrivez.</li>
+                <li>Les messages WhatsApp et l’espace équipe restent en français.</li>
+                <li>Une commande passée en anglais affiche « Client anglophone » dans son détail.</li>
+              </ul>
+            </div>
+            <SettingSwitch settings={settings} name="englishSite" label="Site en anglais" saving={saving} onToggle={toggle} />
+          </div>
           {settings.updatedByName && (
             <p className="st-muted rg-who">Dernier changement : {settings.updatedByName}, le {formatDateTime(settings.updatedAt)}.</p>
           )}

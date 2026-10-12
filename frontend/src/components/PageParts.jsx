@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import { Link } from 'react-router-dom';
+import { useT } from '../i18n/index.jsx';
 
 // Bandeau rouge en haut des pages intérieures.
 // crumbs : [{ label, to }] ; le dernier élément, sans lien, est la page courante.
@@ -22,14 +23,13 @@ export function PageHead({ crumbs, title, children }) {
   );
 }
 
-const STEPS = ['Choix des plats', 'Vérification', 'Informations', 'Confirmation'];
-
-// Barre d'étapes compacte du tunnel de commande
+// Barre d'étapes compacte du tunnel de commande (étapes : i18n, progress.steps)
 export function Progress({ step }) {
+  const { progress } = useT();
   return (
-    <ol className="progress" aria-label="Progression">
-      {STEPS.map((t, i) => (
-        <li key={t} className={i < step ? 'done' : i === step ? 'cur' : undefined} aria-current={i === step ? 'step' : undefined}>
+    <ol className="progress" aria-label={progress.aria}>
+      {progress.steps.map((t, i) => (
+        <li key={i} className={i < step ? 'done' : i === step ? 'cur' : undefined} aria-current={i === step ? 'step' : undefined}>
           <span className="k">{i + 1}.</span> {t}
         </li>
       ))}

@@ -1,5 +1,5 @@
 // Client de l'API Belchicken. Les messages d'erreur du serveur sont déjà en français
-// et sont affichés tels quels.
+// et sont affichés tels quels ; en anglais (lot 8), le site les traduit d'après leur code (i18n/en.js).
 const BASE = (import.meta.env.VITE_API_URL || 'http://localhost:3006').replace(/\/+$/, '');
 
 export class ApiError extends Error {
@@ -47,6 +47,8 @@ export const api = {
   // Lot 7 : avis du client, par la clé du lien du remerciement : { reference, firstName, delivery, state }
   getReview: (token) => request(`/api/avis/${encodeURIComponent(token)}`).then((d) => d.review),
   sendReview: (token, body) => request(`/api/avis/${encodeURIComponent(token)}`, { method: 'POST', body: JSON.stringify(body) }).then((d) => d.review),
+  // Lot 8 : { anglais } = bouton FR / EN affiché (réglage du Patron « Site en anglais »)
+  getSite: () => request('/api/site'),
 };
 
 // Espace équipe : appels sur la même adresse que le site (/api/staff/...), relayés vers l'API
