@@ -681,6 +681,17 @@ page d'essai ramène à la page actuelle (« ‹ Commandes »), comme avant.
     préparation, rien en livraison, rien à retirer. » et une seule colonne pleine largeur (« Tout 2 · À remercier 2 »
     sur téléphone). Aucune commande : « Aucune commande en cours. ». Réglage éteint : page et barre actuelles.
     Captures : `C:\Users\HP\Desktop\belchiken\captures-lot12-facon-b\`. Envoyé le 12 octobre 2026 avec l'accord écrit du client.
+- [x] 8. Corrections du client (12 octobre 2026, sur dev, **sans migration**), liées au même réglage :
+  - bouton ⋮ **tout en haut à droite** (la barre prend toute la largeur de l'écran au lieu de la colonne centrée),
+    panneau ouvert sur la droite, sur une seule ligne même sur un petit téléphone ;
+  - **page d'arrivée** selon le rôle (connexion et `/equipe`) : Patron → Tableau de bord (Commandes si
+    `TABLEAU_DE_BORD` est fermé), Opérateur → Commandes, autres rôles comme avant ; éteint : Commandes pour tous.
+    `teamHome()` dans `nav-pages.js`, testée (25 tests du site). Texte du réglage et de l'interrupteur complétés.
+  - Vérifié sur dev avec la vraie API locale (sessions d'essai temporaires de « Patron (essai) », « Awa (essai) »,
+    « Presta (essai) »), en tailles téléphone (390 et 340 px), tablette et ordinateur : **28 vérifications, aucun échec,
+    aucune erreur**. Dev remise comme avant (réglages, interrupteurs, sessions, commandes identiques) ; 2 lignes de plus
+    au journal de sécurité (fermeture et réouverture de `TABLEAU_DE_BORD` par « Presta (essai) »). Captures :
+    `C:\Users\HP\Desktop\belchiken\captures-equipe-arrivee-et-barre\`. **STOP avant la mise en ligne.**
 - [ ] Plus tard : seuils d'attente modifiables par le Patron (page Réglages).
 
 ### Réglages des lots 11 et 12 (migration groupée)

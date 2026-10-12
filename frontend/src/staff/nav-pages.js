@@ -35,3 +35,12 @@ export function pageTitle(pathname, pages) {
   if (other) return other[1];
   return pages.find((p) => p.match.test(pathname))?.label ?? 'Espace équipe';
 }
+
+// Page d'arrivée de l'équipe (connexion, /equipe). Réglage « Nouvelle page Commandes et barre ⋮ » allumé : le Patron
+// arrive sur le Tableau de bord (s'il est ouvert par le Prestataire, sinon Commandes), l'Opérateur sur Commandes.
+// Éteint, et pour les autres rôles de cet espace (Prestataire) : Commandes, comme avant. Le livreur et le
+// Responsable livraison ont leurs propres pages (StaffApp.jsx), inchangées.
+export function teamHome({ role, newOrdersPage, hasFeature }) {
+  if (newOrdersPage && role === 'PATRON' && hasFeature('TABLEAU_DE_BORD')) return '/equipe/tableau-de-bord';
+  return '/equipe/commandes';
+}

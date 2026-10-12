@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { pageTitle, staffPages } from './nav-pages.js';
+import { pageTitle, staffPages, teamHome } from './nav-pages.js';
 
 const all = () => true;
 const labels = (o) => staffPages(o).map((p) => p.label);
@@ -37,4 +37,15 @@ test('nom de la page dans la barre', () => {
   assert.equal(pageTitle('/equipe/mot-de-passe', pages), 'Mon mot de passe');
   assert.equal(pageTitle('/equipe/alertes', pages), 'Alertes');
   assert.equal(pageTitle('/equipe/inconnue', pages), 'Espace équipe');
+});
+
+test('page d’arrivée : Patron sur le Tableau de bord, Opérateur sur Commandes, seulement avec le réglage allumé', () => {
+  const open = () => true;
+  const noBoard = (k) => k !== 'TABLEAU_DE_BORD';
+  assert.equal(teamHome({ role: 'PATRON', newOrdersPage: true, hasFeature: open }), '/equipe/tableau-de-bord');
+  assert.equal(teamHome({ role: 'PATRON', newOrdersPage: true, hasFeature: noBoard }), '/equipe/commandes', 'Tableau de bord fermé par le Prestataire');
+  assert.equal(teamHome({ role: 'OPERATEUR', newOrdersPage: true, hasFeature: open }), '/equipe/commandes');
+  assert.equal(teamHome({ role: 'PRESTATAIRE', newOrdersPage: true, hasFeature: open }), '/equipe/commandes', 'comme avant');
+  // Réglage éteint : comme avant pour tout le monde
+  for (const role of ['PATRON', 'OPERATEUR', 'PRESTATAIRE']) assert.equal(teamHome({ role, newOrdersPage: false, hasFeature: open }), '/equipe/commandes');
 });

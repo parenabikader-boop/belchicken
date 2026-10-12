@@ -838,7 +838,12 @@ le Patron l'avait éteinte (son choix revient à la réouverture) ; le Patron ne
 - **Barre ⋮** (même réglage) : logo, nom de la page, Alertes et ⋮ ; le ⋮ ouvre un panneau sur le côté avec les pages
   du rôle (`staff/nav-pages.js`, mêmes règles que l'ancienne barre, testées), le nom de la personne connectée et
   Déconnexion ; même chose sur téléphone, tablette et ordinateur. Aussi sur `/equipe/commandes-v2`. Réglage éteint :
-  l'ancienne barre, inchangée.
+  l'ancienne barre, inchangée. La barre prend toute la largeur de l'écran : ⋮ tout en haut à droite, panneau ouvert sur
+  la droite.
+- **Page d'arrivée** (même réglage), à la connexion et sur `/equipe` : Patron → Tableau de bord (Commandes si le
+  Prestataire a fermé `TABLEAU_DE_BORD`), Opérateur → Commandes, Prestataire → Commandes comme avant ; livreur et
+  Responsable livraison inchangés. Réglage éteint : Commandes pour tous, comme avant. Une adresse précise (lien d'une
+  alerte, retour après une session expirée) reste respectée. Règle : `teamHome()` dans `staff/nav-pages.js` (testée).
 - Migration `20261012180000_menu_borne_page_commandes` : structure seulement (2 colonnes oui/non, éteintes par
   défaut), aucune donnée écrite. Tests : `test/menu-borne-commandes.test.js`, `frontend/src/utils/site-choice.test.js`.
 - Démonstration : la photo de `demo:effacer` peut dater d'avant une migration ; les colonnes ajoutées depuis sont

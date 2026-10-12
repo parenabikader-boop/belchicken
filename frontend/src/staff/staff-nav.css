@@ -1,6 +1,9 @@
 /* Barre simple de l'espace équipe (StaffNav.jsx) : logo, nom de la page, Alertes, « ⋮ » et panneau sur le côté.
    Même chose sur téléphone, tablette et ordinateur. L'ancienne barre (.st-nav, staff.css) ne change pas. */
-.st-top .st-wrap.sn-bar{display:flex;align-items:center;justify-content:flex-start;gap:12px;height:60px}
+/* Toute la largeur de l'écran (pas la colonne centrée des pages) : ⋮ tout en haut à droite, sur une seule ligne
+   (les règles de l'ancienne barre pour téléphone et tablette, staff.css, ne s'appliquent pas ici) */
+.st-top .st-wrap.sn-bar{display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:12px;height:60px;max-width:none;padding:0 16px}
+.sn-more{margin-left:auto}
 .sn-logo{flex:none;display:flex;text-decoration:none;color:inherit}
 .sn-logo .mark{width:40px;height:40px}
 .sn-title{flex:1;min-width:0;margin:0;font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-.01em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -9,6 +12,7 @@
 .sn-more{font-size:24px;line-height:1;padding:0 10px}
 .sn-dot{position:absolute;top:-8px;right:-8px;font-size:11px;min-width:20px;height:20px}
 @media (max-width:480px){
+  .st-top .st-wrap.sn-bar{gap:8px;padding:0 12px}
   .sn-btn-txt{display:none}
   .sn-btn{padding:0 10px}
   .sn-title{font-size:18px}

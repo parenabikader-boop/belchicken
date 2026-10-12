@@ -152,7 +152,7 @@ export default function SettingsPage() {
             <div className="rg-text">
               <h2>Nouvelle page Commandes et barre ⋮</h2>
               <p>
-                Allume <b>deux choses ensemble</b> pour toute l’équipe :
+                Allume <b>trois choses ensemble</b> pour toute l’équipe :
               </p>
               <ul className="rg-list">
                 <li>
@@ -162,9 +162,13 @@ export default function SettingsPage() {
                 </li>
                 <li>
                   la <b>barre simple</b> en haut de l’espace équipe : le nom de la page, Alertes, et un bouton <b>⋮</b> qui ouvre
-                  toutes les pages sur le côté, avec le nom de la personne connectée et Déconnexion.
+                  toutes les pages sur le côté, avec le nom de la personne connectée et Déconnexion ;
                 </li>
-                <li><b>Éteint</b> : la page Commandes et la barre du haut restent comme aujourd’hui.</li>
+                <li>
+                  la <b>page d’arrivée</b> selon le rôle : le Patron arrive sur le Tableau de bord (sur Commandes si le Tableau
+                  de bord n’est pas inclus dans la formule), l’Opérateur sur Commandes.
+                </li>
+                <li><b>Éteint</b> : la page Commandes, la barre du haut et la page d’arrivée (Commandes) restent comme aujourd’hui.</li>
                 <li>Mêmes commandes, mêmes étapes, mêmes boutons et mêmes droits : seule la présentation change.</li>
                 <li>Vous pouvez les essayer avant de les allumer : <Link to="/equipe/commandes-v2">Voir la nouvelle page</Link>.</li>
               </ul>

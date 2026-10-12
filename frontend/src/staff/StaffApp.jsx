@@ -8,6 +8,7 @@ import { OrdersFeedProvider, useOrdersFeed } from './orders/OrdersFeed.jsx';
 import OrdersList from './orders/OrdersList.jsx';
 import { useAppSettings } from './settings/useAppSettings.js';
 import StaffNav from './StaffNav.jsx';
+import { teamHome } from './nav-pages.js';
 // Lot 12 : nouvelle page Commandes (réglage « Nouvelle page Commandes », et /equipe/commandes-v2 pour l'essayer)
 const OrdersPage2 = lazy(() => import('./orders2/OrdersPage2.jsx'));
 import OrderDetail from './orders/OrderDetail.jsx';
@@ -106,7 +107,7 @@ function TeamRoutes() {
   return (
     <Routes>
       <Route element={<StaffLayout />}>
-        <Route index element={<Navigate to="commandes" replace />} />
+        <Route index element={<TeamHome />} />
         <Route path="commandes" element={<OrdersChoice />} />
         <Route path="commandes/nouvelle" element={<NewOrder />} />
         <Route path="commandes/:reference" element={<OrderDetail />} />
@@ -228,6 +229,15 @@ function OrdersChoice() {
   const { newOrdersPage, loaded } = useAppSettings();
   if (!loaded) return <p className="st-muted">Chargement…</p>;
   return newOrdersPage ? <Suspense fallback={null}><OrdersPage2 /></Suspense> : <OrdersList />;
+}
+
+// /equipe (et la connexion, qui y mène) : page d'arrivée selon le rôle et le réglage « Nouvelle page Commandes et
+// barre ⋮ » (teamHome, nav-pages.js). Réglage illisible : Commandes, comme avant.
+function TeamHome() {
+  const { user, hasFeature } = useStaff();
+  const { newOrdersPage, loaded } = useAppSettings();
+  if (!loaded) return <p className="st-muted">Chargement…</p>;
+  return <Navigate to={teamHome({ role: user.role, newOrdersPage, hasFeature })} replace />;
 }
 
 // Lot 12 : page réservée au Patron et au Prestataire ; les autres reviennent à `to`

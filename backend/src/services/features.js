@@ -26,7 +26,7 @@ export const FEATURES = [
   // Lot 11 : menu façon borne, ouvert sans ligne ; le Patron l'allume en plus (réglage « Menu façon borne »)
   { key: 'MENU_BORNE', label: 'Menu façon borne', help: 'Menu du site client en plein écran, comme les bornes du restaurant (si le Patron l’allume). Fermé : le menu actuel du site.' },
   // Lot 12 : nouvelle page Commandes, ouverte sans ligne ; le Patron l'allume en plus (réglage « Nouvelle page Commandes et barre ⋮ »)
-  { key: 'NOUVELLE_PAGE_COMMANDES', label: 'Nouvelle page Commandes et barre ⋮', help: 'Page Commandes plus lisible les soirs d’affluence, avec les couleurs d’attente, et barre simple en haut de l’espace équipe (bouton ⋮ qui ouvre toutes les pages), si le Patron l’allume. Fermé : la page Commandes et la barre actuelles.' },
+  { key: 'NOUVELLE_PAGE_COMMANDES', label: 'Nouvelle page Commandes et barre ⋮', help: 'Page Commandes plus lisible les soirs d’affluence, avec les couleurs d’attente, barre simple en haut de l’espace équipe (bouton ⋮ qui ouvre toutes les pages) et page d’arrivée selon le rôle (Patron : Tableau de bord), si le Patron l’allume. Fermé : la page Commandes, la barre et la page d’arrivée actuelles.' },
   // Lot 5d : seul interrupteur fermé sans ligne (defaultOpen: false), et qui ne concerne que le Patron :
   // le Prestataire et le Responsable livraison voient toujours le relevé (le Responsable sans les conditions
   // du contrat ni le montant dû, statement.js).
