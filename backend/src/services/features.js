@@ -25,8 +25,8 @@ export const FEATURES = [
   { key: 'ANGLAIS', label: 'Site en anglais', help: 'Bouton FR / EN sur le site client (si le Patron l’allume). Les messages WhatsApp et l’espace équipe restent en français. Fermé : site en français seulement, sans bouton.' },
   // Lot 11 : menu façon borne, ouvert sans ligne ; le Patron l'allume en plus (réglage « Menu façon borne »)
   { key: 'MENU_BORNE', label: 'Menu façon borne', help: 'Menu du site client en plein écran, comme les bornes du restaurant (si le Patron l’allume). Fermé : le menu actuel du site.' },
-  // Lot 12 : nouvelle page Commandes, ouverte sans ligne ; le Patron l'allume en plus (réglage « Nouvelle page Commandes »)
-  { key: 'NOUVELLE_PAGE_COMMANDES', label: 'Nouvelle page Commandes', help: 'Page Commandes plus lisible les soirs d’affluence, avec les couleurs d’attente (si le Patron l’allume). Fermé : la page Commandes actuelle.' },
+  // Lot 12 : nouvelle page Commandes, ouverte sans ligne ; le Patron l'allume en plus (réglage « Nouvelle page Commandes et barre ⋮ »)
+  { key: 'NOUVELLE_PAGE_COMMANDES', label: 'Nouvelle page Commandes et barre ⋮', help: 'Page Commandes plus lisible les soirs d’affluence, avec les couleurs d’attente, et barre simple en haut de l’espace équipe (bouton ⋮ qui ouvre toutes les pages), si le Patron l’allume. Fermé : la page Commandes et la barre actuelles.' },
   // Lot 5d : seul interrupteur fermé sans ligne (defaultOpen: false), et qui ne concerne que le Patron :
   // le Prestataire et le Responsable livraison voient toujours le relevé (le Responsable sans les conditions
   // du contrat ni le montant dû, statement.js).

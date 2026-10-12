@@ -4,9 +4,15 @@ import { staffApi } from '../../api/client.js';
 // Réglages du logiciel (parcours court…), relus à chaque ouverture de page. loaded = réponse reçue. Si la
 // lecture échoue : tout éteint, c'est-à-dire le fonctionnement habituel.
 let last = null;
+// Composants affichés en même temps qu'un changement de réglage (barre de l'espace équipe) : prévenus tout de suite
+const listeners = new Set();
 
 export function useAppSettings() {
   const [settings, setSettings] = useState(last);
+  useEffect(() => {
+    listeners.add(setSettings);
+    return () => listeners.delete(setSettings);
+  }, []);
   useEffect(() => {
     let alive = true;
     staffApi.settings().then(
@@ -25,4 +31,5 @@ export function useAppSettings() {
 
 export const rememberSettings = (s) => {
   last = s;
+  for (const set of listeners) set(s);
 };

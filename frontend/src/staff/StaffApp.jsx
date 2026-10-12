@@ -7,6 +7,7 @@ import Login from './pages/Login.jsx';
 import { OrdersFeedProvider, useOrdersFeed } from './orders/OrdersFeed.jsx';
 import OrdersList from './orders/OrdersList.jsx';
 import { useAppSettings } from './settings/useAppSettings.js';
+import StaffNav from './StaffNav.jsx';
 // Lot 12 : nouvelle page Commandes (réglage « Nouvelle page Commandes », et /equipe/commandes-v2 pour l'essayer)
 const OrdersPage2 = lazy(() => import('./orders2/OrdersPage2.jsx'));
 import OrderDetail from './orders/OrderDetail.jsx';
@@ -156,6 +157,22 @@ function CourierShell({ home = '/equipe/courses', homeLabel = 'Mes courses', sub
     window.scrollTo(0, 0);
   }, [pathname]);
 
+  // Barre simple (logo, nom de la page, Alertes, « ⋮ ») avec la nouvelle page Commandes : quand le réglage
+  // « Nouvelle page Commandes » est actif, et sur /equipe/commandes-v2 pour l'essayer. Sinon l'ancienne barre.
+  const { newOrdersPage } = useAppSettings();
+  if (newOrdersPage || pathname === '/equipe/commandes-v2') {
+    return (
+      <div className="st-app">
+        <StaffNav unseen={unseen.size} chiffres={chiffres} />
+        {!soundReady && <p className="st-sound">Touchez l'écran une fois pour activer le son des nouvelles commandes.</p>}
+        <main className="st-wrap st-main">
+          <InstallBanner app="equipe" />
+          <Outlet />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="st-app">
       <header className="st-top">
@@ -260,6 +277,22 @@ function StaffShell() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
+
+  // Barre simple (logo, nom de la page, Alertes, « ⋮ ») avec la nouvelle page Commandes : quand le réglage
+  // « Nouvelle page Commandes » est actif, et sur /equipe/commandes-v2 pour l'essayer. Sinon l'ancienne barre.
+  const { newOrdersPage } = useAppSettings();
+  if (newOrdersPage || pathname === '/equipe/commandes-v2') {
+    return (
+      <div className="st-app">
+        <StaffNav unseen={unseen.size} chiffres={chiffres} />
+        {!soundReady && <p className="st-sound">Touchez l'écran une fois pour activer le son des nouvelles commandes.</p>}
+        <main className="st-wrap st-main">
+          <InstallBanner app="equipe" />
+          <Outlet />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="st-app">

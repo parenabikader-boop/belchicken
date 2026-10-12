@@ -150,19 +150,26 @@ export default function SettingsPage() {
           </div>
           <div className="rg-row rg-sep">
             <div className="rg-text">
-              <h2>Nouvelle page Commandes</h2>
+              <h2>Nouvelle page Commandes et barre ⋮</h2>
               <p>
-                La page <b>Commandes</b> de l’équipe devient plus lisible les soirs d’affluence : cartes plus compactes,
-                couleur selon l’attente, commandes en retard en haut, et un bandeau qui compte les retards et les messages à
-                confirmer.
+                Allume <b>deux choses ensemble</b> pour toute l’équipe :
               </p>
               <ul className="rg-list">
-                <li><b>Éteint</b> : la page Commandes reste comme aujourd’hui pour toute l’équipe.</li>
-                <li>Mêmes commandes, mêmes étapes et mêmes boutons : seule la présentation change.</li>
-                <li>Vous pouvez l’essayer avant de l’allumer : <Link to="/equipe/commandes-v2">Voir la nouvelle page</Link>.</li>
+                <li>
+                  la <b>nouvelle page Commandes</b>, plus lisible les soirs d’affluence : cartes plus compactes, couleur selon
+                  l’attente, commandes en retard en haut, et un bandeau qui compte les retards et les
+                  messages à confirmer ;
+                </li>
+                <li>
+                  la <b>barre simple</b> en haut de l’espace équipe : le nom de la page, Alertes, et un bouton <b>⋮</b> qui ouvre
+                  toutes les pages sur le côté, avec le nom de la personne connectée et Déconnexion.
+                </li>
+                <li><b>Éteint</b> : la page Commandes et la barre du haut restent comme aujourd’hui.</li>
+                <li>Mêmes commandes, mêmes étapes, mêmes boutons et mêmes droits : seule la présentation change.</li>
+                <li>Vous pouvez les essayer avant de les allumer : <Link to="/equipe/commandes-v2">Voir la nouvelle page</Link>.</li>
               </ul>
             </div>
-            <SettingSwitch settings={settings} name="newOrdersPage" label="Nouvelle page Commandes" saving={saving} onToggle={toggle} />
+            <SettingSwitch settings={settings} name="newOrdersPage" label="Nouvelle page Commandes et barre ⋮" saving={saving} onToggle={toggle} />
           </div>
           {settings.updatedByName && (
             <p className="st-muted rg-who">Dernier changement : {settings.updatedByName}, le {formatDateTime(settings.updatedAt)}.</p>
