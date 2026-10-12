@@ -8,7 +8,7 @@ import { useAppSettings } from '../settings/useAppSettings.js';
 import TourPanel from '../orders/TourPanel.jsx';
 import { HISTORY, HISTORY_FILTERS, STAGES, STAGE_STATUSES, stageCount } from '../orders/labels.js';
 import OrderCard2 from './OrderCard2.jsx';
-import { boardColumns, byWait, summary, waitLevel } from './waiting.js';
+import { boardColumns, byUrgency, byWait, nothingLine, shortLabel, summary, waitLevel } from './waiting.js';
 import './orders2.css';
 
 // Lot 12 : page Commandes plus lisible, sur /equipe/commandes quand le Patron allume « Nouvelle page Commandes »
@@ -16,7 +16,10 @@ import './orders2.css';
 // La page actuelle (orders/OrdersList.jsx) ne change pas. Même fil des commandes (OrdersFeed.jsx : son, badge,
 // mise à jour toutes les 5 s), mêmes étapes (labels.js) ; en plus :
 //   - explications repliées derrière « ? » (ouvertes au premier passage sur l'appareil) ;
-//   - colonnes vides réduites, « Payées » cachée avec le parcours court quand elle est vide ;
+//   - façon B (choisie par le client le 12 octobre 2026) : étapes vides cachées, résumées en une ligne « Rien à
+//     vérifier, rien en préparation… » ; « Payées » cachée avec le parcours court quand elle est vide ;
+//   - téléphone et tablette : onglet « Tout » (par défaut) = toutes les commandes triées par urgence, avec leur étape,
+//     puis un onglet par étape qui a des commandes ;
 //   - cartes compactes sur 2 lignes, couleur selon le temps passé à l'étape, plus longue attente en haut ;
 //   - bandeau « en cours · en retard · à surveiller · messages » et filtre « En retard seulement ».
 const WIDE = '(min-width: 1024px)';
@@ -98,10 +101,15 @@ export default function OrdersPage2() {
   const sum = summary(active, now);
   const shown = (id) => active.filter((o) => inStage(o, id) && (!lateOnly || waitLevel(o, now) === 'late')).sort(byWait);
   const countOf = (id) => (lateOnly ? shown(id).length : stageCount(counts, id));
-  const columns = boardColumns(STAGES, countOf, { shortFlow });
+  const { visible, empty } = boardColumns(STAGES, countOf, { shortFlow });
+  // En retard seulement : pas de ligne « Rien à… » (une étape peut avoir des commandes, mais aucune en retard)
+  const nothing = lateOnly ? null : nothingLine(empty);
   const history = etape === HISTORY.id;
-  // Téléphone : l'étape choisie, sinon la première qui contient des commandes
-  const tab = columns.find((c) => c.stage.id === etape) || columns.find((c) => c.count > 0) || columns[0];
+  // Téléphone et tablette : l'étape choisie si elle a des commandes, sinon « Tout »
+  const tab = visible.find((c) => c.stage.id === etape) || null;
+  const everything = active.filter((o) => !lateOnly || waitLevel(o, now) === 'late').sort(byUrgency(now));
+  const stageOf = (o) => STAGES.find((st) => inStage(o, st.id));
+  const noneText = lateOnly ? 'Aucune commande en retard.' : 'Aucune commande en cours.';
 
   return (
     <div className="o2">
@@ -145,46 +153,63 @@ export default function OrdersPage2() {
         <History status={params.get('statut') || 'LIVREE'} counts={counts} onStatus={(s) => go({ statut: s })} />
       ) : !feed.orders && !feed.error ? (
         <p className="st-muted">Chargement des commandes…</p>
-      ) : wide ? (
-        <>
-          <TourPanel orders={active.filter((o) => inStage(o, 'EN_PREPARATION'))} onDone={feed.refresh} />
-          <div className="o2-board" style={{ gridTemplateColumns: columns.map((c) => (c.collapsed ? '52px' : 'minmax(0,1fr)')).join(' ') }}>
-            {columns.map(({ stage, count, collapsed }) => (
-              <Column key={stage.id} stage={stage} count={count} collapsed={collapsed} orders={shown(stage.id)} unseen={feed.unseen} now={now} help={help} />
-            ))}
-          </div>
-        </>
       ) : (
         <>
-          <nav className="o2-tabs" aria-label="Étapes">
-            {columns.map(({ stage, count }) => {
-              const late = shown(stage.id).some((o) => waitLevel(o, now) === 'late');
-              return (
-                <button key={stage.id} type="button" className={`od-tab${tab.stage.id === stage.id ? ' on' : ''}${count ? ' has' : ''}${late ? ' late' : ''}`}
-                  aria-pressed={tab.stage.id === stage.id} onClick={() => go({ etape: stage.id })}>
-                  {stage.label} <span>{count}</span>
+          {nothing && <p className="o2-nothing">{nothing}</p>}
+          {wide ? (
+            <>
+              <TourPanel orders={active.filter((o) => inStage(o, 'EN_PREPARATION'))} onDone={feed.refresh} />
+              {visible.length ? (
+                <div className="o2-board" style={{ gridTemplateColumns: visible.map(() => 'minmax(0,1fr)').join(' ') }}>
+                  {visible.map(({ stage, count }) => (
+                    <Column key={stage.id} stage={stage} count={count} orders={shown(stage.id)} unseen={feed.unseen} now={now} help={help} />
+                  ))}
+                </div>
+              ) : (
+                <p className="od-empty o2-none">{noneText}</p>
+              )}
+            </>
+          ) : (
+            <>
+              <nav className="o2-tabs" aria-label="Étapes">
+                <button type="button" className={`od-tab${!tab ? ' on' : ''}${everything.length ? ' has' : ''}${everything.some((o) => waitLevel(o, now) === 'late') ? ' late' : ''}`}
+                  aria-pressed={!tab} onClick={() => go({ etape: null })}>
+                  Tout <span>{everything.length}</span>
                 </button>
-              );
-            })}
-          </nav>
-          {tab.stage.id === 'EN_PREPARATION' && <TourPanel orders={active.filter((o) => inStage(o, 'EN_PREPARATION'))} onDone={feed.refresh} />}
-          <Column stage={tab.stage} count={tab.count} orders={shown(tab.stage.id)} unseen={feed.unseen} now={now} help={help} single />
+                {visible.map(({ stage, count }) => {
+                  const late = shown(stage.id).some((o) => waitLevel(o, now) === 'late');
+                  return (
+                    <button key={stage.id} type="button" className={`od-tab has${tab?.stage.id === stage.id ? ' on' : ''}${late ? ' late' : ''}`}
+                      aria-pressed={tab?.stage.id === stage.id} onClick={() => go({ etape: stage.id })}>
+                      {shortLabel(stage)} <span>{count}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+              {tab ? (
+                <>
+                  {tab.stage.id === 'EN_PREPARATION' && <TourPanel orders={active.filter((o) => inStage(o, 'EN_PREPARATION'))} onDone={feed.refresh} />}
+                  <Column stage={tab.stage} count={tab.count} orders={shown(tab.stage.id)} unseen={feed.unseen} now={now} help={help} single />
+                </>
+              ) : everything.length ? (
+                <ul className="o2-list">
+                  {everything.map((o) => (
+                    <OrderCard2 key={o.reference} order={o} isNew={feed.unseen?.has(o.reference)} now={now} stage={stageOf(o)} />
+                  ))}
+                </ul>
+              ) : (
+                <p className="od-empty o2-none">{noneText}</p>
+              )}
+            </>
+          )}
         </>
       )}
     </div>
   );
 }
 
-// Une étape : en-tête (nom, nombre, « ? »), explication repliée, cartes compactes. Vide : bande étroite.
-function Column({ stage, count, collapsed, orders, unseen, now, help, single = false }) {
-  if (collapsed && !single) {
-    return (
-      <section className={`o2-col collapsed s-${stage.id}`} aria-label={`${stage.label} : aucune commande`}>
-        <span className="o2-col-v">{stage.label}</span>
-        <span className="od-count">0</span>
-      </section>
-    );
-  }
+// Une étape : en-tête (nom, nombre, « ? »), explication repliée, cartes compactes
+function Column({ stage, count, orders, unseen, now, help, single = false }) {
   const open = help.isOpen(stage.id);
   return (
     <section className={`o2-col s-${stage.id}${count ? ' has' : ''}${single ? ' single' : ''}`} aria-label={stage.label}>

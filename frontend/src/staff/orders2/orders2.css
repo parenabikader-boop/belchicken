@@ -21,8 +21,6 @@
 .o2-col.has{background:#fff8ea}
 .o2-col.s-PAIEMENT_A_VERIFIER.has{background:#fff4d6;border-color:#e0a100}
 .o2-col.single{background:transparent;border:0;padding:0}
-.o2-col.collapsed{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 2px;min-height:220px;background:#f6efe6;border-style:dashed}
-.o2-col-v{writing-mode:vertical-rl;transform:rotate(180deg);font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
 .o2-col-head{display:flex;align-items:center;gap:6px;margin:0 2px 6px}
 .o2-col-head h2{flex:1;min-width:0;font-family:var(--sans);font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .o2-col.single .o2-col-head{justify-content:flex-end;margin:4px 0 8px}
@@ -62,3 +60,14 @@
   .o2-sum{width:100%}
   .c2{padding:7px 9px;font-size:13.5px}
 }
+
+/* Façon B : étapes vides résumées en une ligne ; onglet « Tout » avec l'étape au-dessus de chaque carte */
+.o2-nothing{margin:2px 0 10px;color:var(--muted);font-size:14px;font-style:italic}
+.o2-none{margin-top:8px}
+.c2-stage{display:inline-block;margin:0 0 2px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:#f3ead9;border-radius:999px;padding:2px 8px}
+.c2-stage.s-PAIEMENT_A_VERIFIER{background:#e0a100;color:var(--ink)}
+.c2-stage.s-PAYEE{background:#f3ead9;color:var(--ink)}
+.c2-stage.s-EN_PREPARATION{background:#fde9c8;color:#7a4a00}
+.c2-stage.s-EN_LIVRAISON{background:#fbe3e3;color:var(--brand)}
+.c2-stage.s-PRETE{background:#e3f1e4;color:#22632a}
+.c2-stage.s-A_REMERCIER{background:#e6eefb;color:#234a8a}

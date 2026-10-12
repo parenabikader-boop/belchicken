@@ -814,7 +814,7 @@ le Patron l'avait éteinte (son choix revient à la réouverture) ; le Patron ne
 | Réglage du Patron | Colonne | Interrupteur du Prestataire | Éteint | Allumé |
 |---|---|---|---|---|
 | Menu façon borne | `AppSettings.kioskMenu` | `MENU_BORNE` (ouvert sans ligne) | `/menu` = menu actuel (`Menu.jsx`) | `/menu` = menu plein écran (`MenuBorne.jsx`) |
-| Nouvelle page Commandes | `AppSettings.newOrdersPage` | `NOUVELLE_PAGE_COMMANDES` (ouvert sans ligne) | `/equipe/commandes` = page actuelle (`OrdersList.jsx`) | `/equipe/commandes` = nouvelle page (`OrdersPage2.jsx`) |
+| Nouvelle page Commandes et barre ⋮ | `AppSettings.newOrdersPage` | `NOUVELLE_PAGE_COMMANDES` (ouvert sans ligne) | `/equipe/commandes` = page actuelle (`OrdersList.jsx`), barre actuelle | `/equipe/commandes` = nouvelle page (`OrdersPage2.jsx`), barre ⋮ (`StaffNav.jsx`) sur tout l'espace équipe |
 
 - **Menu** : lu par le site avec **`GET /api/site`** (public), qui répond `{ anglais, menuBorne }` et rien d'autre
   (`publicSite()` dans `src/routes/site.routes.js`). `frontend/src/components/SiteFrame.jsx` choisit le cadre : sur
@@ -829,6 +829,16 @@ le Patron l'avait éteinte (son choix revient à la réouverture) ; le Patron ne
   par `/api/site`. Réglage illisible : page actuelle. **`/equipe/commandes-v2`** reste ouverte au Patron et au
   Prestataire pour essayer la nouvelle page avant de l'allumer (lien « Voir la nouvelle page » dans Réglages) ; un
   Opérateur y est renvoyé vers `/equipe/commandes`.
+- **Nouvelle page, façon B** (choisie par le client le 12 octobre 2026) : seules les étapes qui ont des commandes sont
+  affichées ; les autres sont résumées en une ligne (« Rien à vérifier, rien en préparation… ») ; « Payées » n'apparaît
+  pas avec le parcours court tant qu'elle est vide. Ordinateur : une colonne par étape non vide, sur toute la largeur.
+  Téléphone et tablette : onglet **« Tout »** par défaut (toutes les commandes en cours triées par urgence : rouges,
+  puis orange, puis les autres, chacune avec son étape), puis un onglet par étape non vide. Règles :
+  `boardColumns()`, `nothingLine()`, `byUrgency()` dans `staff/orders2/waiting.js` (testées).
+- **Barre ⋮** (même réglage) : logo, nom de la page, Alertes et ⋮ ; le ⋮ ouvre un panneau sur le côté avec les pages
+  du rôle (`staff/nav-pages.js`, mêmes règles que l'ancienne barre, testées), le nom de la personne connectée et
+  Déconnexion ; même chose sur téléphone, tablette et ordinateur. Aussi sur `/equipe/commandes-v2`. Réglage éteint :
+  l'ancienne barre, inchangée.
 - Migration `20261012180000_menu_borne_page_commandes` : structure seulement (2 colonnes oui/non, éteintes par
   défaut), aucune donnée écrite. Tests : `test/menu-borne-commandes.test.js`, `frontend/src/utils/site-choice.test.js`.
 - Démonstration : la photo de `demo:effacer` peut dater d'avant une migration ; les colonnes ajoutées depuis sont

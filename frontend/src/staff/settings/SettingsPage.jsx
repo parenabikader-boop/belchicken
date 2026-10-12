@@ -157,7 +157,7 @@ export default function SettingsPage() {
               <ul className="rg-list">
                 <li>
                   la <b>nouvelle page Commandes</b>, plus lisible les soirs d’affluence : cartes plus compactes, couleur selon
-                  l’attente, commandes en retard en haut, et un bandeau qui compte les retards et les
+                  l’attente, commandes en retard en haut, étapes vides cachées, et un bandeau qui compte les retards et les
                   messages à confirmer ;
                 </li>
                 <li>

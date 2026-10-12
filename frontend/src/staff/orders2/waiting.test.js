@@ -1,7 +1,7 @@
 // Lot 12 : temps d'attente, couleurs, ordre, colonnes et bandeau de la nouvelle page Commandes (waiting.js)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { boardColumns, byWait, summary, THRESHOLDS, waitKey, waitLevel, waitMinutes, waitText } from './waiting.js';
+import { boardColumns, byUrgency, byWait, nothingLine, summary, THRESHOLDS, waitKey, waitLevel, waitMinutes, waitText } from './waiting.js';
 
 const NOW = Date.UTC(2026, 9, 9, 20, 0);
 const ago = (min) => new Date(NOW - min * 60000).toISOString();
@@ -46,13 +46,37 @@ test('plus longue attente à l’étape en haut', () => {
   assert.deepEqual(list.map((o) => o.reference), ['C', 'B', 'A']);
 });
 
-test('colonnes : « Payées » cachée avec le parcours court quand elle est vide, colonnes vides réduites', () => {
+test('étapes : seules celles qui ont des commandes ; « Payées » cachée avec le parcours court quand elle est vide', () => {
   const stages = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE'].map((id) => ({ id }));
   const counts = { PAIEMENT_A_VERIFIER: 3, PAYEE: 0, EN_PREPARATION: 5, PRETE: 0 };
-  const cols = (shortFlow, c = counts) => boardColumns(stages, (id) => c[id], { shortFlow }).map((x) => `${x.stage.id}${x.collapsed ? '·réduite' : ''}`);
-  assert.deepEqual(cols(true), ['PAIEMENT_A_VERIFIER', 'EN_PREPARATION', 'PRETE·réduite']);
-  assert.deepEqual(cols(false), ['PAIEMENT_A_VERIFIER', 'PAYEE·réduite', 'EN_PREPARATION', 'PRETE·réduite']);
-  assert.deepEqual(cols(true, { ...counts, PAYEE: 1 }), ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE·réduite'], 'commande déjà payée : on la voit');
+  const cols = (shortFlow, c = counts) => {
+    const { visible, empty } = boardColumns(stages, (id) => c[id], { shortFlow });
+    return { visible: visible.map((x) => x.stage.id), empty: empty.map((x) => x.stage.id) };
+  };
+  assert.deepEqual(cols(true), { visible: ['PAIEMENT_A_VERIFIER', 'EN_PREPARATION'], empty: ['PRETE'] });
+  assert.deepEqual(cols(false), { visible: ['PAIEMENT_A_VERIFIER', 'EN_PREPARATION'], empty: ['PAYEE', 'PRETE'] });
+  assert.deepEqual(cols(true, { ...counts, PAYEE: 1 }).visible, ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION'], 'commande déjà payée : on la voit');
+  assert.deepEqual(cols(true, {}), { visible: [], empty: ['PAIEMENT_A_VERIFIER', 'EN_PREPARATION', 'PRETE'] });
+});
+
+test('ligne des étapes vides', () => {
+  const e = (...ids) => ids.map((id) => ({ stage: { id } }));
+  assert.equal(nothingLine(e('PAIEMENT_A_VERIFIER', 'EN_PREPARATION', 'EN_LIVRAISON', 'PRETE')), 'Rien à vérifier, rien en préparation, rien en livraison, rien à retirer.');
+  assert.equal(nothingLine(e('A_REMERCIER')), 'Personne à remercier.');
+  assert.equal(nothingLine(e('PAYEE')), 'Rien à lancer.');
+  assert.equal(nothingLine([]), null);
+});
+
+test('onglet « Tout » : rouges, puis orange, puis les autres ; à couleur égale, la plus proche de son seuil rouge', () => {
+  const list = [
+    { reference: 'prep20', status: 'EN_PREPARATION', stageSince: ago(20) }, // ok, 20/40
+    { reference: 'verif8', status: 'PAIEMENT_A_VERIFIER', stageSince: ago(8) }, // orange, 8/10
+    { reference: 'liv90', status: 'EN_LIVRAISON', stageSince: ago(90) }, // rouge, 90/60
+    { reference: 'merci5', status: 'LIVREE', toThank: true, stageSince: ago(5) }, // ok, 5/120
+    { reference: 'verif30', status: 'PAIEMENT_A_VERIFIER', stageSince: ago(30) }, // rouge, 30/10
+    { reference: 'prep30', status: 'EN_PREPARATION', stageSince: ago(30) }, // orange, 30/40
+  ].sort(byUrgency(NOW));
+  assert.deepEqual(list.map((o) => o.reference), ['verif30', 'liv90', 'verif8', 'prep30', 'prep20', 'merci5']);
 });
 
 test('bandeau : en cours, en retard, à surveiller, messages à confirmer', () => {

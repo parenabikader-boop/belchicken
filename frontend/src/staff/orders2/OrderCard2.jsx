@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../utils/format.js';
 import { FEE_METHOD_LABEL, feeText, formatTime, isPartner, isPickup, METHOD_LABEL, statusLabel } from '../orders/labels.js';
-import { waitLevel, waitMinutes, waitText } from './waiting.js';
+import { shortLabel, waitLevel, waitMinutes, waitText } from './waiting.js';
 
 // Ce qui compte pour l'étape (même texte que la page actuelle, OrdersList.jsx, qui ne change pas)
 export function stageDetail(o) {
@@ -34,13 +34,15 @@ const shortMethod = (m) => (METHOD_LABEL[m] || '').split(' ')[0];
 // Lot 12 : carte compacte sur 2 lignes. Ligne 1 : référence, client, badges, temps d'attente à l'étape.
 // Ligne 2 : quartier ou livreur, total et paiement. Bord gauche et pastille : normal, orange ou rouge.
 // withStatus : historique et recherche (statut à la place du temps d'attente).
-export default function OrderCard2({ order: o, isNew, withStatus = false, now }) {
+// stage : onglet « Tout » (téléphone, tablette), l'étape de la commande au-dessus de la carte.
+export default function OrderCard2({ order: o, isNew, withStatus = false, now, stage }) {
   const level = withStatus ? null : waitLevel(o, now);
   const min = waitMinutes(o, now);
   const detail = stageDetail(o);
   const since = formatTime(o.stageSince || o.createdAt);
   return (
     <li>
+      {stage && <span className={`c2-stage s-${stage.id}`}>{shortLabel(stage)}</span>}
       <Link to={`/equipe/commandes/${o.reference}`} className={`c2 s-${o.status}${level ? ` lvl-${level}` : ''}`}>
         <span className="c2-l1">
           <b className="c2-ref">{o.reference}</b>
