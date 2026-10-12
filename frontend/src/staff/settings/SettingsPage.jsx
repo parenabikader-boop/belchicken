@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatDateTime } from '../orders/labels.js';
 import { rememberSettings } from './useAppSettings.js';
@@ -130,6 +131,38 @@ export default function SettingsPage() {
               </ul>
             </div>
             <SettingSwitch settings={settings} name="englishSite" label="Site en anglais" saving={saving} onToggle={toggle} />
+          </div>
+          <div className="rg-row rg-sep">
+            <div className="rg-text">
+              <h2>Menu façon borne</h2>
+              <p>
+                La page <b>Menu</b> du site s’affiche en plein écran, comme les bornes de commande du restaurant : une catégorie
+                à la fois, choisie dans la colonne (ou la bande du haut sur téléphone), et les sauces, frites et boissons
+                proposées dans la fiche de chaque plat.
+              </p>
+              <ul className="rg-list">
+                <li><b>Éteint</b> : le menu du site reste comme aujourd’hui.</li>
+                <li>Mêmes plats, mêmes prix et même panier : seule la page du menu change.</li>
+                <li>Les sauces, frites et accompagnements proposés sont les plats disponibles de la catégorie Extras.</li>
+              </ul>
+            </div>
+            <SettingSwitch settings={settings} name="kioskMenu" label="Menu façon borne" saving={saving} onToggle={toggle} />
+          </div>
+          <div className="rg-row rg-sep">
+            <div className="rg-text">
+              <h2>Nouvelle page Commandes</h2>
+              <p>
+                La page <b>Commandes</b> de l’équipe devient plus lisible les soirs d’affluence : cartes plus compactes,
+                couleur selon l’attente, commandes en retard en haut, et un bandeau qui compte les retards et les messages à
+                confirmer.
+              </p>
+              <ul className="rg-list">
+                <li><b>Éteint</b> : la page Commandes reste comme aujourd’hui pour toute l’équipe.</li>
+                <li>Mêmes commandes, mêmes étapes et mêmes boutons : seule la présentation change.</li>
+                <li>Vous pouvez l’essayer avant de l’allumer : <Link to="/equipe/commandes-v2">Voir la nouvelle page</Link>.</li>
+              </ul>
+            </div>
+            <SettingSwitch settings={settings} name="newOrdersPage" label="Nouvelle page Commandes" saving={saving} onToggle={toggle} />
           </div>
           {settings.updatedByName && (
             <p className="st-muted rg-who">Dernier changement : {settings.updatedByName}, le {formatDateTime(settings.updatedAt)}.</p>

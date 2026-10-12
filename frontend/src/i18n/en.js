@@ -230,7 +230,7 @@ export default {
     moreDrinks: (n) => `${n} more drink${n > 1 ? 's' : ''}`,
     add: 'Add',
   },
-  // Lot 11 : kiosk-style menu (test address /menu-borne)
+  // Lot 11 : kiosk-style menu (/menu, « Menu façon borne » setting)
   borne: {
     back: 'Back',
     prev: 'See previous items',

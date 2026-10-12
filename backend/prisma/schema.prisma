@@ -183,6 +183,12 @@ model AppSettings {
   // Lot 8 : « Site en anglais » (bouton FR / EN sur le site client). Éteint = site en français, sans bouton.
   // Inclus ou non par le Prestataire (interrupteur ANGLAIS).
   englishSite        Boolean  @default(false)
+  // Lot 11 : « Menu façon borne » (/menu en plein écran façon borne). Éteint = menu actuel (Menu.jsx).
+  // Inclus ou non par le Prestataire (interrupteur MENU_BORNE).
+  kioskMenu          Boolean  @default(false)
+  // Lot 12 : « Nouvelle page Commandes » (/equipe/commandes). Éteint = page actuelle (OrdersList.jsx).
+  // Inclus ou non par le Prestataire (interrupteur NOUVELLE_PAGE_COMMANDES).
+  newOrdersPage      Boolean  @default(false)
   updatedByName     String? // dernier à avoir changé un réglage (copie figée)
   updatedAt          DateTime @updatedAt
 }

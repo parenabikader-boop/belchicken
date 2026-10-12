@@ -133,6 +133,32 @@ export const RESTORED_TABLES = [
   { model: 'deliveryDistanceBand', key: 'id' },
 ];
 
+// Colonnes ajoutées par une migration après la photo (ex. AppSettings.kioskMenu et newOrdersPage, lots 11 et 12) :
+// à l'effacement, elles reprennent leur valeur par défaut (withAddedDefaults), puis la comparaison avec la photo
+// ne regarde que les colonnes que la photo connaissait (photoColumns, projectRows), dans le même ordre.
+// fields : champs du modèle Prisma (Prisma.dmmf), seules les valeurs par défaut simples (oui/non, nombre, texte).
+export function withAddedDefaults(row, fields) {
+  const out = { ...row };
+  for (const f of fields) {
+    if (f.kind !== 'scalar' || f.name in out || !f.hasDefaultValue) continue;
+    if (f.default === null || typeof f.default === 'object') continue; // now(), cuid()… : jamais pour ces colonnes
+    out[f.name] = f.default;
+  }
+  return out;
+}
+
+// { appSettings: ['id', 'shortFlow', …] } : colonnes de chaque table de réglages au moment de la photo
+export function photoColumns(photo) {
+  const out = {};
+  for (const { model } of RESTORED_TABLES) {
+    const rows = photo.settings?.[model];
+    if (rows?.length) out[model] = Object.keys(rows[0]);
+  }
+  return out;
+}
+
+export const projectRows = (rows, keys) => rows.map((r) => Object.fromEntries(keys.map((k) => [k, r[k]])));
+
 // Interrupteurs ouverts pendant la démonstration (remis comme avant à l'effacement)
 export const DEMO_FEATURES = ['TABLEAU_DE_BORD', 'CAISSE', 'VENTES', 'AVIS', 'RELEVE'];
 

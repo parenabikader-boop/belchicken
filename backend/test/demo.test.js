@@ -7,7 +7,7 @@ import { newOrderReference } from '../src/utils/reference.js';
 import { companyReady } from '../src/services/delivery-mode.js';
 import { normalizePhone } from '../src/utils/phone.js';
 import {
-  DEMO_COMPANY, DEMO_REF_RE, DEMO_TERMS, PRESTATAIRE_DEMO, RESTORED_TABLES, comparePhotos, isDemoOrder, isDemoRemittance, isDemoRun,
+  DEMO_COMPANY, DEMO_REF_RE, DEMO_TERMS, PRESTATAIRE_DEMO, RESTORED_TABLES, comparePhotos, photoColumns, projectRows, withAddedDefaults, isDemoOrder, isDemoRemittance, isDemoRun,
   isDemoAvailabilityChange, isDemoStaff, isDemoTerms, isDemoZone, isLiveTestOrder, passwordTargetError, serverError, serverNameOf,
 } from '../scripts/demo-commun.js';
 import { checkPlan, generatePlan, isOpenAt, summarize } from '../scripts/demo-plan.js';
@@ -169,6 +169,32 @@ test('photos : identiques, différentes, journal de sécurité qui ne fait que g
   assert.deepEqual(comparePhotos(before, grown).map((d) => d.allowed), [true]);
   const changed = { tables: { Order: { count: 7, hash: 'b' }, SecurityLog: { count: 10, hash: 'h', hashUntilPhoto: 'z' } } };
   assert.equal(comparePhotos(before, changed).filter((d) => !d.allowed).length, 2);
+});
+
+test('photo prise avant une migration : colonnes ajoutées remises par défaut, ignorées dans la comparaison', () => {
+  // Photo d'avant les lots 11 et 12 : AppSettings sans kioskMenu ni newOrdersPage
+  const at = new Date('2026-10-12T10:00:00Z');
+  const photoRow = { id: 1, shortFlow: true, englishSite: false, updatedByName: 'NABI', updatedAt: at };
+  const photo = { settings: { appSettings: [photoRow], deliverySettings: [] } };
+  const fields = [
+    { name: 'id', kind: 'scalar', hasDefaultValue: true, default: 1 },
+    { name: 'shortFlow', kind: 'scalar', hasDefaultValue: true, default: false },
+    { name: 'englishSite', kind: 'scalar', hasDefaultValue: true, default: false },
+    { name: 'kioskMenu', kind: 'scalar', hasDefaultValue: true, default: false },
+    { name: 'newOrdersPage', kind: 'scalar', hasDefaultValue: true, default: false },
+    { name: 'updatedByName', kind: 'scalar', hasDefaultValue: false },
+    { name: 'updatedAt', kind: 'scalar', hasDefaultValue: false },
+    { name: 'createdAt', kind: 'scalar', hasDefaultValue: true, default: { name: 'now', args: [] } },
+  ];
+  // Effacement : la ligne de la photo, plus les nouvelles colonnes à « éteint » (rien d'autre n'est inventé)
+  assert.deepEqual(withAddedDefaults(photoRow, fields), { ...photoRow, kioskMenu: false, newOrdersPage: false });
+  // Comparaison : seulement les colonnes connues de la photo, dans le même ordre (même empreinte)
+  const cols = photoColumns(photo);
+  assert.deepEqual(cols, { appSettings: ['id', 'shortFlow', 'englishSite', 'updatedByName', 'updatedAt'] });
+  const after = [{ id: 1, shortFlow: true, englishSite: false, kioskMenu: false, newOrdersPage: false, updatedByName: 'NABI', updatedAt: at }];
+  assert.equal(JSON.stringify(projectRows(after, cols.appSettings)), JSON.stringify([photoRow]));
+  // Une valeur d'avant changée reste visible
+  assert.notEqual(JSON.stringify(projectRows([{ ...after[0], shortFlow: false }], cols.appSettings)), JSON.stringify([photoRow]));
 });
 
 test('les scripts de démonstration n’envoient rien : ni WhatsApp, ni alerte, ni journal', () => {

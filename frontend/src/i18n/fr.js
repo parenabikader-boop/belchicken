@@ -131,7 +131,7 @@ export default {
     moreDrinks: (n) => `Encore ${n} boisson${n > 1 ? 's' : ''}`,
     add: 'Ajouter',
   },
-  // Lot 11 : menu façon borne (adresse d'essai /menu-borne)
+  // Lot 11 : menu façon borne (/menu, réglage « Menu façon borne »)
   borne: {
     back: 'Retour',
     prev: 'Voir les articles précédents',

@@ -36,8 +36,8 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 8 | Langue FR/EN sur le site client | Terminé : en ligne le 12 octobre 2026 (enregistrement `1e2047c`), réglage « Site en anglais » éteint en production |
 | 9 | WhatsApp automatique (API Meta), deux numéros | À faire |
 | 10 | Application Play Store | À faire |
-| 11 | Menu façon borne (page du menu du site client), façon A | En cours (demandé le 12 octobre 2026, avant les lots 9 et 10) : page « écran libre » validée par le client, essayée sur dev à l'adresse `/menu-borne`, enregistrée en local ; reste l'étape 1 (réglage « Menu façon borne » et interrupteur `MENU_BORNE`, petite migration), après l'accord du client |
-| 12 | Page Commandes plus lisible (soirs d'affluence) | En cours : nouvelle page à l'adresse d'essai `/equipe/commandes-v2` (dev, enregistrée en local), API complétée ; restent l'écriture du coup de feu `demo:affluence` dans dev et le réglage (migration groupée avec le lot 11), après l'accord du client |
+| 11 | Menu façon borne (page du menu du site client), façon A | Prêt sur dev, enregistré en local (pas sur GitHub) : page « écran libre » validée par le client, réglage « Menu façon borne » et interrupteur `MENU_BORNE` (migration groupée `20261012180000_menu_borne_page_commandes`, appliquée sur dev seulement le 12 octobre 2026), essais faits ; `/menu-borne` renvoie vers `/menu`. **STOP avant la mise en ligne** |
+| 12 | Page Commandes plus lisible (soirs d'affluence) | Prêt sur dev, enregistré en local (pas sur GitHub) : nouvelle page, coup de feu `demo:affluence` écrit dans dev, réglage « Nouvelle page Commandes » et interrupteur `NOUVELLE_PAGE_COMMANDES` (même migration que le lot 11), essais faits ; `/equipe/commandes-v2` gardée pour le Patron et le Prestataire. **STOP avant la mise en ligne** |
 
 Hors lots : **démonstration commerciale** sur la base dev (scripts `demo:*`, enregistrement local `bcc13e1`, pas
 envoyé sur GitHub). Voir « Démonstration commerciale » plus bas.
@@ -581,8 +581,8 @@ inchangés. Captures des bornes : `docs/captures-borne/` ; captures des essais (
 - [x] 0. Captures des bornes au dossier (`docs/captures-borne/`, 3 images) ; Extras proposés d'après les sous-groupes
   de la catégorie Extras de la base, prix lus dans le menu. Sur dev, la seule sauce (« Sauce supplémentaire ») est
   indisponible : la section Sauces apparaîtra quand le Patron créera les vraies sauces (noms et prix de Belchicken).
-- [ ] 1. Réglage « Menu façon borne » et interrupteur `MENU_BORNE`, `GET /api/site`, `/menu` qui affiche l'un ou
-  l'autre menu. **Petite migration** annoncée avant, sauvegarde Neon. Tests. (½ jour) **Après l'accord du client.**
+- [x] 1. Réglage « Menu façon borne » et interrupteur `MENU_BORNE`, `GET /api/site` (`menuBorne`), `/menu` qui
+  affiche l'un ou l'autre menu (12 octobre 2026). Voir « Réglages des lots 11 et 12 » plus bas.
 - [x] 2. Nouvelle page, version « écran libre » (12 octobre 2026, adresse d'essai `/menu-borne`).
 - [x] 3. Écran de personnalisation plein écran (façon A), Retour et prix toujours visibles.
 - [x] 4. Essais sur dev en tailles téléphone, tablette et ordinateur (navigateur Edge sans fenêtre, aucune erreur, aucune
@@ -644,8 +644,8 @@ page d'essai ramène à la page actuelle (« ‹ Commandes »), comme avant.
 
 - [x] 0. Accord du client sur l'analyse et sur les seuils d'attente (12 octobre 2026).
 - [x] 1. API : `stageSince` et `noticePending` dans la liste des commandes en cours, tests (309 tests au total).
-- [ ] 2. Réglage « Nouvelle page Commandes », petite migration groupée avec celle du lot 11, sauvegarde Neon, tests.
-  **Après l'accord du client.**
+- [x] 2. Réglage « Nouvelle page Commandes » et interrupteur `NOUVELLE_PAGE_COMMANDES`, migration groupée avec celle
+  du lot 11 (12 octobre 2026). Voir « Réglages des lots 11 et 12 » plus bas.
 - [x] 3. Nouvelle page sur ordinateur (`/equipe/commandes-v2`) : colonnes réduites quand elles sont vides, « Payées »
   cachée avec le parcours court, explications repliées derrière « ? », cartes compactes sur 2 lignes, couleurs
   d'attente, plus longue attente en haut, bandeau et filtre « En retard seulement ».
@@ -663,6 +663,49 @@ page d'essai ramène à la page actuelle (« ‹ Commandes »), comme avant.
   dont page actuelle et nouvelle page côte à côte : `captures-lot12-commandes\v2-vraies-donnees-dev\`. **STOP avant la
   mise en ligne.**
 - [ ] Plus tard : seuils d'attente modifiables par le Patron (page Réglages).
+
+### Réglages des lots 11 et 12 (migration groupée)
+
+Décisions du client (12 octobre 2026) : une seule migration pour les deux réglages, schéma présenté avant ;
+`/menu-borne` retirée (renvoie vers `/menu`), **sans** aperçu dans l'espace équipe pour l'instant ;
+`/equipe/commandes-v2` gardée pour le Patron et le Prestataire, avec le lien « Voir la nouvelle page » dans Réglages.
+
+- [x] Migration `20261012180000_menu_borne_page_commandes` : `AppSettings.kioskMenu` et `AppSettings.newOrdersPage`,
+  oui/non, éteints par défaut ; écrite sans base (`prisma migrate diff`), schéma accepté par le client.
+- [x] Serveur : réglages et interrupteurs `MENU_BORNE` et `NOUVELLE_PAGE_COMMANDES` (ouverts sans ligne),
+  `GET /api/site` = `{ anglais, menuBorne }` (jamais le réglage de l'équipe). Site : `SiteFrame.jsx`, `MenuChoice.jsx`,
+  `utils/site.js`, `utils/site-choice.js` ; espace équipe : `/equipe/commandes` choisit la page, page Réglages.
+  `Menu.jsx`, `OrdersList.jsx`, `OrdersPage2.jsx` inchangés (commentaires mis à jour). README « Menu façon borne et
+  nouvelle page Commandes ».
+- [x] Démonstration : `demo:effacer` accepte une photo prise avant une migration (colonnes ajoutées remises par défaut,
+  ignorées dans la comparaison).
+- [x] Tests : 317 côté serveur (8 de plus), 17 côté site (4 de plus), tous passent.
+- [x] Sauvegarde Neon de dev par le client (branche « sauvegarde-avant-lot11-12 »), puis `npm run db:deploy` sur dev
+  seulement (`ep-nameless-band-b4vetndd`, vérifié deux fois) avec son accord, le 12 octobre 2026.
+- [x] Essais sur dev (12 octobre 2026), vraie API locale (WhatsApp et alertes coupés), sessions d'essai temporaires
+  de « Patron (essai) », « Awa (essai) » et « Presta (essai) », Edge sans fenêtre en tailles téléphone, tablette et
+  ordinateur : **58 vérifications, aucun échec, aucune erreur dans le navigateur**.
+  - Éteint : `/menu` = menu actuel avec l'en-tête ; `/menu-borne/burgers` → `/menu/burgers` ; Awa voit la page
+    Commandes actuelle et `/equipe/commandes-v2` la renvoie vers `/equipe/commandes` ; le Patron ouvre la nouvelle
+    page par le lien de Réglages ; un Opérateur ne peut pas changer un réglage (403).
+  - Allumé : `/menu` en plein écran sans en-tête ni pied, changement de catégorie (`/menu/poulet`), plat ajouté,
+    « Ma commande 1 », panier avec l'en-tête, retour au menu façon borne (aucune commande validée) ; Awa voit la
+    nouvelle page sur `/equipe/commandes`, détail puis retour.
+  - Prestataire : `MENU_BORNE` fermé → `/api/site` faux, menu actuel, le Patron ne peut pas rallumer (403
+    `FONCTION_NON_INCLUSE`) ; `NOUVELLE_PAGE_COMMANDES` fermé → page actuelle ; les deux « Non inclus » dans Réglages ;
+    réouverture → le choix du Patron revient. Téléphone qui se souvenait d'« allumé » : menu actuel dès la réponse.
+  - Captures et rapport : `C:\Users\HP\Desktop\belchiken\captures-lot11-12-reglages\`.
+- [x] Dev remise comme avant : `AppSettings` identique (mêmes valeurs, « NABI », même date), lignes d'interrupteurs
+  de l'essai supprimées, sessions d'essai supprimées ; commandes (800, dont 793 « Démo ») identiques. Seules restent
+  4 lignes du journal de sécurité (fermeture et réouverture des deux interrupteurs par « Presta (essai) ») : la base
+  refuse de les effacer.
+- [x] Démonstration vérifiée en lecture seule : la photo d'avant ne connaît pas les 2 colonnes ; `demo:effacer` les
+  remettrait à « éteint », et `AppSettings` est identique à la photo sur ses colonnes (sans la correction, il aurait été
+  signalé différent). Données « Démo » en place (793 commandes, 30 en cours, 13 comptes).
+- [x] Enregistrement local (pas sur GitHub).
+- [ ] Mise en ligne : **avec l'accord écrit du client**. La migration passera sur la production au déploiement Render
+  (2 colonnes éteintes : rien ne change pour les clients ni pour l'équipe). Vérifier ensuite dans le tableau de bord de
+  Render que la migration est passée.
 
 ## Démonstration commerciale (base dev)
 

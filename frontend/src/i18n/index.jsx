@@ -2,7 +2,7 @@
 // Le bouton FR / EN n'existe que si GET /api/site répond { anglais: true }. Le choix du client est gardé
 // dans son téléphone pour la prochaine visite. Sans LanguageProvider (espace équipe), tout reste en français.
 import { createContext, Fragment, useContext, useEffect, useMemo, useState } from 'react';
-import { api } from '../api/client.js';
+import { loadSite, readStored, writeStored } from '../utils/site.js';
 import fr from './fr.js';
 import en from './en.js';
 
@@ -10,25 +10,11 @@ const DICTS = { fr, en };
 const CHOICE_KEY = 'belchicken.langue'; // 'fr' | 'en' : choix du client
 const ENABLED_KEY = 'belchicken.anglais'; // '1' | '0' : dernière réponse de /api/site (évite un clignotement)
 
-function read(key) {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-function write(key, value) {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    /* navigation privée : le choix vaut pour cette visite seulement */
-  }
-}
+// Stockage du téléphone (navigation privée : le choix vaut pour cette visite seulement)
+const read = readStored;
+const write = writeStored;
 
 const LangContext = createContext({ lang: 'fr', t: fr, enabled: false, setLang: () => {} });
-
-// Demandé une fois par visite
-let siteRequest = null;
 
 export function LanguageProvider({ children }) {
   const [enabled, setEnabled] = useState(() => read(ENABLED_KEY) === '1');
@@ -36,7 +22,7 @@ export function LanguageProvider({ children }) {
 
   useEffect(() => {
     let alive = true;
-    (siteRequest ||= api.getSite().catch(() => null)).then((site) => {
+    loadSite().then((site) => { // demandé une fois par visite (utils/site.js)
       if (!alive || !site) return; // serveur injoignable : on garde la dernière réponse connue
       setEnabled(site.anglais === true);
       write(ENABLED_KEY, site.anglais === true ? '1' : '0');

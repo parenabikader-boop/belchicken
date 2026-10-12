@@ -1,4 +1,4 @@
-/* Lot 12 : page Commandes plus lisible (adresse d'essai /equipe/commandes-v2). Chargé seulement par OrdersPage2.jsx.
+/* Lot 12 : page Commandes plus lisible (/equipe/commandes si le réglage est allumé, /equipe/commandes-v2). Chargé seulement par OrdersPage2.jsx.
    La page actuelle (OrdersList.jsx, staff.css) ne change pas. */
 
 .o2-head{margin-bottom:4px}

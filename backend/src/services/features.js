@@ -23,6 +23,10 @@ export const FEATURES = [
   { key: 'AVIS', label: 'Avis des clients', help: 'Lien « Donnez votre avis » dans le message de remerciement (si le Patron l’allume), notes et commentaires, alerte en cas de mauvaise note. Fermé : plus de lien ni d’avis reçu, les avis déjà reçus sont gardés.' },
   // Lot 8 : site client en anglais, ouvert sans ligne ; le Patron l'allume en plus (réglage « Site en anglais »)
   { key: 'ANGLAIS', label: 'Site en anglais', help: 'Bouton FR / EN sur le site client (si le Patron l’allume). Les messages WhatsApp et l’espace équipe restent en français. Fermé : site en français seulement, sans bouton.' },
+  // Lot 11 : menu façon borne, ouvert sans ligne ; le Patron l'allume en plus (réglage « Menu façon borne »)
+  { key: 'MENU_BORNE', label: 'Menu façon borne', help: 'Menu du site client en plein écran, comme les bornes du restaurant (si le Patron l’allume). Fermé : le menu actuel du site.' },
+  // Lot 12 : nouvelle page Commandes, ouverte sans ligne ; le Patron l'allume en plus (réglage « Nouvelle page Commandes »)
+  { key: 'NOUVELLE_PAGE_COMMANDES', label: 'Nouvelle page Commandes', help: 'Page Commandes plus lisible les soirs d’affluence, avec les couleurs d’attente (si le Patron l’allume). Fermé : la page Commandes actuelle.' },
   // Lot 5d : seul interrupteur fermé sans ligne (defaultOpen: false), et qui ne concerne que le Patron :
   // le Prestataire et le Responsable livraison voient toujours le relevé (le Responsable sans les conditions
   // du contrat ni le montant dû, statement.js).

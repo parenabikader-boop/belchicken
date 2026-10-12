@@ -8,11 +8,12 @@
 import { existsSync, readFileSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { prisma } from '../src/lib/prisma.js';
+import { Prisma } from '@prisma/client';
 import { createPrompt } from './prompt.js';
 import { assertDev, photoSince, takePhoto } from './demo-photo.js';
 import {
   CUSTOMER_PHONE_PREFIX, DEMO_REF_PREFIX, DEMO_SOURCES, DEMO_TERMS_NOTE, DEMO_ZONES, PHOTO_DIR, PHOTO_FILE, RESTORED_TABLES,
-  STAFF_PHONE_PREFIX, comparePhotos, isDemoAvailabilityChange, isDemoOrder, isDemoRemittance, isDemoRun, isDemoSource, isDemoStaff,
+  STAFF_PHONE_PREFIX, comparePhotos, photoColumns, withAddedDefaults, isDemoAvailabilityChange, isDemoOrder, isDemoRemittance, isDemoRun, isDemoSource, isDemoStaff,
   isDemoTerms, isDemoZone, isLiveTestOrder,
 } from './demo-commun.js';
 
@@ -83,7 +84,12 @@ async function main() {
     const gone = current.filter((r) => !keep.has(r[key]) && !(model === 'deliveryZone' && zoneIds.includes(r.id)));
     for (const r of gone) extra.push(`${model} « ${r.name ?? r[key]} »`);
     if (gone.length) restoreOps.push(prisma[model].deleteMany({ where: { [key]: { in: gone.map((r) => r[key]) } } }));
-    for (const row of before) restoreOps.push(prisma[model].upsert({ where: { [key]: row[key] }, create: revive(row), update: revive(row) }));
+    // Colonnes ajoutées depuis la photo (migration) : remises à leur valeur par défaut
+    const fields = Prisma.dmmf.datamodel.models.find((m) => m.name.charAt(0).toLowerCase() + m.name.slice(1) === model).fields;
+    for (const row of before) {
+      const data = withAddedDefaults(revive(row), fields);
+      restoreOps.push(prisma[model].upsert({ where: { [key]: row[key] }, create: data, update: data }));
+    }
   }
 
   if (live.length) console.log(`\nCommandes passées en direct pendant les essais (client « Démo ») : ${live.map((o) => o.reference).join(', ')}.`);
@@ -116,7 +122,8 @@ async function main() {
   await prisma.$transaction(ops);
 
   // Comparaison avec la photo d'avant
-  const after = photoSince(await takePhoto(prisma), photo.takenAt);
+  // (réglages : seulement les colonnes que la photo connaissait, voir photoColumns)
+  const after = photoSince(await takePhoto(prisma, new Date(), photoColumns(photo)), photo.takenAt);
   const diffs = comparePhotos(photo, after);
   const blocking = diffs.filter((d) => !d.allowed);
   console.log(`\nComparaison avec la photo d'avant : ${Object.keys(after.tables).length} tables.`);

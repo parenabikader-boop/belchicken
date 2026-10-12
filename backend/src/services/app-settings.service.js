@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { featureClosedError, getFeatures } from './features.service.js';
 
-export const DEFAULT_SETTINGS = { shortFlow: false, agentOrders: false, restaurantDispatch: false, reviewsEnabled: false, englishSite: false };
+export const DEFAULT_SETTINGS = { shortFlow: false, agentOrders: false, restaurantDispatch: false, reviewsEnabled: false, englishSite: false, kioskMenu: false, newOrdersPage: false };
 
 export const settingsSchema = z.object({
   shortFlow: z.boolean().optional(),
@@ -16,11 +16,15 @@ export const settingsSchema = z.object({
   reviewsEnabled: z.boolean().optional(),
   // Lot 8 : « Site en anglais » (bouton FR / EN sur le site client)
   englishSite: z.boolean().optional(),
+  // Lot 11 : « Menu façon borne » (/menu en plein écran)
+  kioskMenu: z.boolean().optional(),
+  // Lot 12 : « Nouvelle page Commandes » (/equipe/commandes)
+  newOrdersPage: z.boolean().optional(),
 });
 
 // Lot 4 : réglage et fonction du Prestataire qui l'inclut. Fermée = comme si le Patron l'avait éteint
 // (son choix est gardé et revient quand la fonction est rouverte).
-const FEATURE_OF = { shortFlow: 'PARCOURS_COURT', agentOrders: 'PRISE_COMMANDE_AGENT', restaurantDispatch: 'TOURNEES_RESTAURANT', reviewsEnabled: 'AVIS', englishSite: 'ANGLAIS' };
+const FEATURE_OF = { shortFlow: 'PARCOURS_COURT', agentOrders: 'PRISE_COMMANDE_AGENT', restaurantDispatch: 'TOURNEES_RESTAURANT', reviewsEnabled: 'AVIS', englishSite: 'ANGLAIS', kioskMenu: 'MENU_BORNE', newOrdersPage: 'NOUVELLE_PAGE_COMMANDES' };
 
 // included : réglages compris dans la formule (la page Réglages montre les autres comme non inclus)
 const toPublic = (row, features) => {
@@ -31,6 +35,8 @@ const toPublic = (row, features) => {
     restaurantDispatch: (row?.restaurantDispatch ?? DEFAULT_SETTINGS.restaurantDispatch) && included.restaurantDispatch,
     reviewsEnabled: (row?.reviewsEnabled ?? DEFAULT_SETTINGS.reviewsEnabled) && included.reviewsEnabled,
     englishSite: (row?.englishSite ?? DEFAULT_SETTINGS.englishSite) && included.englishSite,
+    kioskMenu: (row?.kioskMenu ?? DEFAULT_SETTINGS.kioskMenu) && included.kioskMenu,
+    newOrdersPage: (row?.newOrdersPage ?? DEFAULT_SETTINGS.newOrdersPage) && included.newOrdersPage,
     included,
     updatedByName: row?.updatedByName ?? null,
     updatedAt: row?.updatedAt ?? null,

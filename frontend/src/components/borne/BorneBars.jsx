@@ -9,7 +9,7 @@ const SearchIcon = () => (
   </svg>
 );
 
-// Lot 11 : barre fine du haut, à la place de l'en-tête du site (page /menu-borne seulement) :
+// Lot 11 : barre fine du haut, à la place de l'en-tête du site (menu façon borne seulement) :
 // petit logo (retour à l'accueil), loupe, FR / EN si le site en anglais est allumé, « Ma commande (n) ».
 export function BorneTopBar({ searching, onSearch }) {
   const { count } = useCart();

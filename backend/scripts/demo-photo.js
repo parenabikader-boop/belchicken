@@ -3,7 +3,7 @@
 // plus une copie exacte des réglages que la démonstration change, pour les remettre comme avant.
 import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
-import { RESTORED_TABLES, serverError, serverNameOf } from './demo-commun.js';
+import { RESTORED_TABLES, projectRows, serverError, serverNameOf } from './demo-commun.js';
 
 // Avant tout accès à la base : dev seulement. N'affiche que le nom du serveur.
 export function assertDev() {
@@ -23,11 +23,13 @@ const hashRows = (rows) =>
     .update(JSON.stringify([...rows].sort((a, b) => (keyOf(a) < keyOf(b) ? -1 : keyOf(a) > keyOf(b) ? 1 : 0))))
     .digest('hex');
 
-export async function takePhoto(prisma, takenAt = new Date()) {
+// columns : { appSettings: [...] } (photoColumns) pour la photo d'après, colonnes de la photo d'avant seulement
+export async function takePhoto(prisma, takenAt = new Date(), columns = {}) {
   const tables = {};
   for (const { name } of Prisma.dmmf.datamodel.models) {
     const rows = await prisma[delegate(name)].findMany();
-    tables[name] = { count: rows.length, hash: hashRows(rows) };
+    const keys = columns[delegate(name)];
+    tables[name] = { count: rows.length, hash: hashRows(keys ? projectRows(rows, keys) : rows) };
     // Journal de sécurité : empreinte des seules lignes d'avant la photo de référence (voir comparePhotos)
     if (name === 'SecurityLog') tables[name].rows = rows.map((r) => ({ at: r.at.toISOString(), row: r }));
   }

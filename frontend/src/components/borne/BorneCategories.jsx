@@ -24,7 +24,7 @@ export default function BorneCategories({ categories, active, onPick }) {
   return (
     <nav className="kb-cats" ref={nav} aria-label={t.menu.categories}>
       {categories.map((c) => (
-        <Link key={c.id} to={`/menu-borne/${c.slug}`} className={c.slug === active ? 'on' : undefined}
+        <Link key={c.id} to={`/menu/${c.slug}`} className={c.slug === active ? 'on' : undefined}
           aria-current={c.slug === active ? 'page' : undefined} onClick={onPick}>
           <span className="kb-cat-ph" style={{ background: photoBg(c.heroImageUrl) }}>
             {c.heroImageUrl && <img {...sizedPhoto(c.heroImageUrl, 'thumb')} alt="" loading="lazy" />}

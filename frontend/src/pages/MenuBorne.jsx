@@ -11,10 +11,10 @@ import { searchProducts } from '../utils/product.js';
 import { useT } from '../i18n/index.jsx';
 import '../borne.css';
 
-// Lot 11 : menu façon borne de commande (façon A), adresse d'essai /menu-borne, sans lien depuis le site.
-// Écran libre comme sur une borne : barre fine en haut (logo, loupe, « Ma commande »), pas d'en-tête ni de pied de
-// page du site (route hors de Layout, App.jsx), barre fine du panier en bas seulement s'il n'est pas vide.
-// UNE SEULE CATÉGORIE À LA FOIS (/menu-borne/:categorie, la première par défaut) : une rangée par sous-groupe, qui
+// Lot 11 : menu façon borne de commande (façon A), affiché sur /menu quand le Patron allume « Menu façon borne »
+// (pages/MenuChoice.jsx). Écran libre comme sur une borne : barre fine en haut (logo, loupe, « Ma commande »), pas
+// d'en-tête ni de pied de page du site (components/SiteFrame.jsx), barre fine du panier en bas seulement s'il n'est
+// pas vide. UNE SEULE CATÉGORIE À LA FOIS (/menu/:categorie, la première par défaut) : une rangée par sous-groupe, qui
 // remplit la largeur ou glisse s'il y a plus de plats que la largeur. On change de catégorie seulement par la
 // colonne ou la bande des catégories ; la page remonte alors en haut. Seule la recherche mélange les catégories.
 // La page Menu actuelle (Menu.jsx), sa fiche (ProductDialog.jsx) et le reste du site ne changent pas.
@@ -70,7 +70,7 @@ function Content({ menu, t, categorie, searching, query, setQuery, closeSearch, 
   const sections = menuSections(menu.categories, t.menu.others);
   const current = sections.find((s) => s.category.slug === categorie);
   // Sans catégorie, ou catégorie inconnue : la première
-  if (!current) return sections.length ? <Navigate to={`/menu-borne/${sections[0].category.slug}`} replace /> : null;
+  if (!current) return sections.length ? <Navigate to={`/menu/${sections[0].category.slug}`} replace /> : null;
 
   const q = query.trim();
   const results = q ? searchProducts(menu.categories, q) : [];

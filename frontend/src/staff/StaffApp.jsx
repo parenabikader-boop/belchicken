@@ -6,7 +6,8 @@ import { StaffScreen } from './StaffScreen.jsx';
 import Login from './pages/Login.jsx';
 import { OrdersFeedProvider, useOrdersFeed } from './orders/OrdersFeed.jsx';
 import OrdersList from './orders/OrdersList.jsx';
-// Lot 12 : nouvelle page Commandes, adresse d'essai /equipe/commandes-v2
+import { useAppSettings } from './settings/useAppSettings.js';
+// Lot 12 : nouvelle page Commandes (réglage « Nouvelle page Commandes », et /equipe/commandes-v2 pour l'essayer)
 const OrdersPage2 = lazy(() => import('./orders2/OrdersPage2.jsx'));
 import OrderDetail from './orders/OrderDetail.jsx';
 import MenuAdmin from './menu/MenuAdmin.jsx';
@@ -105,15 +106,15 @@ function TeamRoutes() {
     <Routes>
       <Route element={<StaffLayout />}>
         <Route index element={<Navigate to="commandes" replace />} />
-        <Route path="commandes" element={<OrdersList />} />
-        {/* Lot 12 : page Commandes plus lisible, adresse d'essai sans lien (fichier à part, téléchargé seulement ici) */}
-        <Route path="commandes-v2" element={<Suspense fallback={null}><OrdersPage2 /></Suspense>} />
+        <Route path="commandes" element={<OrdersChoice />} />
         <Route path="commandes/nouvelle" element={<NewOrder />} />
         <Route path="commandes/:reference" element={<OrderDetail />} />
         <Route path="menu" element={<MenuAdmin />} />
         <Route path="caisse" element={<RequireFeature feature="CAISSE"><CashPage /></RequireFeature>} />
         <Route path="alertes" element={<AlertsPage />} />
         <Route path="mot-de-passe" element={<PasswordPage />} />
+        {/* Lot 12 : nouvelle page à essayer avant de l'allumer pour l'équipe (Patron et Prestataire, lien dans Réglages) */}
+        <Route path="commandes-v2" element={<RequirePatronLevel to="/equipe/commandes"><Suspense fallback={null}><OrdersPage2 /></Suspense></RequirePatronLevel>} />
         <Route element={<RequirePatron />}>
           <Route path="menu/plats/nouveau" element={<ProductForm />} />
           <Route path="menu/plats/:id" element={<ProductForm />} />
@@ -202,6 +203,20 @@ function RequireStaff() {
   if (status === 'anon') return <Navigate to={`/equipe/connexion?suite=${encodeURIComponent(pathname)}`} replace />;
   if (user.mustChangePassword) return <StaffScreen><ForcedPassword /></StaffScreen>;
   return <Outlet />;
+}
+
+// Lot 12 : /equipe/commandes affiche la page actuelle ou, si le Patron a allumé « Nouvelle page Commandes » (et que
+// le Prestataire l'inclut, interrupteur NOUVELLE_PAGE_COMMANDES), la nouvelle page. Réglage illisible : page actuelle.
+function OrdersChoice() {
+  const { newOrdersPage, loaded } = useAppSettings();
+  if (!loaded) return <p className="st-muted">Chargement…</p>;
+  return newOrdersPage ? <Suspense fallback={null}><OrdersPage2 /></Suspense> : <OrdersList />;
+}
+
+// Lot 12 : page réservée au Patron et au Prestataire ; les autres reviennent à `to`
+function RequirePatronLevel({ to, children }) {
+  const { user } = useStaff();
+  return isPatronLevel(user.role) ? children : <Navigate to={to} replace />;
 }
 
 // Pages réservées au Patron (et au Prestataire, lot 4 ; l'API le vérifie aussi) : l'Opérateur revient à la liste du menu

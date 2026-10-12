@@ -155,8 +155,10 @@ quand ils sont saisis, bouton « Nous contacter sur WhatsApp ». Elle relit la c
 
 ### `GET /api/site`
 
-Lot 8 : `{ anglais: true|false }` = bouton FR / EN affiché sur le site client (réglage du Patron « Site en anglais »,
-inclus par le Prestataire). Voir « Langue du site client, FR/EN ».
+`{ anglais: true|false, menuBorne: true|false }`, rien d'autre. Lot 8 : `anglais` = bouton FR / EN affiché sur le site
+client (réglage du Patron « Site en anglais », inclus par le Prestataire), voir « Langue du site client, FR/EN ».
+Lot 11 : `menuBorne` = `/menu` en plein écran façon borne (réglage « Menu façon borne », interrupteur `MENU_BORNE`),
+voir « Menu façon borne et nouvelle page Commandes ».
 
 ### `GET /api/payment`
 
@@ -365,8 +367,9 @@ Connexion par numéro de téléphone et mot de passe ; trois rôles : `PATRON` (
   `GET /api/staff/orders/:reference`, `POST /api/staff/orders/:reference/status` avec `{ from, to, reason }`.
   Lot 12 : chaque commande de la liste a aussi `stageSince` (début de son étape, pour le temps d'attente) et
   `noticePending` (l'étape suivante attend le message au client), calculés par `stageSince()` et `noticePending()` de
-  `customer-messages.js` ; rien n'a été retiré. Nouvelle page Commandes à l'adresse d'essai `/equipe/commandes-v2`
-  (`frontend/src/staff/orders2/`, sans lien ni réglage pour l'instant ; voir la feuille de route, lot 12).
+  `customer-messages.js` ; rien n'a été retiré. Nouvelle page Commandes (`frontend/src/staff/orders2/`) affichée sur
+  `/equipe/commandes` quand le réglage « Nouvelle page Commandes » est allumé (voir « Menu façon borne et nouvelle page
+  Commandes »).
   `from` est le statut affiché à l'écran : si un collègue l'a changé entre-temps, l'API répond 409 au lieu d'écraser.
 - Page Commandes (`frontend/src/staff/orders/OrdersList.jsx`) : une étape à la fois, dans l'ordre du travail (À vérifier,
   Payées, En préparation, En livraison, Livrées · à remercier, puis Historique avec Livrées / Annulées), chaque étape avec
@@ -784,7 +787,7 @@ contrôlées par `npm run langues` (dans `frontend/`). Socle : `frontend/src/i18
 - **Deux niveaux** : interrupteur du Prestataire `ANGLAIS` (ouvert sans ligne) et réglage du Patron « Site en
   anglais » (`AppSettings.englishSite`, **éteint par défaut** : site en français, sans bouton, exactement comme avant ;
   vérifié par des captures comparées au pixel près).
-- **`GET /api/site`** (public) : `{ anglais: true|false }`, rien d'autre. Allumé : bouton **FR / EN** dans l'en-tête
+- **`GET /api/site`** (public) : `{ anglais: true|false }` (plus `menuBorne` depuis le lot 11). Allumé : bouton **FR / EN** dans l'en-tête
   (sur téléphone, dans le bandeau brun du haut ; pages de commande et page d'avis : dans leur en-tête). Français par
   défaut, jamais d'anglais automatique ; le choix du client est gardé dans son téléphone (`belchicken.langue`).
 - **Traduit** : boutons, titres, étapes, paiement (codes USSD), frais de livraison, suivi, avis, Infos pratiques
@@ -800,6 +803,37 @@ contrôlées par `npm run langues` (dans `frontend/`). Socle : `frontend/src/i18
   équipe). Prépare des messages en anglais au lot 9.
 - Migration `20261012120000_langue_site` : structure seulement (enum `Langue`, `AppSettings.englishSite` éteint,
   `Order.language` vide), aucune donnée écrite. Tests : `test/langue.test.js`.
+
+## Menu façon borne et nouvelle page Commandes (lots 11 et 12)
+
+Deux réglages du Patron (page Réglages), **éteints par défaut**, chacun inclus ou non par le Prestataire, comme « Site
+en anglais » : une fonction n'est active que si elle est incluse **et** allumée. Fermée par le Prestataire : comme si
+le Patron l'avait éteinte (son choix revient à la réouverture) ; le Patron ne peut pas l'allumer (403
+`FONCTION_NON_INCLUSE`).
+
+| Réglage du Patron | Colonne | Interrupteur du Prestataire | Éteint | Allumé |
+|---|---|---|---|---|
+| Menu façon borne | `AppSettings.kioskMenu` | `MENU_BORNE` (ouvert sans ligne) | `/menu` = menu actuel (`Menu.jsx`) | `/menu` = menu plein écran (`MenuBorne.jsx`) |
+| Nouvelle page Commandes | `AppSettings.newOrdersPage` | `NOUVELLE_PAGE_COMMANDES` (ouvert sans ligne) | `/equipe/commandes` = page actuelle (`OrdersList.jsx`) | `/equipe/commandes` = nouvelle page (`OrdersPage2.jsx`) |
+
+- **Menu** : lu par le site avec **`GET /api/site`** (public), qui répond `{ anglais, menuBorne }` et rien d'autre
+  (`publicSite()` dans `src/routes/site.routes.js`). `frontend/src/components/SiteFrame.jsx` choisit le cadre : sur
+  `/menu` avec le réglage allumé, écran libre sans l'en-tête ni le pied du site ; partout ailleurs, `Layout.jsx` comme
+  avant. `pages/MenuChoice.jsx` affiche l'un ou l'autre menu. Catégories : `/menu/:categorie` dans les deux menus.
+  Le téléphone garde la dernière réponse (`belchicken.menuBorne`) pour ne pas clignoter ; première visite : rien
+  n'est affiché le temps de la réponse ; serveur injoignable : le menu actuel. Règle sans réseau :
+  `utils/site-choice.js` (testée). Une seule demande de `/api/site` par visite, partagée avec la langue (`utils/site.js`).
+- L'ancienne adresse d'essai **`/menu-borne`** renvoie vers `/menu` (qui affiche le menu choisi). Pas d'aperçu du menu
+  façon borne dans l'espace équipe.
+- **Page Commandes** : réglage lu par l'équipe avec `GET /api/staff/reglages` (Patron, Opérateur, Prestataire), jamais
+  par `/api/site`. Réglage illisible : page actuelle. **`/equipe/commandes-v2`** reste ouverte au Patron et au
+  Prestataire pour essayer la nouvelle page avant de l'allumer (lien « Voir la nouvelle page » dans Réglages) ; un
+  Opérateur y est renvoyé vers `/equipe/commandes`.
+- Migration `20261012180000_menu_borne_page_commandes` : structure seulement (2 colonnes oui/non, éteintes par
+  défaut), aucune donnée écrite. Tests : `test/menu-borne-commandes.test.js`, `frontend/src/utils/site-choice.test.js`.
+- Démonstration : la photo de `demo:effacer` peut dater d'avant une migration ; les colonnes ajoutées depuis sont
+  remises à leur valeur par défaut puis ignorées dans la comparaison (`withAddedDefaults()`, `photoColumns()` dans
+  `scripts/demo-commun.js`).
 
 ## Parcours court et bon de commande (lot 1)
 

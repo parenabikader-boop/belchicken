@@ -11,7 +11,8 @@ import OrderCard2 from './OrderCard2.jsx';
 import { boardColumns, byWait, summary, waitLevel } from './waiting.js';
 import './orders2.css';
 
-// Lot 12 : page Commandes plus lisible, adresse d'essai /equipe/commandes-v2 (sans lien, sans réglage pour l'instant).
+// Lot 12 : page Commandes plus lisible, sur /equipe/commandes quand le Patron allume « Nouvelle page Commandes »
+// (StaffApp.jsx) ; toujours à /equipe/commandes-v2 pour le Patron et le Prestataire (lien dans Réglages).
 // La page actuelle (orders/OrdersList.jsx) ne change pas. Même fil des commandes (OrdersFeed.jsx : son, badge,
 // mise à jour toutes les 5 s), mêmes étapes (labels.js) ; en plus :
 //   - explications repliées derrière « ? » (ouvertes au premier passage sur l'appareil) ;

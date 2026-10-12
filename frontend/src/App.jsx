@@ -1,8 +1,8 @@
 import { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router-dom';
-import Layout from './components/Layout.jsx';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
+import SiteFrame from './components/SiteFrame.jsx';
 import Home from './pages/Home.jsx';
-import Menu from './pages/Menu.jsx';
+import MenuChoice from './pages/MenuChoice.jsx';
 import Commande from './pages/Commande.jsx';
 import Valider from './pages/Valider.jsx';
 import Confirmation from './pages/Confirmation.jsx';
@@ -13,8 +13,12 @@ import { LanguageProvider } from './i18n/index.jsx';
 const StaffApp = lazy(() => import('./staff/StaffApp.jsx'));
 // Lot 7 : page d'avis, petit fichier à part, sans l'en-tête ni le pied du site
 const Review = lazy(() => import('./pages/Review.jsx'));
-// Lot 11 : menu façon borne, adresse d'essai sans lien depuis le site (fichier à part, téléchargé seulement ici)
-const MenuBorne = lazy(() => import('./pages/MenuBorne.jsx'));
+
+// Lot 11 : ancienne adresse d'essai du menu façon borne, renvoyée vers /menu (qui affiche le menu choisi par le Patron)
+function OldKioskAddress() {
+  const { categorie } = useParams();
+  return <Navigate to={categorie ? `/menu/${categorie}` : '/menu'} replace />;
+}
 
 export default function App() {
   return (
@@ -22,11 +26,11 @@ export default function App() {
       <Route path="equipe/*" element={<Suspense fallback={null}><StaffApp /></Suspense>} />
       {/* Lot 8 : français ou anglais sur le site client seulement (l'espace équipe reste en français) */}
       <Route path="avis/:token" element={<LanguageProvider><Suspense fallback={null}><Review /></Suspense></LanguageProvider>} />
-      {/* Lot 11 : menu façon borne, écran libre (sa propre barre fine, sans l'en-tête ni le pied du site) */}
-      <Route path="menu-borne/:categorie?" element={<LanguageProvider><Suspense fallback={null}><MenuBorne /></Suspense></LanguageProvider>} />
-      <Route element={<LanguageProvider><Layout /></LanguageProvider>}>
+      <Route path="menu-borne/:categorie?" element={<OldKioskAddress />} />
+      {/* Lot 11 : SiteFrame = Layout, sauf sur /menu avec « Menu façon borne » allumé (écran libre) */}
+      <Route element={<LanguageProvider><SiteFrame /></LanguageProvider>}>
         <Route index element={<Home />} />
-        <Route path="menu/:categorie?" element={<Menu />} />
+        <Route path="menu/:categorie?" element={<MenuChoice />} />
         <Route path="commande" element={<Commande />} />
         <Route path="valider" element={<Valider />} />
         <Route path="confirmation/:reference" element={<Confirmation />} />
