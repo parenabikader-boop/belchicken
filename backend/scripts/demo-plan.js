@@ -202,7 +202,12 @@ const startOfDay = (t) => {
 };
 
 // days : jours complets avant aujourd'hui ; prestataireFromDay : 1er jour (0 = le plus ancien) en mode Prestataire
-export function generatePlan({ products, now = new Date(), days = 30, prestataireFromDay = 10, seed = 2026 }) {
+// rush (lot 12, npm run demo:affluence) : coup de feu d'un soir, seulement les commandes de la dernière heure environ,
+//   { count, windowMinutes, restaurantShare, slowShare, pendingShare } ; une partie traîne (slowShare), une autre
+//   attend encore le message au client (pendingShare) ; ni remise d'espèces ni avis.
+// existing : comptes, provenances et quartiers « Démo » déjà dans dev ({ staff, sources, zones }), réutilisés tels quels.
+// Sans rush ni existing, la démonstration est exactement la même qu'avant (mêmes tirages).
+export function generatePlan({ products, now = new Date(), days = 30, prestataireFromDay = 10, seed = 2026, rush = null, existing = null }) {
   const rng = makeRng(seed);
   const nowMs = now.getTime();
   const firstDay = startOfDay(nowMs) - days * DAY;
@@ -215,6 +220,20 @@ export function generatePlan({ products, now = new Date(), days = 30, prestatair
   const who = Object.fromEntries(staff.map((s) => [s.key, s]));
   const sources = DEMO_SOURCES.map((s, i) => ({ ...s, id: newId(rng), position: 90 + i }));
   const zones = DEMO_ZONES.map((z) => ({ ...z, id: newId(rng) }));
+  // Coup de feu : les comptes, provenances et quartiers « Démo » de dev (mêmes numéros, mêmes noms)
+  if (existing) {
+    const find = (list, test, what) => {
+      const found = list.find(test);
+      if (!found) throw new Error(`${what} absent de dev : lancez d'abord npm run demo:remplir.`);
+      return found;
+    };
+    for (const s of staff) Object.assign(s, { id: find(existing.staff, (x) => x.phone === s.phone, `Compte ${s.name}`).id });
+    for (const s of sources) Object.assign(s, { id: find(existing.sources, (x) => x.name === s.name, `Provenance ${s.name}`).id });
+    for (const z of zones) {
+      const e = find(existing.zones, (x) => x.name === z.name, `Quartier ${z.name}`);
+      Object.assign(z, { id: e.id, fee: e.fee, nightFee: e.nightFee });
+    }
+  }
   const restaurantCouriers = staff.filter((s) => s.role === 'LIVREUR' && s.courierTeam === 'RESTAURANT');
   const partnerCouriers = staff.filter((s) => s.role === 'LIVREUR' && s.courierTeam === 'PRESTATAIRE');
 
@@ -241,7 +260,12 @@ export function generatePlan({ products, now = new Date(), days = 30, prestatair
 
   // 1. Heures de commande, jour par jour (aujourd'hui : seulement jusqu'à maintenant)
   const times = [];
-  for (let d = 0; d <= days; d++) {
+  // Coup de feu : les commandes arrivent pendant la dernière heure environ (heures d'ouverture seulement)
+  for (let i = 0; rush && i < rush.count; i++) {
+    const t = nowMs - Math.round(rng.between(1, rush.windowMinutes) * MIN);
+    if (isOpenAt(t)) times.push(t);
+  }
+  for (let d = 0; !rush && d <= days; d++) {
     const dayStart = firstDay + d * DAY;
     const weekday = new Date(dayStart).getUTCDay();
     const trend = 0.85 + (0.3 * d) / days; // l'activité grandit au fil du mois
@@ -269,7 +293,8 @@ export function generatePlan({ products, now = new Date(), days = 30, prestatair
     const night = new Date(t0).getUTCHours() < 6 || new Date(t0).getUTCHours() >= 23;
     const agent = rng.chance(night ? 0.2 : 0.4) ? agentAt(t0) : null;
     const mode = rng.chance(agent ? 0.2 : night ? 0.1 : 0.27) ? 'A_EMPORTER' : 'LIVRAISON';
-    const operator = mode === 'LIVRAISON' && t0 >= switchAt ? 'PRESTATAIRE' : 'RESTAURANT';
+    // Coup de feu : livraisons de notre équipe et quelques-unes du restaurant (commandes d'avant le changement de mode)
+    const operator = mode === 'LIVRAISON' && (rush ? !rng.chance(rush.restaurantShare) : t0 >= switchAt) ? 'PRESTATAIRE' : 'RESTAURANT';
     const customer = rng.chance(0.35) ? rng.pick(regulars) : rng.pick(customers);
     const evening = new Date(t0).getUTCHours() >= 18;
 
@@ -328,6 +353,12 @@ export function generatePlan({ products, now = new Date(), days = 30, prestatair
     const status = (at, from, to, by, reason = null) => act(at, { kind: 'status', from, to, by, reason });
     const message = (at, key, by, type = rng.chance(0.95) ? 'MESSAGE_ENVOYE' : 'CLIENT_APPELE') => act(at, { kind: 'event', type, messageKey: key, by });
 
+    // Coup de feu : une partie des commandes traîne (agents débordés, cuisine en retard), d'autres attendent encore
+    // le message au client (l'agent ne l'a pas confirmé). Sans coup de feu : aucun tirage de plus.
+    o.slow = rush && rng.chance(rush.slowShare) ? 2.5 : 1;
+    o.pending = Boolean(rush) && rng.chance(rush.pendingShare);
+    const gap = (min, max) => (o.pending ? rng.minutes(8, 20) : rng.minutes(min, max));
+
     status(t0, null, 'PAIEMENT_A_VERIFIER', agent);
     if (agent) message(t0 + rng.minutes(1, 2), mode === 'A_EMPORTER' ? 'COMMANDE_A_PAYER_EMPORTER' : 'COMMANDE_A_PAYER', agent, 'MESSAGE_ENVOYE');
 
@@ -341,14 +372,14 @@ export function generatePlan({ products, now = new Date(), days = 30, prestatair
 
     // Parcours court : « Paiement vérifié » fait Payée puis En préparation, un seul message
     const busy = load(t0);
-    const paidAt = t0 + (agent ? rng.minutes(1, 5) : rng.minutes(2, 9) + Math.min(8, busy * 0.25) * MIN);
+    const paidAt = t0 + Math.round((agent ? rng.minutes(1, 5) : rng.minutes(2, 9) + Math.min(8, busy * 0.25) * MIN) * o.slow);
     const verifier = verifierAt(paidAt);
     o.shortFlow = true;
     o.paidAt = paidAt;
     status(paidAt, 'PAIEMENT_A_VERIFIER', 'PAYEE', verifier);
     status(paidAt, 'PAYEE', 'EN_PREPARATION', verifier);
     if (o.deliveryFeeSource === 'A_CONFIRMER') act(paidAt, { kind: 'event', type: 'FRAIS_SAISIS', amount: o.agentFee, by: verifier, fee: o.agentFee });
-    const preparedMsgAt = paidAt + rng.minutes(1, 3);
+    const preparedMsgAt = paidAt + gap(1, 3);
     message(preparedMsgAt, mode === 'A_EMPORTER' ? 'PAIEMENT_PREPARATION_EMPORTER' : 'PAIEMENT_PREPARATION', verifier);
     o.preparedMsgAt = preparedMsgAt;
 
@@ -359,16 +390,16 @@ export function generatePlan({ products, now = new Date(), days = 30, prestatair
       return o;
     }
 
-    o.readyAt = Math.max(paidAt + rng.minutes(12, 22) + Math.min(12, busy * 0.35) * MIN, preparedMsgAt + MIN);
+    o.readyAt = Math.max(paidAt + Math.round((rng.minutes(12, 22) + Math.min(12, busy * 0.35) * MIN) * o.slow), preparedMsgAt + MIN);
     if (mode === 'A_EMPORTER') {
       // Prête (code de retrait), message avec l'adresse, retrait au comptoir avec le code, remerciement
       status(o.readyAt, 'EN_PREPARATION', 'PRETE', agentAt(o.readyAt));
-      const readyMsg = o.readyAt + rng.minutes(1, 2);
+      const readyMsg = o.readyAt + gap(1, 2);
       message(readyMsg, 'COMMANDE_PRETE', agentAt(o.readyAt));
-      const takenAt = readyMsg + rng.minutes(8, 45);
+      const takenAt = readyMsg + Math.round(rng.minutes(8, 45) * o.slow);
       status(takenAt, 'PRETE', 'LIVREE', agentAt(takenAt));
       o.deliveredAt = takenAt;
-      message(takenAt + rng.minutes(2, 20), 'RETIREE', agentAt(takenAt));
+      message(takenAt + gap(2, 20), 'RETIREE', agentAt(takenAt));
     }
     return o;
   });
@@ -384,8 +415,9 @@ export function generatePlan({ products, now = new Date(), days = 30, prestatair
     } else {
       o.actions.push({ at, kind: 'status', from: 'EN_LIVRAISON', to: 'LIVREE', by: courier });
     }
-    o.actions.push({ at: at + rng.minutes(2, 15), kind: 'event', type: 'MESSAGE_ENVOYE', messageKey: 'LIVREE', by: agentAt(at) });
+    o.actions.push({ at: at + (o.pending ? rng.minutes(8, 20) : rng.minutes(2, 15)), kind: 'event', type: 'MESSAGE_ENVOYE', messageKey: 'LIVREE', by: agentAt(at) });
   };
+  const routeGap = (o, min, max) => (o.pending ? rng.minutes(8, 20) : rng.minutes(min, max));
   const toDeliver = (op) => records.filter((o) => o.readyAt && o.mode === 'LIVRAISON' && o.deliveryOperator === op).sort((a, b) => a.readyAt - b.readyAt);
 
   // 3a. Livraison par le restaurant : l'agent fait partir le livreur le plus tôt libre
@@ -397,9 +429,9 @@ export function generatePlan({ products, now = new Date(), days = 30, prestatair
     o.actions.push({ at: leave, kind: 'status', from: 'EN_PREPARATION', to: 'EN_LIVRAISON', by: agent });
     o.actions.push({ at: leave, kind: 'assign', courier, run: null });
     o.actions.push({ at: leave, kind: 'event', type: 'LIVREUR_ASSIGNE', courierName: courier.name, by: agent });
-    const routeMsg = leave + rng.minutes(1, 2);
+    const routeMsg = leave + routeGap(o, 1, 2);
     o.actions.push({ at: routeMsg, kind: 'event', type: 'MESSAGE_ENVOYE', messageKey: 'EN_ROUTE', by: agent });
-    const ride = rideMinutes(o.km);
+    const ride = rideMinutes(o.km) * o.slow;
     delivered(o, Math.max(leave + ride * MIN, routeMsg + MIN), courier);
     free.set(courier.id, o.deliveredAt + ride * 0.6 * MIN);
   }
@@ -434,9 +466,9 @@ export function generatePlan({ products, now = new Date(), days = 30, prestatair
       } else {
         o.actions.push({ at: pickedAt, kind: 'status', from: 'PRETE_LIVRAISON', to: 'EN_LIVRAISON', by: courier });
       }
-      const routeMsg = pickedAt + rng.minutes(1, 3);
+      const routeMsg = pickedAt + routeGap(o, 1, 3);
       o.actions.push({ at: routeMsg, kind: 'event', type: 'MESSAGE_ENVOYE', messageKey: 'EN_ROUTE', by: agentAt(pickedAt) });
-      t += (t === pickedAt ? rideMinutes(o.km) : rng.between(5, 12)) * MIN;
+      t += (t === pickedAt ? rideMinutes(o.km) * o.slow : rng.between(5, 12)) * MIN;
       t = Math.max(t, routeMsg + MIN);
       delivered(o, t, courier);
     }
@@ -456,7 +488,7 @@ export function generatePlan({ products, now = new Date(), days = 30, prestatair
   // 5. Espèces remises au restaurant (ou à notre responsable) chaque matin à 7 h et chaque soir à 22 h 45
   const remittances = [];
   const cashOrders = records.filter((o) => o.deliveredAt && o.mode === 'LIVRAISON' && o.feeMethod === 'ESPECES' && feeOf(o) > 0);
-  for (let d = 0; d <= days; d++) {
+  for (let d = 0; !rush && d <= days; d++) {
     for (const minutes of [7 * 60, 22 * 60 + 45]) {
       const moment = firstDay + d * DAY + minutes * MIN;
       if (moment > nowMs) continue;
@@ -479,7 +511,7 @@ export function generatePlan({ products, now = new Date(), days = 30, prestatair
 
   // 6. Avis des clients : environ un tiers des commandes livrées, quelques mauvaises notes rappelées
   const reviews = [];
-  for (const o of records) {
+  for (const o of rush ? [] : records) {
     if (!o.deliveredAt || !rng.chance(0.35)) continue;
     const delay = rng.weighted([[[10, 120], 60], [[120, 24 * 60], 30], [[24 * 60, 3 * 24 * 60], 10]]);
     const at = o.deliveredAt + rng.minutes(...delay);
@@ -533,7 +565,8 @@ export function generatePlan({ products, now = new Date(), days = 30, prestatair
       calledBackByName: r.calledBackAt ? r.calledBackBy.name : null, calledBackNote: r.calledBackAt ? r.calledBackNote : null,
       createdAt: new Date(r.createdAt),
     })),
-    terms: { ...DEMO_TERMS, validFrom: new Date(switchAt), createdByName: TERMS_AUTHOR, createdAt: new Date(switchAt) },
+    // Coup de feu : les conditions du contrat de la démonstration sont déjà dans dev
+    terms: rush ? null : { ...DEMO_TERMS, validFrom: new Date(switchAt), createdByName: TERMS_AUTHOR, createdAt: new Date(switchAt) },
   };
 }
 

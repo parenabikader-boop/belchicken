@@ -11,6 +11,9 @@ import {
   isDemoAvailabilityChange, isDemoStaff, isDemoTerms, isDemoZone, isLiveTestOrder, passwordTargetError, serverError, serverNameOf,
 } from '../scripts/demo-commun.js';
 import { checkPlan, generatePlan, isOpenAt, summarize } from '../scripts/demo-plan.js';
+import { ACTIVE } from '../src/services/order-status.js';
+import { needsThanks, noticePending, stageSince } from '../src/services/customer-messages.js';
+import { waitLevel } from '../../frontend/src/staff/orders2/waiting.js';
 
 // Menu de test, de la même forme que celui de la base (formules avec boissons, choix, extras, boissons)
 let n = 0;
@@ -169,7 +172,7 @@ test('photos : identiques, différentes, journal de sécurité qui ne fait que g
 });
 
 test('les scripts de démonstration n’envoient rien : ni WhatsApp, ni alerte, ni journal', () => {
-  for (const f of ['demo-commun.js', 'demo-plan.js', 'demo-photo.js', 'demo-remplir.js', 'demo-effacer.js', 'demo-mot-de-passe.js']) {
+  for (const f of ['demo-commun.js', 'demo-plan.js', 'demo-photo.js', 'demo-remplir.js', 'demo-effacer.js', 'demo-mot-de-passe.js', 'demo-affluence.js']) {
     const text = readFileSync(new URL(`../scripts/${f}`, import.meta.url), 'utf8');
     const imports = text.split('\n').filter((l) => /^import /.test(l)).join('\n');
     assert.doesNotMatch(imports, /whatsapp|push|security-log|order\.service|staff-orders|courier\.service|dispatch\.service|cash\.service/i, f);
@@ -218,4 +221,46 @@ test('effacement : commandes passées en direct et disponibilités des livreurs 
   assert.ok(isDemoAvailabilityChange({ courierName: 'Rasmané (Démo)', byName: 'Mariam (Démo)' }));
   assert.equal(isDemoAvailabilityChange({ courierName: 'Rasmané (Démo)', byName: 'Awa (essai)' }), false);
   assert.equal(isDemoAvailabilityChange({ courierName: 'kader', byName: 'kader' }), false);
+});
+
+// Lot 12 : coup de feu (npm run demo:affluence), environ 30 commandes en cours un vendredi soir
+const FRIDAY = new Date('2026-10-09T20:15:00Z');
+const RUSH = { count: 44, windowMinutes: 80, restaurantShare: 0.3, slowShare: 0.25, pendingShare: 0.15 };
+const existing = {
+  staff: plan.staff.map((s) => ({ id: `dev-${s.phone}`, name: s.name, phone: s.phone })),
+  sources: plan.sources.map((s) => ({ id: `dev-${s.name}`, name: s.name })),
+  zones: plan.zones.map((z) => ({ ...z, id: `dev-${z.name}` })),
+};
+
+test('coup de feu : commandes de la dernière heure, sur les comptes, provenances et quartiers « Démo » de dev', () => {
+  const rush = generatePlan({ products: PRODUCTS, now: FRIDAY, days: 0, seed: 7, rush: RUSH, existing });
+  assert.deepEqual(checkPlan(rush, PRODUCTS).errors, []);
+  const from = FRIDAY.getTime() - RUSH.windowMinutes * 60000;
+  for (const o of rush.orders) {
+    assert.ok(isDemoOrder(o));
+    assert.ok(o.createdAt.getTime() >= from && o.createdAt <= FRIDAY);
+    for (const c of o.statusChanges) assert.ok(c.staffUserId === null || c.staffUserId.startsWith('dev-'), 'compte de dev');
+    for (const e of o.events) assert.ok(e.staffUserId.startsWith('dev-'));
+    assert.ok(o.deliveryZoneId === null || o.deliveryZoneId.startsWith('dev-'), 'quartier de dev');
+    assert.ok(o.sourceId === null || o.sourceId.startsWith('dev-'), 'provenance de dev');
+  }
+  for (const r of rush.runs) assert.ok(r.courierId.startsWith('dev-') && r.createdById.startsWith('dev-'));
+  assert.deepEqual([rush.remittances.length, rush.reviews.length, rush.terms], [0, 0, null], 'ni remise d’espèces, ni avis, ni conditions');
+});
+
+test('coup de feu : une trentaine en cours, des retards, des messages à confirmer, les deux équipes de livraison', () => {
+  const rush = generatePlan({ products: PRODUCTS, now: FRIDAY, days: 0, seed: 7, rush: RUSH, existing });
+  const listed = rush.orders.map((o) => ({ ...o, toThank: o.status === 'LIVREE' && needsThanks(o), stageSince: stageSince(o), noticePending: noticePending(o) }));
+  const live = listed.filter((o) => ACTIVE.includes(o.status) || o.toThank);
+  assert.ok(live.length >= 25, `${live.length} en cours`);
+  const levels = live.map((o) => waitLevel(o, FRIDAY.getTime()));
+  assert.ok(levels.includes('late') && levels.includes('ok'), 'des commandes en retard et d’autres à l’heure');
+  assert.ok(live.some((o) => o.noticePending), 'des messages à confirmer');
+  const ops = new Set(live.filter((o) => o.mode === 'LIVRAISON').map((o) => o.deliveryOperator));
+  assert.ok(ops.has('PRESTATAIRE') && ops.has('RESTAURANT'));
+  assert.ok(new Set(live.map((o) => o.status)).size >= 4, 'plusieurs étapes');
+});
+
+test('coup de feu refusé si la démonstration n’est pas en place sur dev', () => {
+  assert.throws(() => generatePlan({ products: PRODUCTS, now: FRIDAY, days: 0, rush: RUSH, existing: { ...existing, staff: [] } }), /absent de dev/);
 });

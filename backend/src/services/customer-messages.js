@@ -378,6 +378,14 @@ export function noticeState(o, { auto = false } = {}) {
   return { ...current, confirmed, required: !auto && !confirmed && !current.optional };
 }
 
+// Lot 12 (page Commandes) : l'étape suivante attend que l'agent prévienne le client (ou ce qu'il faut pour le
+// message, ex. les frais). Faux pour un message facultatif, ou quand l'envoi est automatique.
+export const noticePending = (o, { auto = false } = {}) => Boolean(noticeState(o, { auto })?.required);
+
+// Lot 12 : début de l'étape où en est la commande (dernier passage à son statut), pour le temps d'attente.
+// `o` : la commande avec statusChanges triés par date.
+export const stageSince = (o) => (o.statusChanges || []).findLast((h) => h.toStatus === o.status)?.createdAt ?? o.createdAt;
+
 // Avant de passer à l'étape suivante : null si permis, sinon le message
 export function noticeError(state) {
   if (!state || !state.required) return null;

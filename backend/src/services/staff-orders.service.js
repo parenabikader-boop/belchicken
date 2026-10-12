@@ -11,7 +11,7 @@ import { loadGrid } from './delivery-fees.service.js';
 import { getAppSettings } from './app-settings.service.js';
 import { featureClosedError, getFeatures } from './features.service.js';
 import { historyCutoff } from './features.js';
-import { customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticeState, THANKS_KEYS, thanksWhere } from './customer-messages.js';
+import { CONFIRM_TYPES, customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticePending, noticeState, stageSince, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
 import { messageContextFor } from './delivery-mode.service.js';
 import { pushCourier, pushCourierAssigned, pushCourseCancelled, pushDeliveryManagers, pushTeamDelivered } from './push.service.js';
@@ -75,9 +75,14 @@ export async function listOrders({ status, q }) {
       take: LIST_LIMIT,
       include: {
         items: { select: { quantity: true } },
-        // Pour savoir si une commande livrée attend encore son remerciement
-        statusChanges: { where: { toStatus: 'LIVREE' }, select: { toStatus: true, createdAt: true } },
-        events: { where: { messageKey: { in: THANKS_KEYS } }, select: { type: true, messageKey: true, createdAt: true } },
+        // Pour savoir si une commande livrée attend encore son remerciement, et (lot 12) depuis quand la commande
+        // est à son étape et si l'étape suivante attend le message au client
+        statusChanges: { select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
+        events: {
+          where: { type: { in: [...CONFIRM_TYPES, 'FRAIS_SAISIS', 'FRAIS_CORRIGES'] } },
+          select: { type: true, messageKey: true, createdAt: true },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     }),
     prisma.order.groupBy({ by: ['status'], where: visible, _count: { _all: true } }),
@@ -110,6 +115,9 @@ export async function listOrders({ status, q }) {
       enteredBy: enteredBy(o),
       hasLocation: o.latitude != null,
       toThank: needsThanks(o, { auto }),
+      // Lot 12 : début de l'étape (temps d'attente) et message au client à confirmer avant l'étape suivante
+      stageSince: stageSince(o),
+      noticePending: noticePending(o, { auto }),
     })),
     counts,
     historyOpen, // lot 4 : false = historique limité aux 24 dernières heures

@@ -21,7 +21,8 @@
     "cloudinary:check": "node scripts/cloudinary-check.js",
     "demo:remplir": "node scripts/demo-remplir.js",
     "demo:effacer": "node scripts/demo-effacer.js",
-    "demo:mot-de-passe": "node scripts/demo-mot-de-passe.js"
+    "demo:mot-de-passe": "node scripts/demo-mot-de-passe.js",
+    "demo:affluence": "node scripts/demo-affluence.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

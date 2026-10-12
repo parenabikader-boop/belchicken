@@ -1,0 +1,64 @@
+/* Lot 12 : page Commandes plus lisible (adresse d'essai /equipe/commandes-v2). Chargé seulement par OrdersPage2.jsx.
+   La page actuelle (OrdersList.jsx, staff.css) ne change pas. */
+
+.o2-head{margin-bottom:4px}
+.o2-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:6px 0 10px}
+.o2-search{flex:1 1 240px;margin:0}
+.o2-sum{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13px}
+.o2-sum>span:first-child{margin-right:2px}
+.o2-chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:4px 10px;font-size:13px;line-height:1.3;background:#efe6dc;color:var(--muted);border:1px solid transparent}
+.o2-chip b{color:inherit}
+.o2-chip.late{background:var(--bad-soft);color:var(--bad);border-color:#f3c3be;font-weight:600}
+.o2-chip.late.on{background:var(--bad);color:#fff}
+.o2-chip.late:disabled{opacity:.5;cursor:default}
+.o2-chip.warn{background:#fff1de;color:#9a4300}
+.o2-chip.msg{background:#fff4d6;color:#7a5a00}
+.o2-views{display:flex;gap:6px}
+
+/* Ordinateur : les étapes côte à côte, colonnes vides réduites (largeur réglée par OrdersPage2.jsx) */
+.o2-board{--w:min(1560px,calc(100vw - 32px));width:var(--w);margin-left:calc((100% - var(--w)) / 2);display:grid;gap:8px;align-items:start}
+.o2-col{background:#fbeedd;border:1px solid #f1dcb4;border-radius:var(--r-lg);padding:8px;min-height:120px;min-width:0}
+.o2-col.has{background:#fff8ea}
+.o2-col.s-PAIEMENT_A_VERIFIER.has{background:#fff4d6;border-color:#e0a100}
+.o2-col.single{background:transparent;border:0;padding:0}
+.o2-col.collapsed{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 2px;min-height:220px;background:#f6efe6;border-style:dashed}
+.o2-col-v{writing-mode:vertical-rl;transform:rotate(180deg);font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.o2-col-head{display:flex;align-items:center;gap:6px;margin:0 2px 6px}
+.o2-col-head h2{flex:1;min-width:0;font-family:var(--sans);font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.o2-col.single .o2-col-head{justify-content:flex-end;margin:4px 0 8px}
+.o2-help{flex:none;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line-2);background:var(--panel);color:var(--muted);font-weight:800;font-size:14px;line-height:1;padding:0}
+.o2-help:hover,.o2-help.on{border-color:var(--brand);color:var(--brand-ink)}
+.o2-hint{margin:0 0 8px;background:#fff8ea;border-left:4px solid var(--brand);border-radius:var(--r);padding:7px 10px;font-size:13px;font-weight:600}
+.o2-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+
+/* Carte compacte sur 2 lignes, couleur selon le temps passé à l'étape */
+.c2{display:block;background:var(--panel);border:1px solid #f1dcb4;border-left:5px solid #cdbba8;border-radius:8px;padding:6px 9px;color:var(--text);text-decoration:none;font-size:13px;line-height:1.35}
+.c2:hover{border-color:#e3c999}
+.c2.lvl-warn{border-left-color:#e8890c;background:#fff8ee}
+.c2.lvl-late{border-left-color:var(--bad);background:#fff1ef;border-color:#f3c3be}
+.c2.s-ANNULEE,.c2.s-LIVREE{opacity:.8}
+.c2-l1{display:flex;align-items:center;gap:6px;min-width:0}
+.c2-ref{flex:none;font-family:var(--display);font-weight:800;font-size:14px;letter-spacing:.02em}
+.c2-name{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c2-badge{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:999px;padding:1px 6px;white-space:nowrap}
+.c2-badge.new{background:var(--brand);color:#fff}
+.c2-badge.ready{background:var(--ok-soft);color:var(--ok)}
+.c2-badge.msg{position:relative;background:#fff4d6;color:#7a5a00;border:1px solid #e0a100;font-size:12px;padding:0 6px}
+.c2-wait{flex:none;font-size:12px;font-weight:800;border-radius:999px;padding:1px 8px;background:#efe6dc;color:var(--muted);white-space:nowrap}
+.c2-wait.w-warn{background:#e8890c;color:#fff}
+.c2-wait.w-late{background:var(--bad);color:#fff}
+.c2 .st-pill{flex:none;font-size:11px;padding:1px 8px}
+.c2-l2{display:flex;gap:8px;margin-top:2px;color:var(--muted);font-size:12.5px;min-width:0}
+.c2-detail{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c2-sum{flex:none;white-space:nowrap}
+.c2-sum b{color:var(--text)}
+
+/* Téléphone et tablette : une étape à la fois (onglets) */
+.o2-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 0 8px;padding-bottom:2px}
+.o2-tabs::-webkit-scrollbar{display:none}
+.o2-tabs .od-tab{flex:none}
+.o2-tabs .od-tab.late span{background:var(--bad);color:#fff}
+@media (max-width:640px){
+  .o2-sum{width:100%}
+  .c2{padding:7px 9px;font-size:13.5px}
+}

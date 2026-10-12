@@ -37,6 +37,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 9 | WhatsApp automatique (API Meta), deux numéros | À faire |
 | 10 | Application Play Store | À faire |
 | 11 | Menu façon borne (page du menu du site client), façon A | En cours (demandé le 12 octobre 2026, avant les lots 9 et 10) : page « écran libre » validée par le client, essayée sur dev à l'adresse `/menu-borne`, enregistrée en local ; reste l'étape 1 (réglage « Menu façon borne » et interrupteur `MENU_BORNE`, petite migration), après l'accord du client |
+| 12 | Page Commandes plus lisible (soirs d'affluence) | En cours : nouvelle page à l'adresse d'essai `/equipe/commandes-v2` (dev, enregistrée en local), API complétée ; restent l'écriture du coup de feu `demo:affluence` dans dev et le réglage (migration groupée avec le lot 11), après l'accord du client |
 
 Hors lots : **démonstration commerciale** sur la base dev (scripts `demo:*`, enregistrement local `bcc13e1`, pas
 envoyé sur GitHub). Voir « Démonstration commerciale » plus bas.
@@ -587,6 +588,75 @@ inchangés. Captures des bornes : `docs/captures-borne/` ; captures des essais (
 - [x] 4. Essais sur dev en tailles téléphone, tablette et ordinateur (navigateur Edge sans fenêtre, aucune erreur, aucune
   commande validée), mesures (une seule catégorie, deux rangées entières, plus de vide à droite, barres fines), 21
   captures v3 ; enregistrement local (pas sur GitHub). **STOP avant la mise en ligne.**
+
+### 12. Page Commandes plus lisible
+
+Demandé le 12 octobre 2026 : un vendredi soir avec 30 commandes en cours, les agents doivent s'y retrouver d'un coup
+d'œil. Page `/equipe/commandes` (Patron, Opérateurs, Prestataire ; le Responsable livraison et les livreurs ont leurs
+propres pages). Problèmes relevés par le client : textes d'explication qui prennent la moitié de chaque colonne, six
+colonnes dont certaines presque toujours vides (« Payées » avec le parcours court, « À retirer »), cartes trop
+grandes, rien ne signale une commande qui attend depuis longtemps.
+
+Proposé (à valider par le client) :
+
+- **explications repliées** derrière un bouton « ? » en tête de colonne (ouvertes au premier passage sur l'appareil) ;
+- **colonnes vides réduites** à une bande étroite (nom et 0), qui s'élargit dès qu'une commande arrive ; « Payées »
+  cachée quand le parcours court est allumé et qu'elle est vide ;
+- **cartes compactes sur 2 lignes** : référence, client, badges (Nouvelle, À emporter, Prête) et **temps d'attente** ;
+  puis quartier ou livreur, total et paiement ;
+- **couleur selon le temps passé à l'étape** (et non depuis la commande) : normal, orange, rouge, avec des seuils par
+  étape à valider (proposés : À vérifier 5 / 10 min, En préparation 25 / 40, Prête pour livraison 10 / 20, En livraison
+  40 / 60, À retirer 30 / 60, À remercier 30 / 120) ; **plus anciennes à l'étape en haut** ;
+- signe **« message à confirmer »** sur la carte quand l'étape suivante est bloquée par le message au client ;
+- bandeau en haut : « 28 en cours · 4 en retard », avec un filtre « En retard seulement » ;
+- vue par rôle : pas maintenant (les rôles qui livrent ont déjà leurs pages) ; à revoir après essai.
+
+Sans rien casser :
+
+- réglage du Patron **« Nouvelle page Commandes »**, éteint par défaut (éteint : page actuelle identique) ;
+- **petite migration** (une colonne de `AppSettings`), à grouper si possible avec celle du lot 11 pour une seule
+  sauvegarde Neon ; annoncée avant, accord du client ;
+- **API complétée, sans rien retirer** (signalé) : deux champs de plus par commande dans la liste des commandes en cours,
+  `stageSince` (début de l'étape) et `noticePending` (message à confirmer), calculés par les règles existantes
+  (`stepStart()`, `noticeState()` de `customer-messages.js`) ; la page actuelle les ignore ;
+- nouvelle page dans des fichiers à part ; `OrdersList.jsx`, le détail d'une commande, les boutons d'étape et les
+  règles du serveur ne changent pas.
+
+Essai sur dev seulement, avec des données « Démo » : script `demo:affluence` qui ajoute environ 30 commandes en cours
+(vendredi soir, toutes les étapes, attentes courtes et longues, livraison restaurant et Prestataire, à emporter),
+marquées comme la démonstration (références `BC-0…`, clients « (Démo) ») et donc effacées par `demo:effacer` ; même
+garde-fou dev, mêmes prix du serveur, rejouées avec les règles de l'équipe ; écriture dans dev seulement avec l'accord du
+client. Captures en tailles téléphone, tablette et ordinateur.
+
+Décisions du client (12 octobre 2026) : seuils proposés acceptés pour démarrer, **modifiables plus tard par le Patron**
+(pas maintenant : ils sont réunis dans `frontend/src/staff/orders2/waiting.js` pour cela) ; pas de vue par rôle ;
+même méthode que le lot 11 : la nouvelle page d'abord à une **adresse d'essai** `/equipe/commandes-v2`, sans lien,
+sans migration ; le réglage « Nouvelle page Commandes » et sa migration viendront après, **groupés avec ceux du lot 11**
+(une seule migration, une seule sauvegarde Neon, avec l'accord du client).
+
+Fichiers : serveur `customer-messages.js` (`stageSince()`, `noticePending()`) et `staff-orders.service.js` (liste des
+commandes : deux champs ajoutés, rien de retiré), tests `test/orders-board.test.js` ; site `frontend/src/staff/orders2/`
+(`OrdersPage2.jsx`, `OrderCard2.jsx`, `waiting.js` et ses tests, `orders2.css`), adresse d'essai dans `StaffApp.jsx`.
+`OrdersList.jsx`, `labels.js`, `OrderDetail.jsx` et `staff.css` inchangés. Le détail d'une commande ouvert depuis la
+page d'essai ramène à la page actuelle (« ‹ Commandes »), comme avant.
+
+Étapes :
+
+- [x] 0. Accord du client sur l'analyse et sur les seuils d'attente (12 octobre 2026).
+- [x] 1. API : `stageSince` et `noticePending` dans la liste des commandes en cours, tests (309 tests au total).
+- [ ] 2. Réglage « Nouvelle page Commandes », petite migration groupée avec celle du lot 11, sauvegarde Neon, tests.
+  **Après l'accord du client.**
+- [x] 3. Nouvelle page sur ordinateur (`/equipe/commandes-v2`) : colonnes réduites quand elles sont vides, « Payées »
+  cachée avec le parcours court, explications repliées derrière « ? », cartes compactes sur 2 lignes, couleurs
+  d'attente, plus longue attente en haut, bandeau et filtre « En retard seulement ».
+- [x] 4. Téléphone et tablette : onglets avec les mêmes cartes et couleurs.
+- [x] 5. Script `demo:affluence` (environ 30 commandes en cours, « Démo », réutilise les comptes, provenances et
+  quartiers de la démonstration, effacées par `demo:effacer`), 3 tests ; essai à blanc sur dev le 12 octobre (30 en
+  cours, aucune écriture). **Écriture dans dev : attend l'accord du client.**
+- [ ] 6. Essais sur dev avec le coup de feu écrit, captures, **STOP avant la mise en ligne**. Déjà fait sans rien
+  écrire : captures avec 30 commandes calculées en mémoire (réponses du serveur simulées dans le navigateur) : sur
+  ordinateur, 27 cartes entières visibles au lieu de 10 sur la page actuelle (`captures-lot12-commandes\`).
+- [ ] Plus tard : seuils d'attente modifiables par le Patron (page Réglages).
 
 ## Démonstration commerciale (base dev)
 

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { isPatronLevel, ROLE_LABEL, StaffProvider, useStaff } from './StaffContext.jsx';
 import { RequireFeature } from './FeatureGate.jsx';
@@ -6,6 +6,8 @@ import { StaffScreen } from './StaffScreen.jsx';
 import Login from './pages/Login.jsx';
 import { OrdersFeedProvider, useOrdersFeed } from './orders/OrdersFeed.jsx';
 import OrdersList from './orders/OrdersList.jsx';
+// Lot 12 : nouvelle page Commandes, adresse d'essai /equipe/commandes-v2
+const OrdersPage2 = lazy(() => import('./orders2/OrdersPage2.jsx'));
 import OrderDetail from './orders/OrderDetail.jsx';
 import MenuAdmin from './menu/MenuAdmin.jsx';
 import ProductForm from './menu/ProductForm.jsx';
@@ -104,6 +106,8 @@ function TeamRoutes() {
       <Route element={<StaffLayout />}>
         <Route index element={<Navigate to="commandes" replace />} />
         <Route path="commandes" element={<OrdersList />} />
+        {/* Lot 12 : page Commandes plus lisible, adresse d'essai sans lien (fichier à part, téléchargé seulement ici) */}
+        <Route path="commandes-v2" element={<Suspense fallback={null}><OrdersPage2 /></Suspense>} />
         <Route path="commandes/nouvelle" element={<NewOrder />} />
         <Route path="commandes/:reference" element={<OrderDetail />} />
         <Route path="menu" element={<MenuAdmin />} />

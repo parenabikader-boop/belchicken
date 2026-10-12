@@ -363,6 +363,10 @@ Connexion par numéro de téléphone et mot de passe ; trois rôles : `PATRON` (
   Mots de passe hachés avec scrypt. 8 essais ratés par numéro (20 par adresse IP) toutes les 15 minutes.
 - Commandes (Patron et Opérateur) : `GET /api/staff/orders?status=EN_COURS|TOUTES|<statut>&q=<recherche>`,
   `GET /api/staff/orders/:reference`, `POST /api/staff/orders/:reference/status` avec `{ from, to, reason }`.
+  Lot 12 : chaque commande de la liste a aussi `stageSince` (début de son étape, pour le temps d'attente) et
+  `noticePending` (l'étape suivante attend le message au client), calculés par `stageSince()` et `noticePending()` de
+  `customer-messages.js` ; rien n'a été retiré. Nouvelle page Commandes à l'adresse d'essai `/equipe/commandes-v2`
+  (`frontend/src/staff/orders2/`, sans lien ni réglage pour l'instant ; voir la feuille de route, lot 12).
   `from` est le statut affiché à l'écran : si un collègue l'a changé entre-temps, l'API répond 409 au lieu d'écraser.
 - Page Commandes (`frontend/src/staff/orders/OrdersList.jsx`) : une étape à la fois, dans l'ordre du travail (À vérifier,
   Payées, En préparation, En livraison, Livrées · à remercier, puis Historique avec Livrées / Annulées), chaque étape avec
@@ -860,6 +864,10 @@ règles testées dans `backend/test/demo.test.js` (sans base).
 - `npm run equipe:prestataire` (facultatif, **après** le remplissage) : nom `Prestataire (Démo)`, numéro `70 97 00 50`.
   Jamais dans Claude Code : le script affiche le code QR, la clé et les codes de secours.
 - `npm run demo:mot-de-passe` : choisir le mot de passe d'un compte « Démo » (Responsable livraison, livreurs…).
+- `npm run demo:affluence -- --essai` puis `npm run demo:affluence` (lot 12) : coup de feu d'un soir, environ 30
+  commandes « Démo » en cours (toutes les étapes, retards, messages à confirmer), sur les comptes, provenances et
+  quartiers de la démonstration déjà en place ; effacées par `demo:effacer` avec le reste. Les commandes passées en
+  direct pendant les essais (client « Nom (Démo) » au 70 98 xx xx) le sont aussi.
 - `npm run demo:effacer` : efface toute la démonstration et seulement elle, remet les réglages et la grille
   des frais comme avant, puis compare chaque table avec la photo.
 
