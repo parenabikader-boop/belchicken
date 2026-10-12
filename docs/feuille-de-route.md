@@ -33,7 +33,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 5 | Livraison en deux modes (Restaurant / Prestataire) | Terminé : 5a, 5b, 5c en ligne depuis le 10 octobre 2026, 5d en ligne depuis le 11 octobre 2026 (production en mode Restaurant, réglage « Tournées et disponibilité » éteint, interrupteur `RELEVE` fermé, aucun Responsable livraison ni livreur de notre équipe : rien ne change en production) |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | En ligne depuis le 11 octobre 2026 (enregistrement `6c005ce`, aucune migration, interrupteur `VENTES` ouvert : le Patron voit l'onglet « Ventes ») |
 | 7 | Avis des clients | Terminé : en ligne le 12 octobre 2026, réglage « Demander l’avis des clients » éteint en production |
-| 8 | Langue FR/EN sur le site client | Fait sur dev le 12 octobre 2026, en attente de l’accord du client (réglage « Site en anglais » éteint par défaut) |
+| 8 | Langue FR/EN sur le site client | Terminé : en ligne le 12 octobre 2026 (enregistrement `1e2047c`), réglage « Site en anglais » éteint en production |
 | 9 | WhatsApp automatique (API Meta), deux numéros | À faire |
 | 10 | Application Play Store | À faire |
 
@@ -503,7 +503,18 @@ Fait sur dev (voir README « Langue du site client, FR/EN ») :
   (prête, retirée), commande française annulée, erreurs du serveur traduites (`erreurs-serveur-fr-en.txt`). Dev remis
   dans son état d'avant (commandes et session d'essai supprimées, réglages remis ; chaque table identique à avant).
 - [x] Captures (39 fichiers) dans `C:\Users\HP\Desktop\belchiken\captures-lot8-langue\`.
-- [ ] Accord du client sur les captures, sauvegarde Neon, enregistrement Git et mise en ligne (STOP).
+- [x] Accord du client sur les captures (12 octobre), sauvegarde Neon `sauvegarde-lot8` (faite et vérifiée par le
+  client), tests (288), `npm run langues` et construction relancés.
+- [x] Enregistrement `1e2047c`, mise en ligne le 12 octobre 2026 (Render à jour en ~1 min). Vérifié après la mise en
+  ligne, sans rien écrire en production : `GET /api/site` répond `{"anglais":false}` (404 avant : la colonne
+  `englishSite` de la migration existe donc en production) ; santé, menu, codes ECOFOOD, accueil et grille des frais
+  identiques octet pour octet à avant ; commande ou lien d’avis inconnus répondent comme avant ; espace équipe protégé
+  (401, aussi par le site Vercel) ; site Vercel à jour (code du lot 8) et affiché en français **sans bouton FR / EN**,
+  même avec « anglais » mémorisé dans le téléphone. Migration non vérifiée dans le tableau de bord de Render.
+  En production : réglage « Site en anglais » **éteint** (valeur par défaut de la migration), aucune ligne `ANGLAIS` =
+  ouvert. Rien ne change pour les clients tant que le Patron n’allume pas le réglage.
+
+**Lot 8 terminé le 12 octobre 2026.**
 
 ### 9. WhatsApp automatique
 
