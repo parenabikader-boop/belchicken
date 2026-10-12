@@ -36,8 +36,8 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 8 | Langue FR/EN sur le site client | Terminé : en ligne le 12 octobre 2026 (enregistrement `1e2047c`), réglage « Site en anglais » éteint en production |
 | 9 | WhatsApp automatique (API Meta), deux numéros | À faire |
 | 10 | Application Play Store | À faire |
-| 11 | Menu façon borne (page du menu du site client), façon A | En ligne depuis le 12 octobre 2026 (enregistrement `6000564`, réglage éteint ; sauvegarde Neon de production « sauvegarde-prod-avant-lot11-12 » faite avant par le client) : page « écran libre » validée par le client, réglage « Menu façon borne » et interrupteur `MENU_BORNE` (migration groupée `20261012180000_menu_borne_page_commandes`, appliquée sur dev seulement le 12 octobre 2026), essais faits ; `/menu-borne` renvoie vers `/menu`. **STOP avant la mise en ligne** |
-| 12 | Page Commandes plus lisible (soirs d'affluence) | En ligne depuis le 12 octobre 2026 (`6000564`, réglage allumé par le client) ; corrections sur dev, enregistrées en local : barre ⋮ (`f42a20a`) et façon B (étapes vides cachées, onglet « Tout ») ; avant : nouvelle page, coup de feu `demo:affluence` écrit dans dev, réglage « Nouvelle page Commandes » et interrupteur `NOUVELLE_PAGE_COMMANDES` (même migration que le lot 11), essais faits ; `/equipe/commandes-v2` gardée pour le Patron et le Prestataire. **STOP avant la mise en ligne** |
+| 11 | Menu façon borne (page du menu du site client), façon A | En ligne depuis le 12 octobre 2026 (enregistrement `6000564`, réglage éteint ; sauvegarde Neon de production « sauvegarde-prod-avant-lot11-12 » faite avant par le client) : page « écran libre » validée par le client, réglage « Menu façon borne » et interrupteur `MENU_BORNE` (migration groupée `20261012180000_menu_borne_page_commandes`, passée en production, **vérifiée par le client dans le journal de Render**), essais faits ; `/menu-borne` renvoie vers `/menu` |
+| 12 | Page Commandes plus lisible (soirs d'affluence) | En ligne depuis le 12 octobre 2026 (`6000564`, réglage allumé par le client), puis barre ⋮ (`f42a20a`) et façon B (`8a5fcc3` : étapes vides cachées, onglet « Tout »), envoyées le 12 octobre 2026 avec l'accord écrit du client, sans migration ; avant : nouvelle page, coup de feu `demo:affluence` écrit dans dev, réglage « Nouvelle page Commandes » et interrupteur `NOUVELLE_PAGE_COMMANDES` (même migration que le lot 11, vérifiée dans Render), essais faits ; `/equipe/commandes-v2` gardée pour le Patron et le Prestataire |
 
 Hors lots : **démonstration commerciale** sur la base dev (scripts `demo:*`, enregistrement local `bcc13e1`, pas
 envoyé sur GitHub). Voir « Démonstration commerciale » plus bas.
@@ -587,7 +587,7 @@ inchangés. Captures des bornes : `docs/captures-borne/` ; captures des essais (
 - [x] 3. Écran de personnalisation plein écran (façon A), Retour et prix toujours visibles.
 - [x] 4. Essais sur dev en tailles téléphone, tablette et ordinateur (navigateur Edge sans fenêtre, aucune erreur, aucune
   commande validée), mesures (une seule catégorie, deux rangées entières, plus de vide à droite, barres fines), 21
-  captures v3 ; enregistrement local (pas sur GitHub). **STOP avant la mise en ligne.**
+  captures v3. Mis en ligne le 12 octobre 2026 avec l’étape 1 (`6000564`).
 
 ### 12. Page Commandes plus lisible
 
@@ -680,7 +680,7 @@ page d'essai ramène à la page actuelle (« ‹ Commandes »), comme avant.
     « En retard seulement » sans ligne « Rien à… » ; détail puis retour. 2 commandes : ligne « Rien à vérifier, rien en
     préparation, rien en livraison, rien à retirer. » et une seule colonne pleine largeur (« Tout 2 · À remercier 2 »
     sur téléphone). Aucune commande : « Aucune commande en cours. ». Réglage éteint : page et barre actuelles.
-    Captures : `C:\Users\HP\Desktop\belchiken\captures-lot12-facon-b\`. **STOP avant la mise en ligne.**
+    Captures : `C:\Users\HP\Desktop\belchiken\captures-lot12-facon-b\`. Envoyé le 12 octobre 2026 avec l'accord écrit du client.
 - [ ] Plus tard : seuils d'attente modifiables par le Patron (page Réglages).
 
 ### Réglages des lots 11 et 12 (migration groupée)
@@ -722,9 +722,11 @@ Décisions du client (12 octobre 2026) : une seule migration pour les deux régl
   remettrait à « éteint », et `AppSettings` est identique à la photo sur ses colonnes (sans la correction, il aurait été
   signalé différent). Données « Démo » en place (793 commandes, 30 en cours, 13 comptes).
 - [x] Enregistrement local (pas sur GitHub).
-- [x] Mise en ligne le 12 octobre 2026 avec l'accord écrit du client (6 enregistrements jusqu'à `6000564`, sauvegarde Neon de production avant). Pour mémoire : la migration passe sur la production au déploiement Render
-  (2 colonnes éteintes : rien ne change pour les clients ni pour l'équipe). Vérifier ensuite dans le tableau de bord de
-  Render que la migration est passée.
+- [x] Mise en ligne le 12 octobre 2026 avec l'accord écrit du client (6 enregistrements jusqu'à `6000564`, sauvegarde Neon de production avant). Migration
+  `20261012180000_menu_borne_page_commandes` passée en production : **vérifiée par le client dans le journal de
+  Render** (capture faite).
+- [x] Corrections du lot 12 (barre ⋮ `f42a20a`, façon B `8a5fcc3`) envoyées le 12 octobre 2026 avec l'accord écrit du
+  client, **sans migration**.
 
 ## Démonstration commerciale (base dev)
 
