@@ -18,7 +18,10 @@
     "db:studio": "prisma studio",
     "equipe:patron": "node scripts/create-patron.js",
     "equipe:prestataire": "node scripts/prestataire.js",
-    "cloudinary:check": "node scripts/cloudinary-check.js"
+    "cloudinary:check": "node scripts/cloudinary-check.js",
+    "demo:remplir": "node scripts/demo-remplir.js",
+    "demo:effacer": "node scripts/demo-effacer.js",
+    "demo:mot-de-passe": "node scripts/demo-mot-de-passe.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

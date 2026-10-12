@@ -844,3 +844,42 @@ Client sans son code (ou bloqué) : l'agent valide avec un motif obligatoire (`{
 `RETRAIT_SANS_CODE`, motif dans l'historique). Le code n'apparaît jamais sur la page de suivi publique. Règles :
 `checkPickupCode()` dans `src/services/courier.js`. Migration `20261007120000_code_retrait` (valeur
 `RETRAIT_SANS_CODE` de l'enum `OrderEventType`). Modèle Meta `emporter_commande_prete` à resoumettre (5 variables).
+
+## Démonstration commerciale (base dev seulement)
+
+Un mois d'activité fictive mais réaliste sur la base **dev**, pour présenter le tableau de bord, les ventes,
+les avis, la caisse et le relevé de livraison en mode Prestataire. Scripts dans `backend/scripts/demo-*.js`,
+règles testées dans `backend/test/demo.test.js` (sans base).
+
+À lancer dans sa propre fenêtre PowerShell, depuis `backend/` :
+
+- `npm run demo:remplir -- --essai` : essai à blanc, n'écrit rien (résumé : commandes par jour et par heure,
+  ventes, caisse, tournées, avis, réglages qui changeront).
+- `npm run demo:remplir` : demande le mot de passe de « Patron (Démo) » (saisie cachée), prend la photo de dev
+  (`C:\Users\HP\Desktop\belchiken\demo-photo-avant\`, hors du projet), puis écrit tout en une transaction.
+- `npm run equipe:prestataire` (facultatif, **après** le remplissage) : nom `Prestataire (Démo)`, numéro `70 97 00 50`.
+  Jamais dans Claude Code : le script affiche le code QR, la clé et les codes de secours.
+- `npm run demo:mot-de-passe` : choisir le mot de passe d'un compte « Démo » (Responsable livraison, livreurs…).
+- `npm run demo:effacer` : efface toute la démonstration et seulement elle, remet les réglages et la grille
+  des frais comme avant, puis compare chaque table avec la photo.
+
+Garde-fous :
+
+- Refus de tourner ailleurs que sur dev (`ep-nameless-band-b4vetndd`) ; seul le nom du serveur est affiché.
+- Écriture directe dans la base : aucun message WhatsApp, aucune alerte, aucune ligne du journal de sécurité.
+- Prix lus dans le vrai menu de dev et calculés par `priceItems()` ; chaque commande est rejouée avec les règles de
+  l'équipe (`checkPlan()`) avant d'écrire quoi que ce soit.
+- Marques « Démo » : références `BC-0…` (le 0 n'est jamais tiré pour une vraie commande), clients « … (Démo) » au
+  70 98 xx xx, comptes « … (Démo) » au 70 97 00 xx, provenances « Appel (Démo) » et « WhatsApp (Démo) », conditions
+  « Démo, conditions fictives », quartiers de la grille rangés à partir de la place 900. L'effacement exige toutes les
+  marques et s'arrête sans rien effacer au moindre doute.
+- Commande passée en direct pendant les essais : client « Nom (Démo) » au 70 98 xx xx, sinon l'effacement s'arrête.
+- Réglages changés pendant la démonstration, remis à l'identique : mode Prestataire et société « Livraison DÉMO »
+  (codes `*000*…`), supplément de nuit de 23 h à 6 h, 21 quartiers, interrupteurs tableau de bord, caisse, ventes,
+  avis et relevé, conditions du contrat (500 F par livraison, 300 F de plus par livraison offerte).
+- Seules restent, après l'effacement, les lignes du journal de sécurité (création du compte Prestataire, connexions),
+  que la base refuse d'effacer.
+
+Serveur local pour la démonstration (WhatsApp et alertes coupés), depuis `backend/` :
+`env WHATSAPP_TOKEN= WHATSAPP_PHONE_NUMBER_ID= WHATSAPP_TEAM_NUMBERS= WHATSAPP_CUSTOMER_AUTO=0 VAPID_PUBLIC_KEY= VAPID_PRIVATE_KEY= PUBLIC_SITE_URL=http://localhost:5173 node src/server.js`,
+puis le site avec `npx vite --port 5173` dans `frontend/`. Espace équipe : http://localhost:5173/equipe.
