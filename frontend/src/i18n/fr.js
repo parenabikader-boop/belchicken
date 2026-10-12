@@ -131,6 +131,20 @@ export default {
     moreDrinks: (n) => `Encore ${n} boisson${n > 1 ? 's' : ''}`,
     add: 'Ajouter',
   },
+  // Lot 11 : menu façon borne (adresse d'essai /menu-borne)
+  borne: {
+    back: 'Retour',
+    prev: 'Voir les articles précédents',
+    next: 'Voir les articles suivants',
+    free: 'Comprise',
+    includedDrinks: (n) => (n === 1 ? 'Votre boisson comprise' : `Vos ${n} boissons comprises`),
+    toChoose: (n) => `${n} à choisir`,
+    chosen: '✓ Choisie',
+    allCategories: 'Recherche dans toutes les catégories du menu',
+    extraDrinks: 'Boissons en plus',
+    extraNote: 'En plus, au prix indiqué',
+    addNote: '+ Ajouter une note pour la cuisine',
+  },
   orderBar: {
     // En morceaux, comme avant le lot 8 (même rendu au pixel près)
     count: (n) => [n, ' article', n > 1 ? 's' : '', ' dans votre commande'],

@@ -13,6 +13,8 @@ import { LanguageProvider } from './i18n/index.jsx';
 const StaffApp = lazy(() => import('./staff/StaffApp.jsx'));
 // Lot 7 : page d'avis, petit fichier à part, sans l'en-tête ni le pied du site
 const Review = lazy(() => import('./pages/Review.jsx'));
+// Lot 11 : menu façon borne, adresse d'essai sans lien depuis le site (fichier à part, téléchargé seulement ici)
+const MenuBorne = lazy(() => import('./pages/MenuBorne.jsx'));
 
 export default function App() {
   return (
@@ -20,6 +22,8 @@ export default function App() {
       <Route path="equipe/*" element={<Suspense fallback={null}><StaffApp /></Suspense>} />
       {/* Lot 8 : français ou anglais sur le site client seulement (l'espace équipe reste en français) */}
       <Route path="avis/:token" element={<LanguageProvider><Suspense fallback={null}><Review /></Suspense></LanguageProvider>} />
+      {/* Lot 11 : menu façon borne, écran libre (sa propre barre fine, sans l'en-tête ni le pied du site) */}
+      <Route path="menu-borne/:categorie?" element={<LanguageProvider><Suspense fallback={null}><MenuBorne /></Suspense></LanguageProvider>} />
       <Route element={<LanguageProvider><Layout /></LanguageProvider>}>
         <Route index element={<Home />} />
         <Route path="menu/:categorie?" element={<Menu />} />

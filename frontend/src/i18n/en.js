@@ -230,6 +230,20 @@ export default {
     moreDrinks: (n) => `${n} more drink${n > 1 ? 's' : ''}`,
     add: 'Add',
   },
+  // Lot 11 : kiosk-style menu (test address /menu-borne)
+  borne: {
+    back: 'Back',
+    prev: 'See previous items',
+    next: 'See next items',
+    free: 'Included',
+    includedDrinks: (n) => (n === 1 ? 'Your included drink' : `Your ${n} included drinks`),
+    toChoose: (n) => `${n} to choose`,
+    chosen: '✓ Chosen',
+    allCategories: 'Search across all menu categories',
+    extraDrinks: 'Extra drinks',
+    extraNote: 'Extra, at the price shown',
+    addNote: '+ Add a note for the kitchen',
+  },
   orderBar: {
     count: (n) => `${n} item${n > 1 ? 's' : ''} in your order`,
     see: 'View my order',

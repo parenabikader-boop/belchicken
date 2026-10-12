@@ -36,6 +36,10 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 8 | Langue FR/EN sur le site client | Terminé : en ligne le 12 octobre 2026 (enregistrement `1e2047c`), réglage « Site en anglais » éteint en production |
 | 9 | WhatsApp automatique (API Meta), deux numéros | À faire |
 | 10 | Application Play Store | À faire |
+| 11 | Menu façon borne (page du menu du site client), façon A | En cours (demandé le 12 octobre 2026, avant les lots 9 et 10) : page « écran libre » validée par le client, essayée sur dev à l'adresse `/menu-borne`, enregistrée en local ; reste l'étape 1 (réglage « Menu façon borne » et interrupteur `MENU_BORNE`, petite migration), après l'accord du client |
+
+Hors lots : **démonstration commerciale** sur la base dev (scripts `demo:*`, enregistrement local `bcc13e1`, pas
+envoyé sur GitHub). Voir « Démonstration commerciale » plus bas.
 
 ### 1. Parcours court et bon de commande
 
@@ -521,6 +525,84 @@ Fait sur dev (voir README « Langue du site client, FR/EN ») :
 - API Meta, une fois tous les messages définitifs, pour les deux numéros.
 
 ### 10. Application Play Store
+
+### 11. Menu façon borne (en cours)
+
+Demandé le 12 octobre 2026 par les financeurs : que la **page du menu** du site client ressemble aux bornes de commande
+de Belchicken (3 captures envoyées par le client, à joindre au dossier du lot). **Seule la page du menu change** : panier,
+validation, paiement, suivi et espace équipe ne bougent pas.
+
+Décision du client : **façon A**, sans toucher à la base pour les suppléments. Les sauces, frites et accompagnements
+sont les plats des Extras (et les boissons), ajoutés au panier **en lignes à part**, comme les « boissons en plus »
+d'aujourd'hui ; prix toujours ceux du serveur, aucun prix inventé. La **façon B** (vrais suppléments attachés au plat :
+groupes de suppléments, prix calculé par le serveur, affichage partout, page du Patron, migration) viendra plus tard,
+en lot séparé, seulement si Belchicken la demande.
+
+Ce que fait la page, version **« écran libre »** validée par le client le 12 octobre 2026 (après deux corrections) :
+
+- **écran libre** comme sur une borne : barre fine en haut (petit logo vers l'accueil, loupe, FR / EN si le site en
+  anglais est allumé, « Ma commande (n) »), **sans** l'en-tête ni le pied de page du site ; barre fine du panier en bas,
+  seulement quand le panier n'est pas vide ;
+- **une seule catégorie à la fois** (`/menu-borne/:categorie`, la première par défaut) : on n'en change qu'en touchant
+  la colonne de gauche (tablette, ordinateur) ou la bande du haut (téléphone), la catégorie choisie reste en
+  surbrillance et la page remonte en haut ;
+- dans la catégorie, une rangée par sous-groupe : elle **remplit la largeur** si tous ses plats tiennent (cartes posées
+  en largeur s'il y en a 1 ou 2), sinon elle **glisse** horizontalement (flèches ‹ › sur ordinateur) ;
+- petites cartes (photo de 100 à 140 px) : au moins **deux rangées entières** visibles sans défiler, sur téléphone,
+  tablette et ordinateur ;
+- recherche par une petite loupe : seul cas où les catégories se mélangent, sous « N résultats pour … » ;
+- écran de personnalisation plein écran sur téléphone, grand panneau ailleurs : formule, choix (cuisson…), boisson
+  comprise, puis Sauces, Frites, Boissons en plus, Accompagnements, Poulet à la pièce (sous-groupes des Extras de la
+  base, section cachée s'il n'y a rien de disponible), boutons + et −, prix mis à jour à chaque choix, Retour et
+  « Ajouter · prix » toujours visibles ; textes en français et en anglais.
+
+Fichiers (à part, rien d'autre ne change) : `frontend/src/pages/MenuBorne.jsx`, `frontend/src/components/borne/`
+(`BorneBars`, `BorneCategories`, `BorneRow`, `BorneCard`, `BorneDialog`), `frontend/src/borne.css`,
+`frontend/src/utils/borne.js` et ses tests (`npm test` dans `frontend/`) ; adresse d'essai `/menu-borne` dans `App.jsx`,
+hors du cadre du site (`Layout.jsx`), sans lien depuis le site ; textes `borne` dans `i18n/fr.js` et `en.js`.
+`Menu.jsx`, `ProductDialog.jsx`, `ProductCard.jsx`, `Layout.jsx`, `OrderBar.jsx`, `styles.css`, panier et serveur
+inchangés. Captures des bornes : `docs/captures-borne/` ; captures des essais (v1, v2, v3) :
+`C:\Users\HP\Desktop\belchiken\captures-lot11-menu-borne\`.
+
+**Décision du client (12 octobre 2026) pour l'étape 1 : un seul interrupteur choisit le menu que voient les clients.**
+
+- **Éteint** (par défaut) : le menu actuel du site officiel, `/menu` avec `Menu.jsx` inchangé.
+- **Allumé** : le nouveau menu plein écran façon borne (version « écran libre » ci-dessus), à la place du menu actuel.
+- Réglage du Patron **« Menu façon borne »** dans Réglages (`/equipe/reglages`), éteint par défaut, plus
+  l'interrupteur du Prestataire **`MENU_BORNE`** (ouvert sans ligne), comme pour le site en anglais ; lu par le site
+  avec `GET /api/site`. Pas de version du menu façon borne avec l'en-tête du site.
+- **Petite migration** (une colonne de `AppSettings`) : schéma présenté avant, écrite sans base, **sauvegarde Neon
+  avant la mise en ligne**, appliquée seulement avec l'accord du client.
+- **Ne rien mettre en ligne avant l'étape 1** : sans l'interrupteur, l'adresse d'essai `/menu-borne` serait publique.
+
+Étapes :
+
+- [x] 0. Captures des bornes au dossier (`docs/captures-borne/`, 3 images) ; Extras proposés d'après les sous-groupes
+  de la catégorie Extras de la base, prix lus dans le menu. Sur dev, la seule sauce (« Sauce supplémentaire ») est
+  indisponible : la section Sauces apparaîtra quand le Patron créera les vraies sauces (noms et prix de Belchicken).
+- [ ] 1. Réglage « Menu façon borne » et interrupteur `MENU_BORNE`, `GET /api/site`, `/menu` qui affiche l'un ou
+  l'autre menu. **Petite migration** annoncée avant, sauvegarde Neon. Tests. (½ jour) **Après l'accord du client.**
+- [x] 2. Nouvelle page, version « écran libre » (12 octobre 2026, adresse d'essai `/menu-borne`).
+- [x] 3. Écran de personnalisation plein écran (façon A), Retour et prix toujours visibles.
+- [x] 4. Essais sur dev en tailles téléphone, tablette et ordinateur (navigateur Edge sans fenêtre, aucune erreur, aucune
+  commande validée), mesures (une seule catégorie, deux rangées entières, plus de vide à droite, barres fines), 21
+  captures v3 ; enregistrement local (pas sur GitHub). **STOP avant la mise en ligne.**
+
+## Démonstration commerciale (base dev)
+
+Pour la présentation commerciale à Belchicken : un mois d'activité fictive sur la base **dev** seulement (tableau de
+bord, ventes par provenance et par agent, avis, caisse, relevé en mode Prestataire). Mode d'emploi et garde-fous :
+README « Démonstration commerciale ».
+
+- [x] Scripts `demo:remplir` (essai à blanc `--essai`), `demo:effacer`, `demo:mot-de-passe` et 13 tests (303 au
+  total, tous passent). Enregistrement local `bcc13e1` (12 octobre 2026), **pas envoyé sur GitHub** : il ne change ni
+  le site, ni l'API, ni la base de production.
+- [x] Remplissage de dev par le client (12 octobre) : 759 commandes « Démo », photo enregistrée, compte « Prestataire
+  (Démo) » créé par le client. Chiffres recalculés à part et identiques au serveur (ventes, provenances, agents, avis,
+  caisse, tableau de bord, relevé). Montant dû : livraison offerte payée 500 F **plus** 300 F (règle du lot 5d).
+- [ ] Scénarios du client en mode Prestataire (Responsable livraison, livreurs de notre équipe).
+- [ ] Essai de l'effacement (`demo:effacer`, comparaison avec la photo) : **attend l'accord du client**.
+- [ ] Nouveau remplissage le jour de la présentation.
 
 ## Avant la livraison à Belchicken
 

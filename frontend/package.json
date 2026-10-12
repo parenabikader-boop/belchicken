@@ -8,7 +8,8 @@
     "dev": "vite --strictPort",
     "build": "vite build",
     "preview": "vite preview",
-    "langues": "node scripts/check-langues.mjs"
+    "langues": "node scripts/check-langues.mjs",
+    "test": "node --test src/utils/borne.test.js"
   },
   "dependencies": {
     "react": "^19.1.0",
