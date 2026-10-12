@@ -652,10 +652,16 @@ page d'essai ramène à la page actuelle (« ‹ Commandes »), comme avant.
 - [x] 4. Téléphone et tablette : onglets avec les mêmes cartes et couleurs.
 - [x] 5. Script `demo:affluence` (environ 30 commandes en cours, « Démo », réutilise les comptes, provenances et
   quartiers de la démonstration, effacées par `demo:effacer`), 3 tests ; essai à blanc sur dev le 12 octobre (30 en
-  cours, aucune écriture). **Écriture dans dev : attend l'accord du client.**
-- [ ] 6. Essais sur dev avec le coup de feu écrit, captures, **STOP avant la mise en ligne**. Déjà fait sans rien
-  écrire : captures avec 30 commandes calculées en mémoire (réponses du serveur simulées dans le navigateur) : sur
-  ordinateur, 27 cartes entières visibles au lieu de 10 sur la page actuelle (`captures-lot12-commandes\`).
+  cours, aucune écriture). Écrit dans dev avec l'accord du client le 12 octobre à 18 h 10 : 34 commandes « Démo »
+  ajoutées (31 encore en cours), règles rejouées et prix du serveur vérifiés avant l'écriture.
+- [x] 6. Essais sur dev avec le coup de feu écrit (12 octobre) : liste lue par la fonction même du serveur
+  (`listOrders`, lecture seule ; seule la connexion simulée dans le navigateur), 35 commandes en cours (dont 2
+  anciennes commandes d'essai de dev). **Nouvelle page** : les 35 dans les bonnes colonnes, bandeau identique au calcul
+  à part (35 en cours, 9 en retard, 2 à surveiller, 8 messages à confirmer), couleur et ✉ justes sur chaque carte ;
+  sur ordinateur, 32 cartes entières visibles au lieu de 10. **Page actuelle** : marche normalement (35 cartes, mêmes
+  colonnes et mêmes nombres). Aucune erreur dans le navigateur, en tailles téléphone, tablette et ordinateur. Captures,
+  dont page actuelle et nouvelle page côte à côte : `captures-lot12-commandes\v2-vraies-donnees-dev\`. **STOP avant la
+  mise en ligne.**
 - [ ] Plus tard : seuils d'attente modifiables par le Patron (page Réglages).
 
 ## Démonstration commerciale (base dev)
