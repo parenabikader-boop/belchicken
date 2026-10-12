@@ -1065,3 +1065,30 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .sv .rl-table td:first-child{white-space:nowrap}
 .sv-methods span{display:block;white-space:nowrap;font-size:13px}
 .sv-methods small{color:var(--muted)}
+
+/* ─── Lot 7 : avis des clients (onglet Avis, page Livraison, détail d'une commande) ─── */
+.rv-n{white-space:nowrap;font-weight:800}
+.rv-n>span{color:#d99a00;letter-spacing:1px}
+.rv-n>span i{font-style:normal;color:#e6dccd}
+.rv-n.low{color:var(--bad)}
+.rv-n.low>span{color:var(--bad)}
+.rv-notes{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px}
+.rv-notes small{color:var(--muted)}
+.rv-quote{margin:8px 0 0;padding:8px 12px;border-left:3px solid var(--line-2);background:#fffaf2;font-style:italic;border-radius:0 var(--r) var(--r) 0}
+.rv-help{font-size:13px;margin:0 0 6px}
+.rv-tocall{border-color:var(--bad);background:var(--bad-soft);margin-bottom:14px}
+.rv-tocall h2{display:flex;align-items:center;gap:8px;color:var(--bad)}
+.rv-tocall ul,.rv-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.rv-call{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.rv-call-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
+.rv-call-actions,.rv-call-done{display:flex;flex-wrap:wrap;gap:8px}
+.rv-call-done input{flex:1 1 220px;min-width:0;font:inherit;font-size:15px;border:1.5px solid var(--line-2);border-radius:var(--r);padding:9px 10px}
+.rv-list li{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:6px}
+.rv-list li.low{border-left:3px solid var(--bad);padding-left:10px}
+.rv-list-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.rv-toggle{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600}
+.rv-called{font-size:13px;color:var(--ok);margin:0}
+.rv-called.warn{color:var(--bad);font-weight:700}
+.od-review{margin-bottom:14px;display:flex;flex-direction:column;gap:6px}
+.od-review.low{border-color:var(--bad)}
+.od-review-none{margin:0 0 12px}

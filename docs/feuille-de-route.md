@@ -32,7 +32,7 @@ Elles sont payées par mobile money **avant**, comme sur le site.
 | 4 | Compte Prestataire au-dessus du Patron | En ligne depuis le 10 octobre 2026 (aucun compte Prestataire en production, tout ouvert) |
 | 5 | Livraison en deux modes (Restaurant / Prestataire) | Terminé : 5a, 5b, 5c en ligne depuis le 10 octobre 2026, 5d en ligne depuis le 11 octobre 2026 (production en mode Restaurant, réglage « Tournées et disponibilité » éteint, interrupteur `RELEVE` fermé, aucun Responsable livraison ni livreur de notre équipe : rien ne change en production) |
 | 6 | Ventes globales, par agent et par provenance, export Excel et PDF | En ligne depuis le 11 octobre 2026 (enregistrement `6c005ce`, aucune migration, interrupteur `VENTES` ouvert : le Patron voit l'onglet « Ventes ») |
-| 7 | Avis des clients | À faire |
+| 7 | Avis des clients | Fait sur dev le 11 octobre 2026 (migration passée sur dev, essai et captures faits) : en attente de l’accord du client avant la mise en ligne |
 | 8 | Langue FR/EN sur le site client | À faire |
 | 9 | WhatsApp automatique (API Meta), deux numéros | À faire |
 | 10 | Application Play Store | À faire |
@@ -421,6 +421,48 @@ vérification sur toutes les commandes et sur celles du site seules. Interrupteu
 - Lien dans le message de remerciement.
 - Notes par étoiles (call center, restaurant, livraison) et commentaire.
 - Moyennes par agent et par livreur ; alerte au Patron en cas de mauvaise note.
+
+Plan, schéma et API acceptés par le client le 11 octobre 2026, avec ces réponses : deux niveaux (interrupteur `AVIS`
+ouvert par défaut + réglage du Patron « Demander l'avis des clients », éteint par défaut) ; mauvaise note = 2 étoiles
+ou moins sur l’une des trois ; lien valable 7 jours ; alertes au Patron et au Prestataire, au Responsable livraison
+seulement pour une mauvaise note de livraison de notre équipe ; agents et livreurs ne voient pas leurs notes. Modèles
+Meta des clients pas encore soumis : rien à casser chez Meta ; deux modèles en plus (`commande_livree_avis`,
+`emporter_commande_retiree_avis`), les anciens inchangés. Rappel strict (demande du client) : une seule fois, note
+non modifiable ; la base laisse passer seulement le rappel et le lien vidé à la suppression d’un compte.
+
+**Avancement** :
+
+- [x] Règles `review.js` et tests `review.test.js` (13), messages « avis » et tests (3), interrupteur `AVIS`.
+- [x] Schéma : `Order.reviewToken` (unique), table `OrderReview` (notes vérifiées par la base, modification refusée
+  sauf le rappel une fois et le lien vidé), `AppSettings.reviewsEnabled`. Migration `20261011120000_avis_clients`
+  écrite sans aucune base (`prisma migrate diff` entre deux fichiers de schéma), relue et acceptée par le client.
+- [x] Migration passée sur dev le 11 octobre (`npm run db:deploy`, serveur revérifié juste avant) : 24 migrations, base
+  identique au schéma (vérifié en lecture seule), mêmes lignes qu’avant, aucune commande avec une clé. `npm run test:db`
+  (dev seulement) : 2 essais, passent (notes, un seul avis, 9 modifications refusées, rappel une seule fois, lien vidé
+  à la suppression du compte, avis supprimé avec la commande), rien laissé derrière.
+- [x] Serveur : clé créée au passage « Livrée » (agent ou livreur), `review.service.js`, adresses publiques
+  `/api/avis/:cle` et équipe `/api/staff/avis`, `/api/staff/livraison/avis`, alertes de mauvais avis, réglage du
+  Patron. `route-access.test.js` lit aussi les interrupteurs de chaque adresse. 278 tests, tous passent.
+- [x] Pages : avis public `/avis/:cle` (fichier à part de 5 Ko, sans le menu), onglet « Avis » du Patron, encadré
+  « Avis du client » du détail, onglet « Avis » de la page Livraison, réglage du Patron. Compilé.
+- [x] Essai de bout en bout sur dev (11 octobre), serveur local avec WhatsApp et alertes coupés, comptes d’essai à part
+  (« Essai7 … », Prestataire compris, codes calculés par le script, jamais affichés) : 9 commandes (livraison
+  restaurant, à emporter, mode Prestataire avec notre livreur, réglage éteint puis rallumé, une commande antidatée de
+  8 jours écrite directement pour le lien expiré) : **90 vérifications sur 90**. Deux lectures du détail d’une
+  commande ont échoué une fois sans cause trouvée (serveur relancé ensuite, plus aucun raté) : l’essai a été repris
+  au même endroit avec les mêmes comptes. Dev remise comme avant : 28 tables sur 29 identiques à l’instantané ; seules
+  restent 11 lignes du journal de sécurité (191 au lieu de 180, la base refuse de les effacer).
+- [x] Captures (16 images) dans `C:\Users\HP\Desktop\belchiken\captures-lot7-avis\`.
+- [x] Cause des deux lectures ratées trouvée le 12 octobre (en lecture seule, journal du serveur local) : Neon a coupé
+  une connexion restée ouverte (`P1017` « Server has closed the connection »), une fois dans la grille des frais
+  (`deliveryZone.findMany`) et une fois dans la vérification de session (`staffSession.findUnique`). Aucun lien avec le
+  lot 7 : la lecture du détail (`getOrder`) n’a pas changé, l’avis est lu par une requête à part dont l’échec ne
+  bloque jamais le détail. `P1017` n’est pas dans les codes réessayés par `db-retry.js` ; le détail se recharge tout
+  seul toutes les 5 s. Piste proposée, à faire plus tard et à part : réessayer `P1017` pour les lectures seulement.
+- [x] Accord du client sur les captures (12 octobre), sauvegarde Neon `sauvegarde-lot7` (faite et vérifiée par le
+  client), tests (278) et construction relancés, migration relue (aucune donnée écrite, `reviewsEnabled` éteint par
+  défaut).
+- [ ] Enregistrement, mise en ligne.
 
 ### 8. Langue FR/EN
 

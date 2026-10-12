@@ -4,6 +4,7 @@ import { AppError } from '../utils/AppError.js';
 import { checkHandover, startOfToday, toCourse } from './courier.js';
 import { feeMethodError, feeToCollect } from './order-status.js';
 import { notifyDelivered, statusChange } from './staff-orders.service.js';
+import { reviewTokenData } from './review.service.js';
 
 // Courses à récupérer (lot 5c, notre équipe : confiées dès la préparation), en cours, plus celles livrées
 // ou annulées aujourd'hui
@@ -62,7 +63,8 @@ export async function deliverWithCode(reference, code, feeMethod, courier) {
   await prisma.$transaction(async (tx) => {
     const updated = await tx.order.updateMany({
       where: { id: order.id, status: 'EN_LIVRAISON', courierId: courier.id },
-      data: { status: 'LIVREE', ...(feeToCollect(order) ? { deliveryFeeMethod: feeMethod } : {}) },
+      // Lot 7 : clé du lien de l'avis, si les avis sont actifs
+      data: { status: 'LIVREE', ...(feeToCollect(order) ? { deliveryFeeMethod: feeMethod } : {}), ...(await reviewTokenData(tx)) },
     });
     if (updated.count !== 1) throw new AppError(409, 'Cette course vient de changer. La page est mise à jour.', 'COURSE_CHANGEE');
     await tx.orderStatusChange.create({ data: statusChange(order, 'LIVREE', courier) });

@@ -44,6 +44,9 @@ export const api = {
   getDelivery: () => request('/api/delivery'),
   // Frais pour un choix ({ zoneId } | { other: true } | { location }) : { source, fee, zoneName, distanceKm }
   quoteDelivery: (choice) => request('/api/delivery/quote', { method: 'POST', body: JSON.stringify(choice) }).then((d) => d.quote),
+  // Lot 7 : avis du client, par la clé du lien du remerciement : { reference, firstName, delivery, state }
+  getReview: (token) => request(`/api/avis/${encodeURIComponent(token)}`).then((d) => d.review),
+  sendReview: (token, body) => request(`/api/avis/${encodeURIComponent(token)}`, { method: 'POST', body: JSON.stringify(body) }).then((d) => d.review),
 };
 
 // Espace équipe : appels sur la même adresse que le site (/api/staff/...), relayés vers l'API
@@ -117,6 +120,11 @@ export const staffApi = {
   contractTerms: () => staffRequest('/releve/conditions'),
   // Lot 6 : ventes par période (du, au : 'AAAA-MM-JJ'), Patron et Prestataire
   sales: (du, au) => staffRequest(`/ventes?${new URLSearchParams({ du, au })}`).then((d) => d.sales),
+  // Lot 7 : avis des clients (Patron et Prestataire), notes de livraison de notre équipe (page Livraison)
+  reviews: (du, au) => staffRequest(`/avis?${new URLSearchParams({ du, au })}`).then((d) => d.reviews),
+  orderReview: (reference) => staffRequest(`/avis/commande/${encodeURIComponent(reference)}`).then((d) => d.review),
+  callBack: (id, note) => staffRequest(`/avis/${encodeURIComponent(id)}/rappel`, { method: 'POST', body: JSON.stringify({ note }) }).then((d) => d.review),
+  partnerReviews: (du, au) => staffRequest(`/livraison/avis?${new URLSearchParams({ du, au })}`).then((d) => d.reviews),
   salesExcel: (du, au) => downloadFile(`/api/staff/ventes/excel?${new URLSearchParams({ du, au })}`, `ventes-${du}-au-${au}.xlsx`),
   createContractTerms: (body) => staffRequest('/releve/conditions', { method: 'POST', body: JSON.stringify(body) }),
   deleteContractTerms: (id) => staffRequest(`/releve/conditions/${encodeURIComponent(id)}`, { method: 'DELETE' }),

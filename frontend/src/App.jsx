@@ -10,11 +10,14 @@ import Infos from './pages/Infos.jsx';
 
 // Espace équipe : fichier séparé, téléchargé seulement en allant sur /equipe
 const StaffApp = lazy(() => import('./staff/StaffApp.jsx'));
+// Lot 7 : page d'avis, petit fichier à part, sans l'en-tête ni le pied du site
+const Review = lazy(() => import('./pages/Review.jsx'));
 
 export default function App() {
   return (
     <Routes>
       <Route path="equipe/*" element={<Suspense fallback={null}><StaffApp /></Suspense>} />
+      <Route path="avis/:token" element={<Suspense fallback={null}><Review /></Suspense>} />
       <Route element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="menu/:categorie?" element={<Menu />} />

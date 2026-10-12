@@ -301,6 +301,30 @@ Bonjour {{1}}, vous avez retiré votre commande {{2}}. Merci de votre confiance 
 ~~~
 
 `commande_livree` et `commande_annulee` se terminent maintenant par « Belchicken Burkina » : à resoumettre aussi.
+
+**Lot 7, avis des clients** : deux modèles **en plus**, à soumettre à part (les modèles `commande_livree` et
+`emporter_commande_retiree` ne changent pas et restent utilisés quand les avis sont éteints ou fermés). Le lien
+`{{3}}` est une variable au milieu du texte (Meta refuse une variable à la toute fin) :
+
+~~~
+commande_livree_avis
+Bonjour {{1}}, votre commande {{2}} a été livrée. Merci de votre confiance et bon appétit !
+
+Donnez votre avis en 1 minute : {{3}}
+
+À bientôt chez Belchicken Burkina.
+
+emporter_commande_retiree_avis
+Bonjour {{1}}, vous avez retiré votre commande {{2}}. Merci de votre confiance et bon appétit !
+
+Donnez votre avis en 1 minute : {{3}}
+
+À bientôt chez Belchicken Burkina.
+~~~
+
+Exemple de valeur pour `{{3}}` : `https://belchicken-six.vercel.app/avis/uDLx54qsyE3mxuaNfZj_Lg`. Meta peut classer un
+modèle qui demande un avis en « Marketing » plutôt qu'en « Utilité » : s'il est refusé ou reclassé, le remerciement
+sans lien continue de fonctionner (fermer `AVIS` ou éteindre le réglage du Patron).
 Les 4 modèles `emporter_…` servent aux commandes à emporter (voir « À emporter » plus bas).
 
 2. Une fois les 5 modèles approuvés, mettez `WHATSAPP_CUSTOMER_AUTO=1` sur Render.
@@ -699,6 +723,43 @@ Ventes de Belchicken par période, pour le Patron et le Prestataire. Règles : `
 - **API** : `GET /api/staff/ventes?du=AAAA-MM-JJ&au=AAAA-MM-JJ`, `GET /api/staff/ventes/excel?du=…&au=…`.
   Patron et Prestataire seulement ; Opérateur, Livreur et Responsable livraison refusés (`test/route-access.test.js`).
   Interrupteur du Prestataire `VENTES` (ouvert sans ligne) : fermé, 403 `FONCTION_NON_INCLUSE` pour tout le monde.
+
+## Avis des clients (lot 7)
+
+Le client note sa commande livrée ou retirée depuis un lien du message de remerciement. Règles :
+`backend/src/services/review.js` (testées dans `test/review.test.js`), base : `review.service.js`, page publique :
+`frontend/src/pages/Review.jsx`, espace équipe : `frontend/src/staff/reviews/`.
+
+- **Deux niveaux** : interrupteur du Prestataire `AVIS` (ouvert sans ligne) et réglage du Patron « Demander l'avis
+  des clients » (`AppSettings.reviewsEnabled`, **éteint par défaut** : le remerciement reste comme avant, sans lien).
+- **Lien** : au passage « Livrée » (livreur avec le code, validation sans code, ou retrait au comptoir), si les avis
+  sont actifs, la commande reçoit une clé au hasard de 22 caractères (`Order.reviewToken`, 128 bits). Lien
+  `/avis/<clé>` : jamais la référence seule, jamais sur la page de suivi publique. Valable **7 jours** après la
+  livraison. Éteindre le réglage n'annule pas les liens déjà créés ; fermer `AVIS` coupe tout (plus de lien dans le
+  message, page « Avis indisponibles »), les avis déjà reçus sont gardés.
+- **Message** : modèles `commande_livree_avis` et `emporter_commande_retiree_avis` (voir « Messages WhatsApp au
+  client ») ; même étape `LIVREE` / `RETIREE`, la règle « à remercier » ne change pas.
+- **Page publique** (`/avis/<clé>`, faite pour le téléphone, sans télécharger le menu) : étoiles de 1 à 5 pour le
+  call center, le restaurant et la livraison (pas de livraison pour une commande à emporter), commentaire facultatif
+  (500 caractères). Seulement le prénom et la référence : jamais le téléphone ni les montants. Un seul avis par
+  commande (`OrderReview.orderId` unique).
+- **Base** : table `OrderReview`, notes de 1 à 5 et `lowRating` vérifiés aussi par la base. La base refuse toute
+  modification d'un avis, sauf l'enregistrement du rappel (une seule fois, mauvais avis seulement, colonnes
+  `calledBack…`) et le lien `calledBackById` vidé à la suppression d'un compte. Vérifié par `npm run test:db`.
+  Migration `20261011120000_avis_clients` : structure seulement, aucune donnée écrite.
+- **Mauvais avis** = une note de 2 étoiles ou moins : alerte au Patron et au Prestataire (sans nom ni téléphone du
+  client) ; au Responsable livraison seulement pour une mauvaise note de livraison de notre équipe. Le Patron
+  rappelle le client depuis l'encadré « À rappeler » puis touche « Client rappelé » (note facultative).
+- **Pages** : onglet « Avis » de la page Tableau de bord (`/equipe/avis`, Patron et Prestataire) : moyennes de la
+  période (date de l'avis), par agent (celui qui a vérifié le paiement, comme les ventes) et par livreur, liste avec
+  les commentaires ; encadré « Avis du client » dans le détail d'une commande (Patron et Prestataire) ; onglet « Avis »
+  de la page Livraison (Responsable livraison et Prestataire) : **seulement** la note de livraison des commandes de
+  notre équipe, sans les autres notes, les commentaires, le client ni aucun montant. Agents et livreurs ne voient
+  pas leurs notes.
+- **API** : `GET /api/avis/:cle`, `POST /api/avis/:cle` (public, nombre d'essais limité) ;
+  `GET /api/staff/avis?du=&au=`, `GET /api/staff/avis/commande/:reference`, `POST /api/staff/avis/:id/rappel`
+  (Patron et Prestataire) ; `GET /api/staff/livraison/avis?du=&au=` (Responsable livraison et Prestataire). Toutes
+  derrière `AVIS` (`test/route-access.test.js`).
 
 ## Parcours court et bon de commande (lot 1)
 

@@ -19,6 +19,7 @@ import { enteredBy, paymentVerification, sendFrom, sourceLabel } from './order-s
 import { checkPickupCode, codeLocked, courierAssignError, generateDeliveryCode, handoverReasonError, MAX_CODE_ATTEMPTS } from './courier.js';
 import { isAvailabilityActive } from './courier-team.service.js';
 import { feeOperatorError } from './cash.js';
+import { reviewTokenData } from './review.service.js';
 
 const LIST_LIMIT = 100;
 
@@ -382,6 +383,8 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, n
       ...(courier ? { ...assignment(courier), deliveryCode: generateDeliveryCode(), deliveryCodeAttempts: 0 } : {}),
       ...(to === 'PRETE' ? { deliveryCode: generateDeliveryCode(), deliveryCodeAttempts: 0 } : {}),
       ...(to === 'LIVREE' && feeToCollect(order) ? { deliveryFeeMethod: feeMethod } : {}),
+      // Lot 7 : clé du lien de l'avis, si les avis sont actifs
+      ...(to === 'LIVREE' ? await reviewTokenData(tx) : {}),
     });
     const withReason = to === 'ANNULEE' || (to === 'LIVREE' && !withCode);
     // Parcours court : les deux étapes dans l'historique (« Payée », puis « En préparation »), comme le parcours normal

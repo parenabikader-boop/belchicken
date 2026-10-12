@@ -66,11 +66,13 @@ export async function autoNotifyCustomer(order) {
   if (!customerAutoEnabled()) return;
   const current = currentMessageKey(order);
   if (!current || current.missing) return;
-  const { template } = messageModel(current.key, order);
+  let template = messageModel(current.key, order).template;
   try {
+    const ctx = await messageContextFor(order);
+    template = messageModel(current.key, order, ctx).template;
     const already = await prisma.notificationLog.findFirst({ where: { orderId: order.id, template, status: 'ENVOYEE' } });
     if (already) return;
-    const id = await sendTemplate(order.customerPhone, template, messageParams(current.key, order, await messageContextFor(order)));
+    const id = await sendTemplate(order.customerPhone, template, messageParams(current.key, order, ctx));
     await prisma.notificationLog.create({
       data: { orderId: order.id, recipient: order.customerPhone, template, status: 'ENVOYEE', providerMessageId: id },
     });

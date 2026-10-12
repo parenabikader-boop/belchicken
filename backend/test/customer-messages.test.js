@@ -251,3 +251,53 @@ test('à emporter : l’étape « prête » demande que le client soit prévenu 
   const sent = { ...o, events: [{ type: 'MESSAGE_ENVOYE', messageKey: 'COMMANDE_PRETE', createdAt: new Date(at.getTime() + 1000) }] };
   assert.equal(noticeError(noticeState(sent)), null);
 });
+
+// ─── Lot 7 : lien de l'avis dans le remerciement ───
+
+const TOKEN = 'abcdefghijABCDEFGHIJ_-';
+const thanked = (extra = {}) => order({ status: 'LIVREE', deliveryFee: 1000, reviewToken: TOKEN, ...extra });
+
+test('remerciement avec le lien de l’avis : nouveaux modèles Meta, les anciens ne changent pas', () => {
+  // Les anciens modèles, mot pour mot (rien à refaire approuver)
+  assert.equal(MESSAGES.LIVREE.template, 'commande_livree');
+  assert.equal(MESSAGES.LIVREE.body, 'Bonjour {{1}}, votre commande {{2}} a été livrée. Merci de votre confiance et bon appétit ! À bientôt chez Belchicken Burkina.');
+  assert.equal(MESSAGES.RETIREE.template, 'emporter_commande_retiree');
+  assert.equal(MESSAGES.RETIREE.body, 'Bonjour {{1}}, vous avez retiré votre commande {{2}}. Merci de votre confiance et bon appétit ! À bientôt chez Belchicken Burkina.');
+  assert.equal(MESSAGES.LIVREE.review.template, 'commande_livree_avis');
+  assert.equal(MESSAGES.RETIREE.review.template, 'emporter_commande_retiree_avis');
+
+  const text = renderMessage('LIVREE', thanked(), { ...ctx, reviewLink: true });
+  assert.equal(text,
+    'Bonjour Awa, votre commande BC-7K2Q9M a été livrée. Merci de votre confiance et bon appétit !\n\n' +
+    'Donnez votre avis en 1 minute : https://belchicken-six.vercel.app/avis/abcdefghijABCDEFGHIJ_-\n\n' +
+    'À bientôt chez Belchicken Burkina.');
+  assert.ok(!text.includes('/suivi/'));
+  const pickup = renderMessage('RETIREE', thanked({ mode: 'A_EMPORTER', deliveryFee: null }), { ...ctx, reviewLink: true });
+  assert.match(pickup, /^Bonjour Awa, vous avez retiré votre commande BC-7K2Q9M\. .*\n\nDonnez votre avis en 1 minute : https:\/\/belchicken-six\.vercel\.app\/avis\/abcdefghijABCDEFGHIJ_-\n\n/s);
+});
+
+test('remerciement : l’ancien message sans lien si les avis sont fermés ou la commande sans clé', () => {
+  const old = 'Bonjour Awa, votre commande BC-7K2Q9M a été livrée. Merci de votre confiance et bon appétit ! À bientôt chez Belchicken Burkina.';
+  assert.equal(renderMessage('LIVREE', thanked(), ctx), old); // reviewLink absent
+  assert.equal(renderMessage('LIVREE', thanked(), { ...ctx, reviewLink: false }), old);
+  assert.equal(renderMessage('LIVREE', thanked({ reviewToken: null }), { ...ctx, reviewLink: true }), old);
+  // Livraison offerte : le remerciement n'a pas de version « offerte », le lien reste
+  assert.match(renderMessage('LIVREE', thanked({ deliveryFee: 0 }), { ...ctx, reviewLink: true }), /Donnez votre avis/);
+  // Même clé : la règle « à remercier » ne change pas
+  assert.equal(customerMessage(thanked(), { ...ctx, reviewLink: true }).key, 'LIVREE');
+  // Les autres étapes n'ont jamais le lien
+  assert.doesNotMatch(renderMessage('ANNULEE', thanked({ status: 'ANNULEE' }), { ...ctx, reviewLink: true }), /avis/);
+});
+
+test('modèles « avis » prêts pour Meta : variables dans l’ordre, ni au début ni à la fin', () => {
+  for (const key of ['LIVREE', 'RETIREE']) {
+    const m = MESSAGES[key].review;
+    const vars = [...m.body.matchAll(/\{\{(\d+)\}\}/g)].map((x) => Number(x[1]));
+    const params = messageParams(key, thanked(), { ...ctx, reviewLink: true });
+    assert.deepEqual(vars, [1, 2, 3], key);
+    assert.equal(params.length, 3);
+    assert.ok(!/^\{\{|\}\}$/.test(m.body.trim()), key);
+    for (const p of params) assert.ok(!/[\n\t]/.test(p) && p.length > 0, `${key} : « ${p} »`);
+    assert.match(m.template, /^[a-z_]+$/);
+  }
+});

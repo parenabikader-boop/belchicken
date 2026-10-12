@@ -13,6 +13,7 @@ import { paymentCodes } from './payment-codes.js';
 import { feeWithNight } from './delivery-fees.js';
 import { feePaymentOf } from './delivery-mode.js';
 import { clean, itemsText } from './whatsapp.message.js';
+import { reviewUrl } from './review.js';
 
 // Phrase des frais de livraison, la même dans les messages et sur la page de suivi. Les frais sont
 // payés au livreur à la réception, en espèces ou par mobile money avec le code marchand de l'opérateur
@@ -157,6 +158,16 @@ export const MESSAGES = {
     label: 'Commande livrée, remerciement',
     body: 'Bonjour {{1}}, votre commande {{2}} a été livrée. Merci de votre confiance et bon appétit ! À bientôt chez Belchicken Burkina.',
     params: (o) => [firstName(o.customerName), o.reference],
+    // Lot 7 : avec le lien de l'avis (ctx.reviewLink, messageContextFor). Nouveau modèle Meta : l'ancien,
+    // sans lien, ne change pas et sert dès que les avis sont fermés ou la commande sans lien.
+    review: {
+      template: 'commande_livree_avis',
+      label: 'Commande livrée, remerciement',
+      body:
+        'Bonjour {{1}}, votre commande {{2}} a été livrée. Merci de votre confiance et bon appétit !\n\n' +
+        'Donnez votre avis en 1 minute : {{3}}\n\nÀ bientôt chez Belchicken Burkina.',
+      params: (o, ctx) => [firstName(o.customerName), o.reference, reviewUrl(o.reviewToken, ctx)],
+    },
   },
   // ─── À emporter : pas de frais de livraison, le client vient au restaurant ───
   PAIEMENT_CONFIRME_EMPORTER: {
@@ -191,6 +202,15 @@ export const MESSAGES = {
     label: 'Commande retirée, remerciement',
     body: 'Bonjour {{1}}, vous avez retiré votre commande {{2}}. Merci de votre confiance et bon appétit ! À bientôt chez Belchicken Burkina.',
     params: (o) => [firstName(o.customerName), o.reference],
+    // Lot 7 : avec le lien de l'avis, comme LIVREE
+    review: {
+      template: 'emporter_commande_retiree_avis',
+      label: 'Commande retirée, remerciement',
+      body:
+        'Bonjour {{1}}, vous avez retiré votre commande {{2}}. Merci de votre confiance et bon appétit !\n\n' +
+        'Donnez votre avis en 1 minute : {{3}}\n\nÀ bientôt chez Belchicken Burkina.',
+      params: (o, ctx) => [firstName(o.customerName), o.reference, reviewUrl(o.reviewToken, ctx)],
+    },
   },
   ANNULEE: {
     template: 'commande_annulee',
@@ -274,16 +294,19 @@ function pickupMessageKey(o) {
 // Messages de remerciement (après LIVREE) : livraison ou retrait au comptoir
 export const THANKS_KEYS = ['LIVREE', 'RETIREE'];
 
-// Modèle du message pour cette commande : la version « livraison offerte » quand les frais sont de 0 F
-export const messageModel = (key, o) => (o.deliveryFee === 0 && MESSAGES[key].free) || MESSAGES[key];
+// Modèle du message pour cette commande : la version « livraison offerte » quand les frais sont de 0 F ;
+// lot 7, le remerciement avec le lien de l'avis quand ctx.reviewLink (messageContextFor). Même clé
+// (LIVREE, RETIREE) : la règle « à remercier » ne change pas.
+export const messageModel = (key, o, ctx) =>
+  (ctx?.reviewLink && o.reviewToken && MESSAGES[key].review) || (o.deliveryFee === 0 && MESSAGES[key].free) || MESSAGES[key];
 
 // Valeurs des variables {{1}}, {{2}}… pour cette commande, nettoyées pour Meta
-export const messageParams = (key, o, ctx) => messageModel(key, o).params(o, ctx).map((p) => clean(p));
+export const messageParams = (key, o, ctx) => messageModel(key, o, ctx).params(o, ctx).map((p) => clean(p));
 
 // Texte final : le modèle rempli avec les valeurs
 export const renderMessage = (key, o, ctx) => {
   const params = messageParams(key, o, ctx);
-  return messageModel(key, o).body.replace(/\{\{(\d+)\}\}/g, (_, n) => params[Number(n) - 1]);
+  return messageModel(key, o, ctx).body.replace(/\{\{(\d+)\}\}/g, (_, n) => params[Number(n) - 1]);
 };
 
 // Lien qui ouvre WhatsApp sur la conversation avec le client, message déjà écrit

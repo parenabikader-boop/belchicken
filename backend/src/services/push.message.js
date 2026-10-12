@@ -88,6 +88,31 @@ export function partnerNotification(order, kind) {
   };
 }
 
+// Lot 7 : mauvais avis (une note de 2 ou moins). Ni nom ni téléphone du client sur l'écran verrouillé :
+// tout est dans la page Avis. Patron et Prestataire : les notes qui sont mauvaises ; Responsable livraison
+// (forPartner) : seulement la note de livraison de notre équipe, jamais les autres.
+export function lowReviewNotification(order, review, { forPartner = false } = {}) {
+  if (forPartner) {
+    return {
+      title: `Mauvaise note de livraison · ${order.reference}`,
+      body: `Livraison : ${review.deliveryRating}/5${order.courierName ? ` · ${order.courierName}` : ''}.`,
+      url: '/equipe/livraison?onglet=avis',
+      tag: `avis-livraison-${order.reference}`,
+    };
+  }
+  const low = [
+    ['Call center', review.callCenterRating],
+    ['Restaurant', review.foodRating],
+    ['Livraison', review.deliveryRating],
+  ].filter(([, n]) => n != null && n <= 2);
+  return {
+    title: `Mauvais avis · ${order.reference}`,
+    body: `${low.map(([label, n]) => `${label} : ${n}/5`).join(' · ')}. Rappelez le client.`,
+    url: '/equipe/avis',
+    tag: `avis-${order.reference}`,
+  };
+}
+
 export const testNotification = () => ({
   title: 'Notification d’essai',
   body: 'Les alertes Belchicken fonctionnent sur ce téléphone.',

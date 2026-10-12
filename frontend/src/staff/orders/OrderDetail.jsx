@@ -6,6 +6,8 @@ import { formatPrice } from '../../utils/format.js';
 import { useOrdersFeed } from './OrdersFeed.jsx';
 import { FEE_METHOD_LABEL, formatDateTime, formatPhone, isPickup, mapsHref, METHOD_LABEL, statusLabel, telHref, timeAgo, timelineOf, whatsappHref } from './labels.js';
 import { Actions, CourierBox, DeliveryFee, Notice, useSteps } from './OrderSteps.jsx';
+import { isPatronLevel, useStaff } from '../StaffContext.jsx';
+import { Notes, when } from '../reviews/ReviewsPage.jsx';
 
 const REFRESH_MS = 5000;
 
@@ -35,6 +37,32 @@ export default function OrderDetail() {
 
   if (!order) return <Loading error={error} />;
   return <Loaded order={order} setOrder={setOrder} error={error} load={load} refreshFeed={refreshFeed} />;
+}
+
+// Lot 7 : avis du client sur une commande livrée ou retirée. Patron et Prestataire seulement, AVIS ouvert
+// (l'API le vérifie) : l'Opérateur ne voit pas les notes. Lu à part, une fois la commande livrée.
+function OrderReview({ order }) {
+  const { user, hasFeature } = useStaff();
+  const allowed = isPatronLevel(user.role) && hasFeature('AVIS') && order.status === 'LIVREE';
+  const [review, setReview] = useState(undefined);
+  useEffect(() => {
+    if (!allowed) return undefined;
+    let live = true;
+    staffApi.orderReview(order.reference).then((r) => live && setReview(r), () => live && setReview(null));
+    return () => { live = false; };
+  }, [allowed, order.reference]);
+  if (!allowed || review === undefined) return null;
+  if (!review) return <p className="st-muted od-review-none">Avis du client : pas encore donné.</p>;
+  return (
+    <section className={`st-box od-review${review.lowRating ? ' low' : ''}`}>
+      <h2>Avis du client · {when(review.at)}</h2>
+      <Notes r={review} />
+      {review.comment && <blockquote className="rv-quote">« {review.comment} »</blockquote>}
+      {review.lowRating && (review.calledBack
+        ? <p className="rv-called">Client rappelé par {review.calledBack.by} le {when(review.calledBack.at)}{review.calledBack.note && <> : {review.calledBack.note}</>}</p>
+        : <p className="rv-called warn">Mauvais avis : client à rappeler (page <Link to="/equipe/avis">Avis</Link>).</p>)}
+    </section>
+  );
 }
 
 function Loading({ error }) {
@@ -85,6 +113,8 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
 
       <Notice order={o} steps={steps} onChange={updated} />
       <Actions order={o} steps={steps} />
+
+      <OrderReview order={o} />
 
       <div className="st-grid">
         <CourierBox order={o} onChange={updated} />

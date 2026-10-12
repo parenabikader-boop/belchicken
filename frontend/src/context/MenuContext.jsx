@@ -15,7 +15,10 @@ export function MenuProvider({ children }) {
       .catch((error) => setState({ status: 'error', categories: [], error }));
   }, []);
 
+  // Lot 7 : la page d'avis (/avis/…) doit s'ouvrir vite sur téléphone, sans télécharger le menu.
+  // Ses liens vers le site rechargent la page : le menu se charge alors normalement.
   useEffect(() => {
+    if (window.location.pathname.startsWith('/avis/')) return;
     load();
   }, [load]);
 

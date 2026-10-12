@@ -11,19 +11,23 @@ const mountPath = (layer) =>
   layer.regexp.source.replace('^', '').replace('\\/?(?=\\/|$)', '').replace(/\\\//g, '/');
 
 // Toutes les adresses : méthode, chemin complet, et les protections qui s'appliquent (dans l'ordre)
-function collect(router, prefix = '', inherited = []) {
+function collect(router, prefix = '', inherited = [], inheritedFeatures = []) {
   const routes = [];
   const guards = [...inherited];
+  const features = [...inheritedFeatures]; // interrupteurs du Prestataire (requireFeature)
   for (const layer of router.stack) {
     if (layer.route) {
       const own = layer.route.stack.map((l) => l.handle.staffAccess).filter(Boolean);
+      const ownFeatures = layer.route.stack.map((l) => l.handle.staffFeature).filter(Boolean);
       for (const method of Object.keys(layer.route.methods)) {
-        routes.push({ method: method.toUpperCase(), path: (prefix + layer.route.path).replace(/(.)\/$/, '$1'), guards: [...guards, ...own] });
+        routes.push({ method: method.toUpperCase(), path: (prefix + layer.route.path).replace(/(.)\/$/, '$1'), guards: [...guards, ...own], features: [...features, ...ownFeatures] });
       }
     } else if (layer.handle?.stack) {
-      routes.push(...collect(layer.handle, prefix + mountPath(layer), guards));
+      routes.push(...collect(layer.handle, prefix + mountPath(layer), guards, features));
     } else if (layer.handle?.staffAccess) {
       guards.push(layer.handle.staffAccess); // router.use(requireStaff(...)) : vaut pour les adresses qui suivent
+    } else if (layer.handle?.staffFeature) {
+      features.push(layer.handle.staffFeature); // router.use(requireFeature(...))
     }
   }
   return routes;
@@ -138,4 +142,20 @@ test('lot 6 : ventes réservées au Patron et au Prestataire (jamais Opérateur,
     for (const role of ['PATRON', 'PRESTATAIRE']) assert.equal(allowed(r, role), true, `${key(r)} ${role}`);
     for (const role of ['OPERATEUR', 'LIVREUR', 'RESPONSABLE_LIVRAISON']) assert.equal(allowed(r, role), false, `${key(r)} ouverte à ${role}`);
   }
+});
+
+test('lot 7 : avis réservés au Patron et au Prestataire ; le Responsable livraison a seulement sa note de livraison ; tout derrière AVIS', () => {
+  const list = ROUTES.filter((r) => r.path === '/avis' || r.path.startsWith('/avis/'));
+  assert.deepEqual(list.map(key).sort(), ['GET /avis', 'GET /avis/commande/:reference', 'POST /avis/:id/rappel']);
+  for (const r of list) {
+    for (const role of ['PATRON', 'PRESTATAIRE']) assert.equal(allowed(r, role), true, `${key(r)} ${role}`);
+    for (const role of ['OPERATEUR', 'LIVREUR', 'RESPONSABLE_LIVRAISON']) assert.equal(allowed(r, role), false, `${key(r)} ouverte à ${role}`);
+    assert.ok(r.features.includes('AVIS'), `${key(r)} sans l’interrupteur AVIS`);
+  }
+  const partner = ROUTES.find((r) => key(r) === 'GET /livraison/avis');
+  assert.ok(partner.features.includes('AVIS'));
+  for (const role of ['RESPONSABLE_LIVRAISON', 'PRESTATAIRE']) assert.equal(allowed(partner, role), true, role);
+  for (const role of ['PATRON', 'OPERATEUR', 'LIVREUR']) assert.equal(allowed(partner, role), false, role);
+  // Les ventes restent derrière VENTES (lecture des interrupteurs vérifiée)
+  for (const r of ROUTES.filter((x) => x.path.startsWith('/ventes'))) assert.ok(r.features.includes('VENTES'), key(r));
 });

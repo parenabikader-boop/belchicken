@@ -12,6 +12,8 @@ import { markFeeVerified, reassignCourier } from '../services/staff-orders.servi
 import { assignPartnerRun, pickUp, unassignPartner } from '../services/dispatch.service.js';
 import { RUN_MAX } from '../services/dispatch.js';
 import { createDeliveryMemberSchema, provisionalPasswordSchema } from '../services/team.js';
+import { requireFeature } from '../middlewares/feature.js';
+import { getPartnerReviews } from '../services/review.service.js';
 
 // Lot 5b : page Livraison, notre équipe de livraison. Responsable livraison et Prestataire seulement.
 // Rien ici ne montre les ventes de Belchicken : seulement nos livreurs, nos courses (frais de livraison)
@@ -67,6 +69,11 @@ staffDeliveryTeamRouter.put('/courses/:reference/livreur', handle(async (req, re
 staffDeliveryTeamRouter.delete('/courses/:reference/livreur', handle(async (req, res) => {
   await unassignPartner(req.staff, ref(req));
   res.json(await getDeliveryOverview());
+}));
+
+// Lot 7 : notes de livraison de notre équipe seulement (jamais les autres notes, les commentaires ni le client)
+staffDeliveryTeamRouter.get('/avis', requireFeature('AVIS'), handle(async (req, res) => {
+  res.json({ reviews: await getPartnerReviews({ du: String(req.query.du || ''), au: String(req.query.au || '') }) });
 }));
 
 // Récupérée sans que le livreur ait pu appuyer : motif obligatoire

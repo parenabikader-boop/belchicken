@@ -27,6 +27,7 @@ import StatementPage from './statement/StatementPage.jsx';
 import StatementPrint from './statement/StatementPrint.jsx';
 import SalesPage from './sales/SalesPage.jsx';
 import SalesPrint from './sales/SalesPrint.jsx';
+import ReviewsPage from './reviews/ReviewsPage.jsx';
 import { chiffresHome } from './dashboard/ChiffresTabs.jsx';
 import { FeatureClosed } from './FeatureGate.jsx';
 import InstallBanner from '../components/InstallBanner.jsx';
@@ -117,6 +118,7 @@ function TeamRoutes() {
           <Route path="accueil" element={<HomeAdmin />} />
           <Route path="tableau-de-bord" element={<RequireFeature feature="TABLEAU_DE_BORD"><Dashboard /></RequireFeature>} />
           <Route path="ventes" element={<RequireFeature feature="VENTES"><SalesPage /></RequireFeature>} />
+          <Route path="avis" element={<RequireFeature feature="AVIS"><ReviewsPage /></RequireFeature>} />
           <Route path="equipe" element={<TeamPage />} />
           <Route path="frais-livraison" element={<RequireFeature feature="FRAIS_LIVRAISON"><DeliveryFeesPage /></RequireFeature>} />
           <Route path="reglages" element={<RequireFeature feature="REGLAGES"><SettingsPage /></RequireFeature>} />
@@ -258,7 +260,7 @@ function StaffShell() {
             {patron && <NavLink to="/equipe/accueil">Accueil</NavLink>}
             {/* Lot 6 : un seul lien pour le tableau de bord et les ventes (onglets dans la page) */}
             {patron && chiffres && (
-              <NavLink to={chiffres} className={() => (/^\/equipe\/(tableau-de-bord|ventes)/.test(pathname) ? 'active' : '')}>
+              <NavLink to={chiffres} className={() => (/^\/equipe\/(tableau-de-bord|ventes|avis)/.test(pathname) ? 'active' : '')}>
                 <span className="st-lg">Tableau de bord</span><span className="st-sm">Chiffres</span>
               </NavLink>
             )}

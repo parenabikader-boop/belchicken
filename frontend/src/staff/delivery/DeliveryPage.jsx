@@ -8,6 +8,7 @@ import { formatPhone, timeAgo } from '../orders/labels.js';
 import { plural } from '../../utils/format.js';
 import DispatchBoard from './DispatchBoard.jsx';
 import StatementPage from '../statement/StatementPage.jsx';
+import PartnerReviews from '../reviews/PartnerReviews.jsx';
 
 const REFRESH_MS = 15000;
 
@@ -22,6 +23,7 @@ const TABS = [
   { key: 'caisse', label: 'Caisse' },
   { key: 'equipe', label: 'Comptes' },
   { key: 'releve', label: 'Relevé' }, // lot 5d : sans conditions ni montant dû pour le Responsable livraison
+  { key: 'avis', label: 'Avis', feature: 'AVIS' }, // lot 7 : notes de livraison de notre équipe seulement
 ];
 
 const PARTNER_CASH = { load: staffApi.deliveryCash, verify: staffApi.verifyDeliveryFee, remit: staffApi.remitDeliveryCash };
@@ -44,9 +46,10 @@ const MANAGER_ROLE = {
 };
 
 export default function DeliveryPage() {
-  const { user } = useStaff();
+  const { user, hasFeature } = useStaff();
   const [params, setParams] = useSearchParams();
-  const tab = TABS.some((t) => t.key === params.get('onglet')) ? params.get('onglet') : 'livreurs';
+  const tabs = TABS.filter((t) => !t.feature || hasFeature(t.feature));
+  const tab = tabs.some((t) => t.key === params.get('onglet')) ? params.get('onglet') : 'livreurs';
   const cashTab = params.get('caisse') === 'livreurs' ? 'livreurs' : 'verifier';
   const roles = user.role === 'PRESTATAIRE' ? [COURIER_ROLE, MANAGER_ROLE] : [COURIER_ROLE];
 
@@ -57,7 +60,7 @@ export default function DeliveryPage() {
         <span className="st-muted">Notre équipe de livreurs</span>
       </div>
       <nav className="od-tabs" aria-label="Livraison">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button key={t.key} type="button" className={`od-tab${tab === t.key ? ' on' : ''}`} aria-pressed={tab === t.key} onClick={() => setParams(t.key === 'livreurs' ? {} : { onglet: t.key })}>
             {t.label}
           </button>
@@ -73,6 +76,7 @@ export default function DeliveryPage() {
         />
       )}
       {tab === 'releve' && <StatementPage embedded />}
+      {tab === 'avis' && <PartnerReviews />}
       {tab === 'equipe' && (
         <TeamManager
           heading="h2"

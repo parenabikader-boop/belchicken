@@ -171,6 +171,9 @@ model AppSettings {
   // Lot 5b : tournées et disponibilité des livreurs du restaurant (mode Restaurant). Éteint = comme avant.
   // Inclus ou non par le Prestataire (interrupteur TOURNEES_RESTAURANT). Nos livreurs : toujours actif.
   restaurantDispatch Boolean  @default(false)
+  // Lot 7 : « Demander l'avis des clients » (lien dans le remerciement). Éteint = message comme avant.
+  // Inclus ou non par le Prestataire (interrupteur AVIS).
+  reviewsEnabled     Boolean  @default(false)
   updatedByName      String? // dernier à avoir changé un réglage (copie figée)
   updatedAt          DateTime @updatedAt
 }
@@ -347,6 +350,11 @@ model Order {
   // l'agent le tape au comptoir. Jamais sur la page de suivi publique.
   deliveryCode         String?
   deliveryCodeAttempts Int          @default(0)
+  // Lot 7 : clé du lien de l'avis (128 bits au hasard, 22 caractères, src/services/review.js), créée au
+  // passage LIVREE quand les avis sont actifs. Vide = pas de lien (commande d'avant le lot 7, ou avis
+  // éteints à la livraison). Jamais sur la page de suivi publique.
+  reviewToken          String?      @unique
+  review               OrderReview?
 
   items         OrderItem[]
   notifications NotificationLog[]
@@ -558,6 +566,7 @@ model StaffUser {
   availabilityChanges CourierAvailabilityChange[]
   deliveryRuns        DeliveryRun[]               @relation("RunCourier")
   deliveryRunsCreated DeliveryRun[]               @relation("RunCreatedBy")
+  reviewsCalledBack   OrderReview[]               @relation("ReviewCalledBackBy")
 }
 
 // Lot 5c : tournée, des commandes confiées en une fois à un livreur (par le Responsable livraison en mode
@@ -700,6 +709,35 @@ model SecurityLog {
   detail     String?
 
   @@index([at])
+}
+
+// Lot 7 : avis d'un client sur sa commande livrée ou retirée (règles dans src/services/review.js).
+// Un seul avis par commande (orderId unique). Notes de 1 à 5, vérifiées aussi par la base ; pas de note de
+// livraison pour une commande à emporter. lowRating = une note de 2 ou moins (vérifié par la base) : alerte
+// et client à rappeler.
+// La base refuse toute MODIFICATION (migration 20261011120000_avis_clients), sauf : (a) l'enregistrement du
+// rappel, une seule fois et seulement pour un mauvais avis (colonnes calledBack…), (b) le lien calledBackById
+// vidé quand le compte est supprimé (le nom copié reste). Les notes, le commentaire et lowRating ne changent
+// jamais. Les SUPPRESSIONS restent possibles : une commande supprimée emporte son avis.
+model OrderReview {
+  id               String     @id @default(cuid())
+  orderId          String     @unique
+  order            Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  callCenterRating Int
+  foodRating       Int
+  deliveryRating   Int? // vide pour une commande à emporter
+  comment          String? // 500 caractères au plus
+  lowRating        Boolean
+  // « Client rappelé » (Patron, Prestataire) : qui, quand, note facultative (300 caractères au plus)
+  calledBackAt     DateTime?
+  calledBackById   String?
+  calledBackBy     StaffUser? @relation("ReviewCalledBackBy", fields: [calledBackById], references: [id], onDelete: SetNull)
+  calledBackByName String? // copie figée
+  calledBackNote   String?
+  createdAt        DateTime   @default(now())
+
+  @@index([createdAt])
+  @@index([lowRating, calledBackAt])
 }
 
 // Téléphones qui reçoivent les notifications de nouvelle commande (Web Push).

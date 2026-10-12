@@ -211,13 +211,22 @@ test('parcours court et prise de commande fermés : comme si le Patron les avait
   const open = await getAppSettings(fakeDb({ app }));
   assert.equal(open.shortFlow, true);
   assert.equal(open.agentOrders, true);
-  assert.deepEqual(open.included, { shortFlow: true, agentOrders: true, restaurantDispatch: true });
+  assert.deepEqual(open.included, { shortFlow: true, agentOrders: true, restaurantDispatch: true, reviewsEnabled: true });
   const closed = await getAppSettings(fakeDb({ app, closed: ['PARCOURS_COURT'] }));
   assert.equal(closed.shortFlow, false);
   assert.equal(closed.agentOrders, true);
-  assert.deepEqual(closed.included, { shortFlow: false, agentOrders: true, restaurantDispatch: true });
+  assert.deepEqual(closed.included, { shortFlow: false, agentOrders: true, restaurantDispatch: true, reviewsEnabled: true });
   // Sans réglage enregistré : tout éteint, comme avant
   assert.equal((await getAppSettings(fakeDb())).shortFlow, false);
+});
+
+test('lot 7 : « Demander l’avis des clients » éteint par défaut, et éteint quand AVIS est fermé', async () => {
+  assert.equal((await getAppSettings(fakeDb())).reviewsEnabled, false);
+  const app = { shortFlow: false, agentOrders: false, reviewsEnabled: true };
+  assert.equal((await getAppSettings(fakeDb({ app }))).reviewsEnabled, true);
+  const closed = await getAppSettings(fakeDb({ app, closed: ['AVIS'] }));
+  assert.equal(closed.reviewsEnabled, false);
+  assert.equal(closed.included.reviewsEnabled, false);
 });
 
 test('supplément de nuit fermé : plus d’heures de nuit, la grille continue de calculer', async () => {

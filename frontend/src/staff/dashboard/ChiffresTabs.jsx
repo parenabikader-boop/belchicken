@@ -1,13 +1,15 @@
 import { NavLink } from 'react-router-dom';
 import { useStaff } from '../StaffContext.jsx';
 
-// Lot 6 : onglets « Tableau de bord » et « Ventes », chacun seulement si le Prestataire ne l'a pas fermé.
+// Lot 6 : onglets « Tableau de bord » et « Ventes » (lot 7 : « Avis »), chacun seulement si le Prestataire ne l'a pas fermé.
 // Un seul lien dans l'en-tête du Patron (déjà plein sur tablette), les deux pages derrière ces onglets.
 export function ChiffresTabs() {
   const { hasFeature } = useStaff();
   const tabs = [
     hasFeature('TABLEAU_DE_BORD') && { to: '/equipe/tableau-de-bord', label: 'Tableau de bord' },
     hasFeature('VENTES') && { to: '/equipe/ventes', label: 'Ventes' },
+    // Lot 7 : avis des clients
+    hasFeature('AVIS') && { to: '/equipe/avis', label: 'Avis' },
   ].filter(Boolean);
   if (tabs.length < 2) return null;
   return (
@@ -23,5 +25,6 @@ export function ChiffresTabs() {
 export function chiffresHome(hasFeature) {
   if (hasFeature('TABLEAU_DE_BORD')) return '/equipe/tableau-de-bord';
   if (hasFeature('VENTES')) return '/equipe/ventes';
+  if (hasFeature('AVIS')) return '/equipe/avis';
   return null;
 }

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { featureClosedError, getFeatures } from './features.service.js';
 
-export const DEFAULT_SETTINGS = { shortFlow: false, agentOrders: false, restaurantDispatch: false };
+export const DEFAULT_SETTINGS = { shortFlow: false, agentOrders: false, restaurantDispatch: false, reviewsEnabled: false };
 
 export const settingsSchema = z.object({
   shortFlow: z.boolean().optional(),
@@ -12,11 +12,13 @@ export const settingsSchema = z.object({
   agentOrders: z.boolean().optional(),
   // Lot 5b : tournées et disponibilité des livreurs du restaurant (mode Restaurant)
   restaurantDispatch: z.boolean().optional(),
+  // Lot 7 : « Demander l'avis des clients » (lien dans le message de remerciement)
+  reviewsEnabled: z.boolean().optional(),
 });
 
 // Lot 4 : réglage et fonction du Prestataire qui l'inclut. Fermée = comme si le Patron l'avait éteint
 // (son choix est gardé et revient quand la fonction est rouverte).
-const FEATURE_OF = { shortFlow: 'PARCOURS_COURT', agentOrders: 'PRISE_COMMANDE_AGENT', restaurantDispatch: 'TOURNEES_RESTAURANT' };
+const FEATURE_OF = { shortFlow: 'PARCOURS_COURT', agentOrders: 'PRISE_COMMANDE_AGENT', restaurantDispatch: 'TOURNEES_RESTAURANT', reviewsEnabled: 'AVIS' };
 
 // included : réglages compris dans la formule (la page Réglages montre les autres comme non inclus)
 const toPublic = (row, features) => {
@@ -25,6 +27,7 @@ const toPublic = (row, features) => {
     shortFlow: (row?.shortFlow ?? DEFAULT_SETTINGS.shortFlow) && included.shortFlow,
     agentOrders: (row?.agentOrders ?? DEFAULT_SETTINGS.agentOrders) && included.agentOrders,
     restaurantDispatch: (row?.restaurantDispatch ?? DEFAULT_SETTINGS.restaurantDispatch) && included.restaurantDispatch,
+    reviewsEnabled: (row?.reviewsEnabled ?? DEFAULT_SETTINGS.reviewsEnabled) && included.reviewsEnabled,
     included,
     updatedByName: row?.updatedByName ?? null,
     updatedAt: row?.updatedAt ?? null,

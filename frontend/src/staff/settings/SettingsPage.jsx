@@ -98,6 +98,22 @@ export default function SettingsPage() {
             </div>
             <SettingSwitch settings={settings} name="restaurantDispatch" label="Tournées et disponibilité des livreurs" saving={saving} onToggle={toggle} />
           </div>
+          <div className="rg-row rg-sep">
+            <div className="rg-text">
+              <h2>Demander l’avis des clients</h2>
+              <p>
+                Le message de remerciement, après la livraison ou le retrait, contient un lien <b>« Donnez votre avis »</b> :
+                le client note le call center, le restaurant et la livraison de 1 à 5 étoiles, avec un commentaire s’il le souhaite.
+              </p>
+              <ul className="rg-list">
+                <li><b>Éteint</b> : le message de remerciement reste comme aujourd’hui, sans lien.</li>
+                <li>Un seul avis par commande, dans les 7 jours. Le lien est impossible à deviner.</li>
+                <li>Une note de 2 étoiles ou moins vous envoie une alerte, pour rappeler le client vite.</li>
+                <li>Moyennes et commentaires : onglet « Avis » de la page Tableau de bord.</li>
+              </ul>
+            </div>
+            <SettingSwitch settings={settings} name="reviewsEnabled" label="Demander l’avis des clients" saving={saving} onToggle={toggle} />
+          </div>
           {settings.updatedByName && (
             <p className="st-muted rg-who">Dernier changement : {settings.updatedByName}, le {formatDateTime(settings.updatedAt)}.</p>
           )}

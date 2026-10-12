@@ -90,6 +90,12 @@ export async function pushDeliveryManagers(order, payload) {
   await pushAndLog(order, { staffUser: { isActive: true, role: 'RESPONSABLE_LIVRAISON' } }, payload);
 }
 
+// Lot 7 : mauvais avis d'un client, au Patron et au Prestataire. Ne lève jamais d'erreur.
+export async function pushPatrons(order, payload) {
+  if (!pushEnabled()) return;
+  await pushAndLog(order, { staffUser: { isActive: true, role: { in: ['PATRON', 'PRESTATAIRE'] } } }, payload);
+}
+
 async function pushAndLog(order, where, payload) {
   const subs = await prisma.pushSubscription.findMany({
     where,

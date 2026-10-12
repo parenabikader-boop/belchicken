@@ -19,7 +19,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 - backend : Node.js 20+, Express, Prisma 6, PostgreSQL (Neon), Zod. Port 3006. Déploiement Render.
 - frontend : React + Vite. Port 5173. Déploiement Vercel.
 - Tout le texte visible par les clients est en français.
-- `npm run dev` à la racine lance les deux ; `npm test` dans `backend/` (248 tests au 11 octobre 2026).
+- `npm run dev` à la racine lance les deux ; `npm test` dans `backend/` (278 tests au 11 octobre 2026).
 
 ## État actuel (11 octobre 2026)
 
@@ -51,7 +51,7 @@ Lots de la feuille de route :
   - 5c, prête pour livraison, récupération, tournées, preuves (la base refuse de modifier l'historique) : `dispatch.js`, `dispatch.service.js`. README « Prête pour livraison ».
   - 5d, contrat et relevé (PDF, Excel) : `statement.js`. README « Relevé de livraison et contrat ».
 - **Lot 6, ventes** (Patron et Prestataire, onglet de la page Tableau de bord) : en ligne depuis le 11 octobre 2026 (enregistrement `6c005ce`, aucune migration), interrupteur `VENTES` **ouvert en production**. Règles : `sales.js`. README « Ventes ».
-- **Prochain : lot 7, avis des clients.**
+- **Lot 7, avis des clients** : fait sur dev le 11 octobre 2026 (migration `20261011120000_avis_clients` passée sur dev seulement), **pas encore en ligne** (en attente de l'accord du client sur les captures). Deux niveaux : interrupteur `AVIS` (ouvert sans ligne) + réglage du Patron « Demander l'avis des clients » (éteint par défaut). Règles : `review.js`, `review.service.js`. README « Avis des clients ».
 
 ## Repères pour travailler
 

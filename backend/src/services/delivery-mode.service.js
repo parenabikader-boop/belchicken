@@ -8,6 +8,8 @@ import {
 } from './delivery-mode.js';
 import { ACTIVE } from './order-status.js';
 import { logSecurity } from './security-log.service.js';
+import { isFeatureOpen } from './features.service.js';
+import { reviewLinkActive } from './review.js';
 
 const FIELDS = Object.keys(DEFAULT_COMPANY);
 const pick = (row) => Object.fromEntries(FIELDS.map((f) => [f, row?.[f] ?? DEFAULT_COMPANY[f]]));
@@ -29,7 +31,17 @@ const awaitingFeesWhere = {
 export async function messageContextFor(order) {
   const ctx = messageContext();
   if (order?.deliveryOperator === 'PRESTATAIRE') ctx.prestatairePayment = companyPayment(await getCompany());
+  // Lot 7 : lien de l'avis dans le remerciement (lu en base seulement pour une commande livrée qui a sa clé)
+  if (order?.reviewToken && order.status === 'LIVREE') ctx.reviewLink = await reviewLinkFor(order);
   return ctx;
+}
+
+// Lot 7 : le lien de l'avis va-t-il dans le message ? Interrupteur AVIS ouvert et 7 jours au plus
+async function reviewLinkFor(order) {
+  const statusChanges = order.statusChanges?.some((h) => h.toStatus === 'LIVREE')
+    ? order.statusChanges
+    : await prisma.orderStatusChange.findMany({ where: { orderId: order.id, toStatus: 'LIVREE' }, select: { toStatus: true, createdAt: true }, orderBy: { createdAt: 'asc' } });
+  return reviewLinkActive({ ...order, statusChanges }, { avisOpen: await isFeatureOpen('AVIS') });
 }
 
 // Page Prestataire : réglages, ce qui manque pour le mode Prestataire, commandes qui attendent nos codes
