@@ -784,6 +784,36 @@ README « Démonstration commerciale ».
 - [ ] Essai de l'effacement (`demo:effacer`, comparaison avec la photo) : **attend l'accord du client**.
 - [ ] Nouveau remplissage le jour de la présentation.
 
+## Idées à discuter avec Belchicken
+
+Rien n'est décidé ni codé. Le but du logiciel est d'alléger le travail du call center, pas de lui déplacer ni de lui
+ajouter des tâches. Décision du client le 13 octobre 2026 : pas de rôle Caissier, pas de réglage « Encaissement
+réservé », pas de migration pour l'instant.
+
+**Fonctionnement réel de Belchicken** (noté le 13 octobre 2026) :
+
+1. Le client paie par dépôt Mobile Money.
+2. Le call center vérifie le dépôt sur le téléphone marchand. **Il ne touche jamais d'argent liquide.**
+3. Il imprime le bon de commande, qui est apporté à la caisse.
+4. Le caissier valide : il enregistre la commande dans sa caisse et sort un ticket de caisse.
+5. Le bon et le ticket de caisse partent ensemble en cuisine.
+
+**Questions à poser :**
+
+- [ ] **Qui reçoit l'argent des livreurs dans l'application ?** Aujourd'hui, le bouton « Espèces remises » de la page
+  Caisse (frais de livraison payés en espèces au livreur) est ouvert au Patron **et** au call center (Opérateur), alors
+  que le call center ne touche jamais d'espèces. Vérifier un dépôt Mobile Money (constater sur le téléphone marchand)
+  n'est pas encaisser : seul « Espèces remises » est un vrai encaissement.
+- [ ] **Veulent-ils un jour rapprocher les commandes de l'application et les tickets de caisse ?** (par exemple
+  retrouver le ticket d'une commande, ou vérifier que chaque commande payée a bien son ticket)
+
+**Les deux vrais gains pour le call center** (ils dépendent de Belchicken) :
+
+- [ ] **Paiement automatique** : la commande part seule quand le dépôt arrive, plus de vérification à la main sur le
+  téléphone marchand. Demande un accès aux paiements du compte marchand (Orange Money, Moov Money, Telecel Money).
+- [ ] **WhatsApp automatique** (lot 9) : les messages au client partent seuls à chaque étape, plus de bouton ni de
+  confirmation d'envoi. Demande l'application Meta et les modèles de messages approuvés.
+
 ## Avant la livraison à Belchicken
 
 À faire une seule fois, juste avant de remettre l'application au restaurant (aujourd'hui, tout est encore en test).
