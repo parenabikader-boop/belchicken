@@ -81,7 +81,8 @@ export default function OrdersPage2() {
   const etape = params.get('etape');
   const q = params.get('q') || '';
   const [search, setSearch] = useState(q);
-  const [lateOnly, setLateOnly] = useState(false);
+  // « En retard » du tableau de bord : /equipe/commandes?retard=1 ouvre la page filtrée
+  const [lateOnly, setLateOnly] = useState(() => params.get('retard') === '1');
 
   const go = (changes) => {
     const next = new URLSearchParams(params);

@@ -396,6 +396,7 @@ Connexion par numéro de téléphone et mot de passe ; trois rôles : `PATRON` (
   Chiffre d'affaires = commandes `PAYEE`, `EN_PREPARATION`, `EN_LIVRAISON`, `LIVREE` seulement. La période en cours est comparée
   au même moment de la précédente (aujourd'hui jusqu'à 14 h contre hier jusqu'à 14 h). Heure du Burkina = UTC.
   Calculs dans `src/services/dashboard.js` (testés), lecture en base dans `src/services/dashboard.service.js`.
+  Nouvelle présentation « d'un coup d'œil » : `GET /api/staff/dashboard/aujourdhui` (voir « Tableau de bord d'un coup d'œil »).
 - Alertes sur téléphone (Patron et Opérateur), page `/equipe/alertes` (`frontend/src/staff/alerts/`) : chaque membre active
   les alertes sur son téléphone (`POST /api/staff/push/subscribe`), les coupe (`/push/unsubscribe`) ou s'envoie un essai
   (`/push/test`). À chaque commande, notification « Nouvelle commande BC-XXXX · 7 500 F » (sans nom ni téléphone du client) ;
@@ -897,6 +898,44 @@ Client sans son code (ou bloqué) : l'agent valide avec un motif obligatoire (`{
 `RETRAIT_SANS_CODE`, motif dans l'historique). Le code n'apparaît jamais sur la page de suivi publique. Règles :
 `checkPickupCode()` dans `src/services/courier.js`. Migration `20261007120000_code_retrait` (valeur
 `RETRAIT_SANS_CODE` de l'enum `OrderEventType`). Modèle Meta `emporter_commande_prete` à resoumettre (5 variables).
+
+## Tableau de bord d'un coup d'œil
+
+Demande du client (13 octobre 2026) : le Patron arrive sur le tableau de bord et doit comprendre sa journée d'un coup
+d'œil. **Liée au réglage « Nouvelle page Commandes et barre ⋮ »** (aucune migration, allumé en production : le Patron
+verra la nouveauté dès la mise en ligne). Réglage éteint : tableau de bord par période, comme avant.
+
+Réglage allumé, page `/equipe/tableau-de-bord` (Patron et Prestataire, interrupteur `TABLEAU_DE_BORD`), de haut en bas :
+
+- **Maintenant** : en retard, paiements à vérifier, messages à confirmer, livrées à remercier, avis à rappeler, espèces
+  chez les livreurs ; chaque ligne mène à la page concernée (`/equipe/commandes?retard=1` ouvre la nouvelle page Commandes
+  filtrée « En retard », `?etape=PAIEMENT_A_VERIFIER`, `?etape=A_REMERCIER`, `/equipe/avis`,
+  `/equipe/caisse?onglet=livreurs`) ; une ligne à 0 est cachée, « Tout est à jour » quand tout est à 0. Aucune lecture de
+  plus : le site reprend la liste des commandes en cours déjà rechargée toutes les 5 s (`OrdersFeed.jsx`), avec les seuils
+  de la page Commandes (`orders2/waiting.js`) ; « à vérifier » et « à remercier » = compteurs du serveur, toutes dates.
+  Règles : `frontend/src/staff/dashboard/now.js`.
+- **Aujourd'hui** : chiffre des plats, commandes payées, panier moyen, comparés à hier et au même jour de la semaine
+  dernière **à la même heure** ; frais de livraison encaissés sur une seule ligne.
+- **Plats les plus vendus** (5), aujourd'hui ou 7 jours (aujourd'hui et les 6 jours d'avant).
+- **Provenance aujourd'hui** (règles de la page Ventes), cachée s'il n'y a que « Site » ; lien « Ventes ».
+- **Analyse détaillée** : l'ancien tableau de bord, replié, chargé seulement quand on l'ouvre (sans titre ni onglets en
+  double). Le titre « Tableau de bord » n'est plus répété dans la page (il est dans la barre).
+
+Début de journée : quand la comparaison au même moment compte moins de 5 commandes payées (`EARLY_MIN`), pas de
+pourcentage ni de rouge, une phrase grise « Trop tôt pour comparer… » ; aussi dans l'analyse détaillée (période en cours),
+que le réglage soit allumé ou non. Règle : `frontend/src/staff/dashboard/compare.js`.
+
+API `GET /api/staff/dashboard/aujourdhui` (lecture seule, mêmes droits que `/dashboard`) : `{ at, today, yesterday,
+lastWeek, lastWeekDay, topToday, topWeek, sources, cashWithCouriers, reviewsToCall, salesOpen }`. Toutes les lectures
+partent en même temps (commandes des 3 tranches sans leurs plats, plats additionnés par la base, provenances, espèces,
+mauvais avis non rappelés, interrupteurs). Calculs : `backend/src/services/today.js` (testés dans `test/today.test.js`),
+mêmes règles que le tableau de bord (`summarize()`), chiffres identiques à « Jour » de l'analyse détaillée.
+
+Temps de réponse mesurés en local sur dev (13 octobre 2026, depuis le Burkina, ~300 ms par aller-retour vers Neon,
+connexion comprise) : nouvelle adresse ~3 s ; ancienne : Jour ~4 s, Semaine 7 à 11 s, Mois 21 à 26 s. Sur Render
+(à côté de Neon), tout est beaucoup plus court. L'ancienne adresse pourrait être accélérée sans changer les chiffres
+(ses 5 lectures partent l'une après l'autre ; en parallèle, essai à part : 3 à 5 fois plus rapide) : pas fait, attend
+l'accord du client.
 
 ## Démonstration commerciale (base dev seulement)
 

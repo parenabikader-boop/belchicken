@@ -159,3 +159,11 @@ test('lot 7 : avis réservés au Patron et au Prestataire ; le Responsable livra
   // Les ventes restent derrière VENTES (lecture des interrupteurs vérifiée)
   for (const r of ROUTES.filter((x) => x.path.startsWith('/ventes'))) assert.ok(r.features.includes('VENTES'), key(r));
 });
+
+test('tableau de bord, bloc « Aujourd’hui » : Patron et Prestataire seulement, derrière TABLEAU_DE_BORD', () => {
+  const r = ROUTES.find((x) => key(x) === 'GET /dashboard/aujourdhui');
+  assert.ok(r, 'adresse introuvable');
+  for (const role of ['PATRON', 'PRESTATAIRE']) assert.equal(allowed(r, role), true, role);
+  for (const role of ['OPERATEUR', 'LIVREUR', 'RESPONSABLE_LIVRAISON']) assert.equal(allowed(r, role), false, role);
+  assert.ok(r.features.includes('TABLEAU_DE_BORD'));
+});

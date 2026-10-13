@@ -233,6 +233,8 @@ export const staffApi = {
     staffRequest(`/home/${slot}/photo`, { method: 'PUT', body: blob, headers: { 'Content-Type': blob.type || 'image/jpeg' } }).then((d) => d.photo),
   // Tableau de bord (Patron) : period = day | week | month, offset = 0 (en cours), -1 (précédente)…
   getDashboard: (period, offset) => staffRequest(`/dashboard?period=${period}&offset=${offset}`),
+  // Nouvelle présentation du tableau de bord : bloc « Aujourd'hui » (lecture seule)
+  getDashboardToday: () => staffRequest('/dashboard/aujourdhui'),
   resetHomePhoto: (slot) => staffRequest(`/home/${slot}/photo`, { method: 'DELETE' }).then((d) => d.photo),
   // Alertes de nouvelle commande sur téléphone (Patron et Opérateur)
   pushStatus: () => staffRequest('/push'),

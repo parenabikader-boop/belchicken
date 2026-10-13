@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatPrice, plural } from '../../utils/format.js';
+import { useAppSettings } from '../settings/useAppSettings.js';
 import { ChiffresTabs } from './ChiffresTabs.jsx';
+import { compareState, pctText } from './compare.js';
+import TodayBlocks from './TodayBlocks.jsx';
+import './today.css';
 
 // Tableau de bord du Patron (l'API le réserve au Patron). Pensé d'abord pour le téléphone :
 // une colonne, chiffres clés en haut, graphiques en barres simples (toucher une barre affiche sa valeur).
@@ -64,18 +68,20 @@ const COMPARE = {
 };
 const compareLabel = (r) => COMPARE[r.period][r.isCurrent ? 0 : 1];
 
-// Évolution : flèche et mot en plus de la couleur ; pour les annulations, une hausse est une mauvaise nouvelle
-function Delta({ now, before, compare, upIsBad = false, money = false }) {
-  if (!before) {
+// Évolution : flèche et mot en plus de la couleur ; pour les annulations, une hausse est une mauvaise nouvelle.
+// Période en cours avec trop peu de commandes au même moment (début de journée) : « trop tôt pour comparer », en
+// gris, jamais « −100 % » en rouge (compare.js, demande du client du 13 octobre 2026).
+function Delta({ now, before, compare, upIsBad = false, money = false, early }) {
+  const st = compareState({ now, before, upIsBad, inProgress: early?.inProgress, basePaid: early?.basePaid });
+  const diff = money ? formatPrice(before) : before;
+  if (st.kind === 'early') return <p className="db-delta flat">Trop tôt pour comparer <span className="db-vs">({compare.when} : {diff})</span></p>;
+  if (st.kind === 'none') {
     return <p className="db-delta flat">{now ? `Pas de comparaison : rien ${compare.when}` : `Rien non plus ${compare.when}`}</p>;
   }
-  const pct = Math.round(((now - before) / before) * 100);
-  const diff = money ? formatPrice(before) : before;
-  if (pct === 0) return <p className="db-delta flat">= Stable {compare.vs} <span className="db-nw">({diff})</span></p>;
-  const good = pct > 0 !== upIsBad;
+  if (st.kind === 'flat') return <p className="db-delta flat">= Stable {compare.vs} <span className="db-nw">({diff})</span></p>;
   return (
-    <p className={`db-delta ${good ? 'good' : 'bad'}`}>
-      <span aria-hidden="true">{pct > 0 ? '▲' : '▼'}</span> {pct > 0 ? '+' : '−'}{Math.abs(pct)} % <span className="db-vs">{compare.vs} <span className="db-nw">({diff})</span></span>
+    <p className={`db-delta ${st.kind}`}>
+      <span aria-hidden="true">{st.pct > 0 ? '▲' : '▼'}</span> {pctText(st.pct)} <span className="db-vs">{compare.vs} <span className="db-nw">({diff})</span></span>
     </p>
   );
 }
@@ -193,12 +199,15 @@ function Card({ title, sub, children, wide }) {
   );
 }
 
-export default function Dashboard() {
+// Tableau de bord par période (Jour, Semaine, Mois). Avec la nouvelle présentation, il est replié sous « Analyse
+// détaillée » (embedded : sans titre ni onglets, déjà au-dessus) et ne se charge qu'une fois ouvert.
+function DetailedDashboard({ embedded = false }) {
   const [period, setPeriod] = useState('day');
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [retry, setRetry] = useState(0); // « Réessayer » après une erreur
 
   // Chargement à chaque changement de période, puis rechargement discret toutes les 60 s
   // (onglet visible) et au retour sur l'onglet : les chiffres suivent les commandes payées ou annulées.
@@ -223,7 +232,7 @@ export default function Dashboard() {
       clearInterval(timer);
       document.removeEventListener('visibilitychange', onShow);
     };
-  }, [period, offset]);
+  }, [period, offset, retry]);
 
   const choose = (p) => {
     setPeriod(p);
@@ -234,6 +243,8 @@ export default function Dashboard() {
   const s = data?.summary;
   const prev = data?.previous;
   const compare = r && compareLabel(r);
+  // Début de période en cours : comparaison trop maigre (compare.js)
+  const early = r && { inProgress: r.isCurrent, basePaid: prev.paid };
   const paidTotal = data ? data.payments.reduce((n, p) => n + p.paid, 0) : 0;
   // Parts en % : la dernière complète à 100 pour que le total tombe juste
   const shares = data ? data.payments.map((p) => (paidTotal ? Math.round((p.paid / paidTotal) * 100) : 0)) : [];
@@ -241,10 +252,14 @@ export default function Dashboard() {
 
   return (
     <div className="db">
-      <div className="st-head">
-        <h1 className="st-title">Tableau de bord</h1>
-      </div>
-      <ChiffresTabs />
+      {!embedded && (
+        <>
+          <div className="st-head">
+            <h1 className="st-title">Tableau de bord</h1>
+          </div>
+          <ChiffresTabs />
+        </>
+      )}
 
       <div className="db-period" role="group" aria-label="Période">
         {PERIODS.map((p) => (
@@ -263,7 +278,7 @@ export default function Dashboard() {
       {error && (
         <>
           <div className="alert err" role="alert"><span>{error.message}</span></div>
-          <button type="button" className="btn btn-p" style={{ marginTop: 14 }} onClick={load}>Réessayer</button>
+          <button type="button" className="btn btn-p" style={{ marginTop: 14 }} onClick={() => setRetry((n) => n + 1)}>Réessayer</button>
         </>
       )}
       {!data && !error && <p className="st-muted">Chargement des chiffres…</p>}
@@ -273,12 +288,12 @@ export default function Dashboard() {
           <section className="st-box db-hero">
             <h2>Chiffre d'affaires des plats</h2>
             <p className="db-big">{formatPrice(s.revenue)}</p>
-            <Delta now={s.revenue} before={prev.revenue} compare={compare} money />
+            <Delta early={early} now={s.revenue} before={prev.revenue} compare={compare} money />
             <p className="st-muted db-note">Commandes payées seulement (payée, en préparation, en livraison, livrée).</p>
             <div className="db-fees">
               <h3>Frais de livraison encaissés</h3>
               <p className="db-num">{formatPrice(s.deliveryRevenue)}</p>
-              <Delta now={s.deliveryRevenue} before={prev.deliveryRevenue} compare={compare} money />
+              <Delta early={early} now={s.deliveryRevenue} before={prev.deliveryRevenue} compare={compare} money />
               <dl className="db-feesplit">
                 <dt>En espèces</dt>
                 <dd><b>{formatPrice(s.deliveryCash)}</b> <small className="st-muted">{plural(s.deliveryCashCount, 'commande')}</small></dd>
@@ -307,17 +322,17 @@ export default function Dashboard() {
             <div className="st-box db-tile">
               <h3>Commandes payées</h3>
               <p className="db-num">{s.paid}</p>
-              <Delta now={s.paid} before={prev.paid} compare={compare} />
+              <Delta early={early} now={s.paid} before={prev.paid} compare={compare} />
             </div>
             <div className="st-box db-tile">
               <h3>Panier moyen</h3>
               <p className="db-num">{s.paid ? formatPrice(s.avgBasket) : '—'}</p>
-              <Delta now={s.avgBasket} before={prev.avgBasket} compare={compare} money />
+              <Delta early={early} now={s.avgBasket} before={prev.avgBasket} compare={compare} money />
             </div>
             <div className="st-box db-tile">
               <h3>Annulées</h3>
               <p className="db-num">{s.cancelled}</p>
-              <Delta now={s.cancelled} before={prev.cancelled} compare={compare} upIsBad />
+              <Delta early={early} now={s.cancelled} before={prev.cancelled} compare={compare} upIsBad />
             </div>
           </div>
           <p className="st-muted db-received">
@@ -430,6 +445,30 @@ export default function Dashboard() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// Réglage « Nouvelle page Commandes et barre ⋮ » allumé : la journée d'un coup d'œil (TodayBlocks.jsx), puis le
+// tableau de bord par période replié sous « Analyse détaillée ». Le nom de la page est déjà dans la barre (pas de
+// titre en double). Éteint (ou réglage illisible) : tableau de bord par période, comme avant.
+export default function Dashboard() {
+  const { newOrdersPage, loaded } = useAppSettings();
+  const [open, setOpen] = useState(false);
+  if (!loaded) return <p className="st-muted">Chargement…</p>;
+  if (!newOrdersPage) return <DetailedDashboard />;
+  return (
+    <div className="db">
+      <h1 className="tb-sr">Tableau de bord</h1>
+      <ChiffresTabs />
+      <TodayBlocks />
+      <details className="tb-more" onToggle={(e) => setOpen(e.currentTarget.open)}>
+        <summary>
+          <b>Analyse détaillée</b>
+          <small>Jour, semaine ou mois : chiffre par heure, plats et catégories, heures de pointe, paiements, livreurs, annulations.</small>
+        </summary>
+        {open && <DetailedDashboard embedded />}
+      </details>
     </div>
   );
 }

@@ -739,6 +739,35 @@ Décisions du client (12 octobre 2026) : une seule migration pour les deux régl
 - [x] Corrections du lot 12 (barre ⋮ `f42a20a`, façon B `8a5fcc3`) envoyées le 12 octobre 2026 avec l'accord écrit du
   client, **sans migration**.
 
+### Tableau de bord d'un coup d'œil (13 octobre 2026)
+
+Analyse et proposition présentées le 13 octobre (captures `C:\Users\HP\Desktop\belchiken\captures-tableau-de-bord-analyse\`).
+Décisions du client : nouveauté **liée au réglage « Nouvelle page Commandes et barre ⋮ »** (pas de migration) ; ancien
+tableau de bord gardé sur la même page, replié sous « Analyse détaillée » ; frais de livraison sur une seule ligne ;
+corriger le titre en double et le « −100 % » rouge en début de journée ; le nouveau bloc doit rester rapide, sans calcul
+lourd. Détails : README « Tableau de bord d'un coup d'œil ».
+
+- [x] 1. Serveur : `GET /api/staff/dashboard/aujourdhui` (lecture seule, Patron et Prestataire, `TABLEAU_DE_BORD`),
+  `services/today.js`, `getToday()` ; API complétée, rien retiré, schéma inchangé. Tests : 322 côté serveur (5 de plus).
+- [x] 2. Site : blocs « Maintenant », « Aujourd'hui », plats, provenance (`TodayBlocks.jsx`, `now.js`, `compare.js`,
+  `today.css`), « Analyse détaillée » repliée (`Dashboard.jsx`), lien « en retard » vers la page Commandes filtrée
+  (`?retard=1`, `OrdersPage2.jsx`). Corrigé au passage : le bouton « Réessayer » de l'ancien tableau de bord (fonction
+  introuvable, la page aurait planté en cas d'erreur). « Trop tôt pour comparer » aussi dans l'ancien tableau de bord
+  (période en cours), réglage allumé ou non. Tests : 32 côté site (7 de plus).
+- [x] 3. Essais sur dev (13 octobre 2026) : `demo:affluence` relancé avec l'accord du client (36 commandes « Démo »
+  ajoutées, 60 en cours avec celles du 12) ; vraie API locale (WhatsApp et alertes coupés), session d'essai temporaire de
+  « Patron (essai) » supprimée ensuite (11 sessions avant et après), réglage simulé dans le navigateur, toute écriture
+  bloquée. **41 vérifications, aucun échec, aucune erreur dans le navigateur** : arrivée sur le tableau de bord, pas de
+  titre en double, chiffres = serveur = « Jour » de l'analyse détaillée (474 500 F, 30 commandes, panier 15 817 F), plats du
+  jour et des 7 jours, provenance, analyse repliée et non chargée puis ouverte, lien « en retard » (49 = page Commandes),
+  lien « à vérifier », début de journée simulé (aucun rouge), petit téléphone 340 px, réglage éteint = page d'avant.
+  Captures : `C:\Users\HP\Desktop\belchiken\captures-tableau-de-bord-coup-d-oeil\`.
+- [x] Temps de réponse en local (depuis le Burkina, connexion comprise) : nouvelle adresse ~3 s (calcul seul : 0,6 à
+  1,1 s) ; ancienne : Jour ~4 s, Semaine 7 à 11 s, Mois 21 à 26 s.
+- [ ] Ancienne adresse plus rapide sans changer les chiffres (lectures en parallèle ; essai à part : Jour 0,6 s au lieu de
+  1,8 s, mois précédent 2,7 s au lieu de 10 à 14 s) : **attend l'accord du client**.
+- [x] 4. Documentation, enregistrement local. **STOP avant la mise en ligne** (rien sur GitHub sans accord écrit).
+
 ## Démonstration commerciale (base dev)
 
 Pour la présentation commerciale à Belchicken : un mois d'activité fictive sur la base **dev** seulement (tableau de

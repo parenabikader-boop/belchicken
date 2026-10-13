@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "langues": "node scripts/check-langues.mjs",
-    "test": "node --test src/utils/borne.test.js src/utils/site-choice.test.js src/staff/orders2/waiting.test.js src/staff/nav-pages.test.js src/staff/session.test.js"
+    "test": "node --test src/utils/borne.test.js src/utils/site-choice.test.js src/staff/orders2/waiting.test.js src/staff/nav-pages.test.js src/staff/session.test.js src/staff/dashboard/compare.test.js src/staff/dashboard/now.test.js"
   },
   "dependencies": {
     "react": "^19.1.0",
