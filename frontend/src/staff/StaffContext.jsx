@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { staffApi } from '../api/client.js';
+import { afterRecheck } from './session.js';
 
 const StaffContext = createContext(null);
 
@@ -19,10 +20,30 @@ export function StaffProvider({ children }) {
 
   useEffect(check, [check]);
 
+  // Revérification en arrière-plan (correctif du 13 octobre 2026) : une demande automatique refusée (401, par
+  // exemple le rechargement des commandes toutes les 5 s) ne doit JAMAIS effacer l'écran ni fermer une fenêtre
+  // ouverte. On redemande « qui suis-je » sans toucher à l'affichage : session bonne = rien ne bouge (compte et
+  // fonctions mis à jour) ; session vraiment terminée (401) = page de connexion ; serveur injoignable = on garde
+  // l'écran, la demande suivante réessaiera. Avant la première vérification, c'est la vérification normale.
+  const rechecking = useRef(false);
+  const ready = state.status === 'ready';
+  const recheck = useCallback(() => {
+    if (!ready) return check();
+    if (rechecking.current) return undefined;
+    rechecking.current = true;
+    return staffApi.me().then(
+      (me) => setState((s) => afterRecheck(s, { me })),
+      (error) => setState((s) => afterRecheck(s, { error })),
+    ).finally(() => {
+      rechecking.current = false;
+    });
+  }, [ready, check]);
+
   const value = useMemo(
     () => ({
       ...state,
-      retry: check,
+      retry: check, // bouton « Réessayer » de l'écran d'erreur, à l'ouverture
+      recheck, // demandes automatiques refusées : sans effacer l'écran
       // Renvoie { codeRequired: true } pour le compte Prestataire : le code est demandé ensuite (loginCode)
       login: async (phone, password) => {
         const data = await staffApi.login(phone, password);
@@ -46,7 +67,7 @@ export function StaffProvider({ children }) {
         setState({ status: 'anon', user: null, error: null, features: {} });
       },
     }),
-    [state, check],
+    [state, check, recheck],
   );
 
   return <StaffContext.Provider value={value}>{children}</StaffContext.Provider>;

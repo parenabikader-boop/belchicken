@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { staffApi } from '../../api/client.js';
 
 // Réglages du logiciel (parcours court…), relus à chaque ouverture de page. loaded = réponse reçue. Si la
-// lecture échoue : tout éteint, c'est-à-dire le fonctionnement habituel.
+// lecture échoue : la dernière valeur lue, sinon tout éteint (le fonctionnement habituel).
 let last = null;
 // Composants affichés en même temps qu'un changement de réglage (barre de l'espace équipe) : prévenus tout de suite
 const listeners = new Set();
@@ -20,7 +20,9 @@ export function useAppSettings() {
         last = s;
         if (alive) setSettings(s);
       },
-      () => alive && setSettings({ shortFlow: false, agentOrders: false, newOrdersPage: false, failed: true }),
+      // Relecture ratée : la dernière valeur connue reste (sinon la barre et les pages basculeraient en pleine
+      // utilisation) ; seulement si rien n'a jamais été lu : tout éteint, le fonctionnement habituel
+      () => alive && setSettings(last || { shortFlow: false, agentOrders: false, newOrdersPage: false, failed: true }),
     );
     return () => {
       alive = false;

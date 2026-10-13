@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma.js';
 import { hashToken, newSessionToken, verifyAgainstDummy, verifyPassword } from './staff-auth.js';
 import { passwordStep } from './prestataire.service.js';
+import { sessionRefusal } from './session-log.js';
 
 // Durée d'une connexion : l'équipe reste connectée 14 jours sur son téléphone
 export const SESSION_DAYS = 14;
@@ -36,16 +37,21 @@ export async function login(phone, password, meta = {}) {
   return { user, token, expiresAt };
 }
 
-// Compte connecté pour ce jeton, ou null (jeton inconnu, expiré, compte désactivé)
-export async function getSessionUser(token) {
-  if (!token) return null;
+// Session de ce jeton : { user } si elle est acceptée, sinon { user: null, reason, session } (raison du refus pour
+// le journal des 401, voir session-log.js ; session = la ligne trouvée, ou null)
+export async function checkSession(token) {
+  if (!token) return { user: null, reason: 'sans-cookie', session: null };
   const session = await prisma.staffSession.findUnique({ where: { tokenHash: hashToken(token) }, include: { user: true } });
-  if (!session || session.expiresAt <= new Date() || !session.user.isActive) return null;
+  const reason = sessionRefusal(session);
+  if (reason) return { user: null, reason, session };
   if (Date.now() - session.lastSeenAt.getTime() > SEEN_REFRESH_MS) {
     await prisma.staffSession.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } });
   }
-  return session.user;
+  return { user: session.user, reason: null, session };
 }
+
+// Compte connecté pour ce jeton, ou null (jeton inconnu, expiré, compte désactivé)
+export const getSessionUser = async (token) => (await checkSession(token)).user;
 
 export async function logout(token) {
   if (!token) return;

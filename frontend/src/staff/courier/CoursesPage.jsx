@@ -20,7 +20,7 @@ const POLL_VISIBLE_MS = 10000;
 const POLL_HIDDEN_MS = 30000;
 
 export default function CoursesPage() {
-  const { retry: recheckSession } = useStaff();
+  const { recheck: recheckSession } = useStaff();
   const { play, soundReady } = useChime();
   const [courses, setCourses] = useState(null);
   const [error, setError] = useState(null);

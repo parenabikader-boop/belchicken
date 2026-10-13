@@ -56,7 +56,7 @@ export function useChime() {
 }
 
 export function OrdersFeedProvider({ children }) {
-  const { retry: recheckSession } = useStaff();
+  const { recheck: recheckSession } = useStaff();
   const { play, soundReady } = useChime();
   const [feed, setFeed] = useState({ orders: null, counts: {}, error: null, updatedAt: null });
   // Commandes arrivées pendant la session et pas encore ouvertes
@@ -88,10 +88,9 @@ export function OrdersFeedProvider({ children }) {
       }
       setFeed({ orders: data.orders, counts: data.counts, error: null, updatedAt: Date.now() });
     } catch (error) {
-      if (error.status === 401) {
-        inFlight.current = false;
-        return recheckSession(); // session expirée : retour à la connexion
-      }
+      // Refusé : revérification en arrière-plan, sans effacer l'écran (session terminée = page de connexion).
+      // Le rechargement continue normalement ensuite.
+      if (error.status === 401) recheckSession();
       setFeed((f) => ({ ...f, error }));
     }
     inFlight.current = false;

@@ -1,5 +1,6 @@
 import { env } from '../config/env.js';
-import { getSessionUser } from '../services/staff.service.js';
+import { checkSession } from '../services/staff.service.js';
+import { unauthorizedLine } from '../services/session-log.js';
 import { isPrestataire } from '../services/roles.js';
 
 export const SESSION_COOKIE = 'bc_equipe';
@@ -64,9 +65,13 @@ export function accessFor(user, roles, { allowProvisional = false } = {}) {
 function guard(roles, options) {
   const middleware = async (req, res, next) => {
     try {
-      const user = await getSessionUser(readSessionToken(req));
+      const { user, reason, session } = await checkSession(readSessionToken(req));
       const access = accessFor(user, roles, options);
-      if (access === 'non-connecte') return unauthorized(res);
+      if (access === 'non-connecte') {
+        // Journal des refus (jamais la clé de session) : pour trouver la cause des 401 inattendus
+        console.warn(unauthorizedLine({ method: req.method, url: req.originalUrl, reason, cookieHeader: req.headers.cookie, userAgent: req.headers['user-agent'], session }));
+        return unauthorized(res);
+      }
       if (access === 'mot-de-passe') return mustChange(res);
       if (access === 'refuse') return forbidden(res);
       req.staff = user;
