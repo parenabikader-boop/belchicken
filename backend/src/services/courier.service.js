@@ -38,7 +38,7 @@ export async function listCourses(courier, now = new Date()) {
 export async function deliverWithCode(reference, code, feeMethod, courier) {
   const order = await prisma.order.findUnique({
     where: { reference },
-    select: { id: true, status: true, courierId: true, deliveryCode: true, deliveryCodeAttempts: true, deliveryFee: true, deliveryFeeMethod: true, mode: true },
+    select: { id: true, status: true, courierId: true, deliveryCode: true, deliveryCodeAttempts: true, deliveryFee: true, deliveryFeeMethod: true, mode: true, deliveryOperator: true },
   });
   if (!order || order.courierId !== courier.id) throw new AppError(404, 'Course introuvable.', 'COURSE_INTROUVABLE');
   // Mode de paiement des frais vérifié avant le code : un oubli ne compte pas comme un code faux

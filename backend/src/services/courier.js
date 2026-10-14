@@ -112,6 +112,8 @@ export function toCourse(o) {
     deliveryNightFee: o.deliveryNightFee ?? null, // lot 3 : dont supplément de nuit (compris dans deliveryFee)
     deliveryZoneName: o.deliveryZoneName, // quartier choisi par le client (grille des frais)
     feePaidBefore: o.status === 'EN_LIVRAISON' && o.deliveryFeeMethod != null,
+    // Livreur indépendant : aucun frais dans la commande, il les règle directement avec le client
+    ...(o.deliveryOperator === 'INDEPENDANT' && o.mode !== 'A_EMPORTER' && { independent: true }),
     feeMethod: o.status === 'LIVREE' ? o.deliveryFeeMethod : null,
     customerName: o.customerName,
     customerPhone: o.customerPhone,

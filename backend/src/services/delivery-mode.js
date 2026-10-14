@@ -8,12 +8,16 @@
 // - Le mode est noté sur chaque commande à sa création (Order.deliveryOperator) : changer de mode ne
 //   touche pas les commandes déjà passées.
 // - Le paiement des plats reste toujours sur les codes ECOFOOD, dans les deux modes.
+// - INDEPENDANT (livreurs indépendants, interrupteur LIVREURS_INDEPENDANTS fermé par défaut) : livreurs créés par
+//   le Patron ; les frais de livraison se règlent directement entre le client et le livreur, jamais dans la
+//   commande. Interrupteur fermé : choix refusé, et un mode déjà enregistré compte comme Restaurant.
 // Plusieurs restaurants plus tard : rien ici ne dépend du menu ni des prix des plats.
 import { isValidCodeTemplate, MOBILE_MONEY_METHODS } from './payment-codes.js';
 import { PAYMENT_LABELS } from '../utils/format.js';
 
-export const OPERATORS = ['RESTAURANT', 'PRESTATAIRE'];
-export const OPERATOR_LABEL = { RESTAURANT: 'Restaurant', PRESTATAIRE: 'Prestataire' };
+export const OPERATORS = ['RESTAURANT', 'PRESTATAIRE', 'INDEPENDANT'];
+export const OPERATOR_LABEL = { RESTAURANT: 'Restaurant', PRESTATAIRE: 'Prestataire', INDEPENDANT: 'Livreurs indépendants' };
+export const INDEPENDENT_CLOSED = 'Le mode Livreurs indépendants n’est pas inclus (interrupteur LIVREURS_INDEPENDANTS fermé).';
 
 // Colonne de DeliveryCompany pour chaque opérateur mobile money
 export const CODE_FIELDS = { ORANGE_MONEY: 'orangeCode', MOOV_MONEY: 'moovCode', TELECEL_MONEY: 'telecelCode' };
@@ -65,14 +69,21 @@ export function companyFormatError(c) {
 // Mode Prestataire possible : tout rempli, et sans erreur
 export const companyReady = (c) => missingForPrestataire(c).length === 0 && !companyFormatError(c);
 
-// Mode des nouvelles commandes. Par sécurité, Prestataire seulement si tout est prêt (sinon Restaurant).
-export const effectiveMode = (c) => (c?.mode === 'PRESTATAIRE' && companyReady(c) ? 'PRESTATAIRE' : 'RESTAURANT');
+// Mode des nouvelles commandes. Par sécurité, Prestataire seulement si tout est prêt (sinon Restaurant) ;
+// Indépendants seulement avec l'interrupteur LIVREURS_INDEPENDANTS ouvert (independentOpen), sinon Restaurant.
+export function effectiveMode(c, { independentOpen = false } = {}) {
+  if (c?.mode === 'INDEPENDANT') return independentOpen ? 'INDEPENDANT' : 'RESTAURANT';
+  return c?.mode === 'PRESTATAIRE' && companyReady(c) ? 'PRESTATAIRE' : 'RESTAURANT';
+}
 
 // Enregistrement par le Prestataire : null si permis, sinon le message.
 // next : la ligne après le changement ; awaitingFees : commandes en mode Prestataire dont les frais sont
 // encore attendus (le client va payer sur nos codes : ils ne peuvent pas être vidés ni cassés).
-export function companyUpdateError(next, { awaitingFees = 0 } = {}) {
+// independentOpen : interrupteur LIVREURS_INDEPENDANTS ; previousMode : mode enregistré avant ce changement
+// (un mode Indépendants déjà enregistré se garde quand on change seulement les codes).
+export function companyUpdateError(next, { awaitingFees = 0, independentOpen = false, previousMode = null } = {}) {
   if (!OPERATORS.includes(next.mode)) return 'Mode de livraison inconnu.';
+  if (next.mode === 'INDEPENDANT' && previousMode !== 'INDEPENDANT' && !independentOpen) return INDEPENDENT_CLOSED;
   const format = companyFormatError(next);
   if (format) return format;
   const missing = missingForPrestataire(next);

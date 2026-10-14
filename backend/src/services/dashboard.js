@@ -15,7 +15,8 @@ const feePaid = (o) => o.deliveryFee != null && o.deliveryFeeMethod != null && o
 // Lot 5b : les frais des commandes livrées par notre partenaire (mode Prestataire) ne sont pas des recettes de
 // Belchicken : comptés à part, jamais dans les frais du restaurant.
 const isPartner = (o) => o.deliveryOperator === 'PRESTATAIRE';
-export const feeCounted = (o) => feePaid(o) && !isPartner(o); // aussi pour les ventes (lot 6)
+const isIndependent = (o) => o.deliveryOperator === 'INDEPENDANT'; // frais jamais dans la commande
+export const feeCounted = (o) => feePaid(o) && !isPartner(o) && !isIndependent(o); // aussi pour les ventes (lot 6)
 const feeSum = (list) => list.reduce((s, o) => s + o.deliveryFee, 0);
 
 export const dashboardQuerySchema = z.object({

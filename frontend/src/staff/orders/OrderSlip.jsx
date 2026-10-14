@@ -4,7 +4,7 @@ import { staffApi } from '../../api/client.js';
 import { drinksLabel } from '../../utils/drinks.js';
 import { formatPrice } from '../../utils/format.js';
 import { nightLine } from '../../utils/deliveryFee.js';
-import { feeText, formatDateTime, formatPhone, formatTime, isPickup, METHOD_LABEL } from './labels.js';
+import { feeText, formatDateTime, formatPhone, formatTime, isIndependent, isPickup, METHOD_LABEL } from './labels.js';
 
 // Bon de commande imprimable depuis le navigateur : ticket 80 mm ou A4. Il passe d'abord par la caisse, qui
 // vérifie : prix de chaque ligne, total des plats, paiement (« PAYÉ – Orange Money » et le numéro qui a payé),
@@ -121,7 +121,13 @@ function Slip({ o }) {
         <span>{formatPrice(o.itemsTotal)}{o.paymentPayerPhone && <> depuis le {formatPhone(o.paymentPayerPhone)}</>}</span>
       </div>
 
-      {!pickup && (
+      {isIndependent(o) && (
+        <section className="slip-fee">
+          <p><span>Frais de livraison</span><b>Hors commande</b></p>
+          <small>Livreur indépendant : réglés directement par le client.</small>
+        </section>
+      )}
+      {!pickup && !isIndependent(o) && (
         <section className="slip-fee">
           <p>
             <span>Frais de livraison</span>

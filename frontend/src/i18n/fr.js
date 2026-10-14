@@ -74,6 +74,8 @@ export default {
     drinks: drinksLabel,
     paidToCourier: 'Payés au livreur à la réception, en espèces ou par mobile money avec le code marchand.',
     toConfirm: 'Confirmés par notre équipe au téléphone',
+    // Livreurs indépendants : frais hors commande
+    independent: 'Frais de livraison : à régler directement au livreur, à la réception. Ils ne sont pas compris dans votre paiement.',
   },
   date: {
     time,

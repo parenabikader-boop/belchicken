@@ -148,7 +148,9 @@ export default function Confirmation() {
               <>
                 <dt>{t.common.deliveryFee}</dt>
                 <dd>
-                  {fee == null
+                  {order.independentDelivery
+                    ? t.fees.independent
+                    : fee == null
                     ? toConfirm
                       ? T.feeToConfirm
                       : T.feeLater
@@ -280,6 +282,11 @@ function Now({ order }) {
   const known = fee == null ? null : fee === 0 ? T.knownFree : <Rich text={T.knownFee} fee={formatPrice(fee)} night={order.deliveryNightFee > 0 ? `, ${t.fees.nightLine(order.deliveryNightFee)}` : ''} />;
   const preparing = order.status === 'EN_PREPARATION' ? T.preparing : T.paidWillPrepare;
   if (isPickup(order) && order.status !== 'ANNULEE') return <PickupNow order={order} />;
+  // Livreurs indépendants : aucun montant de livraison, la phrase des indépendants à chaque étape avant la remise
+  if (order.independentDelivery && ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'EN_LIVRAISON'].includes(order.status)) {
+    const lead = order.status === 'PAIEMENT_A_VERIFIER' ? checking : order.status === 'EN_LIVRAISON' ? T.onTheWayCode : preparing;
+    return <p className="trk-now">{lead} {t.fees.independent}</p>;
+  }
 
   switch (order.status) {
     case 'ANNULEE':

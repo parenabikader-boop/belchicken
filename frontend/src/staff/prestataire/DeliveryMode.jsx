@@ -16,6 +16,11 @@ const MODES = {
     label: 'Prestataire',
     help: 'Notre équipe de livreurs. Frais de livraison payés sur nos codes marchands, avec notre nom affiché. Le paiement des plats ne change pas.',
   },
+  // Proposé seulement avec l'interrupteur LIVREURS_INDEPENDANTS ouvert (data.independentOpen)
+  INDEPENDANT: {
+    label: 'Livreurs indépendants',
+    help: 'Des livreurs indépendants, créés par le Patron. Les frais de livraison se règlent directement entre le client et le livreur : aucun montant de livraison dans la commande, la Caisse ni les chiffres.',
+  },
 };
 
 const CODE_FIELDS = [
@@ -75,7 +80,7 @@ export default function DeliveryMode() {
       {error && <div className="alert err" role="alert"><span>{error.message}</span></div>}
 
       <div className="pr-modes" role="radiogroup" aria-label="Mode de livraison">
-        {Object.entries(MODES).map(([key, m]) => {
+        {Object.entries(MODES).filter(([key]) => key !== 'INDEPENDANT' || data.independentOpen || mode === 'INDEPENDANT').map(([key, m]) => {
           const locked = key === 'PRESTATAIRE' && !data.ready;
           return (
             <label key={key} className={`pr-mode${mode === key ? ' on' : ''}${locked ? ' locked' : ''}`}>
@@ -97,7 +102,9 @@ export default function DeliveryMode() {
         <div className={`st-action pr-confirm${confirm === 'RESTAURANT' ? ' cancel' : ''}`} role="alertdialog" aria-label="Confirmer le mode de livraison">
           <b>Passer en mode {MODES[confirm].label} ?</b>
           <p>
-            {confirm === 'PRESTATAIRE'
+            {confirm === 'INDEPENDANT'
+              ? 'Les nouvelles commandes en livraison seront livrées par des livreurs indépendants. Le client règle les frais directement au livreur : aucun montant de livraison dans la commande. Les commandes déjà passées ne changent pas.'
+              : confirm === 'PRESTATAIRE'
               ? `Les nouvelles commandes en livraison seront livrées par notre équipe, et leurs frais payés sur nos codes (nom affiché : ${data.company.merchantName}). Les commandes déjà passées ne changent pas.`
               : 'Les nouvelles commandes en livraison reviennent au restaurant (codes ECOFOOD). Les commandes déjà passées en mode Prestataire gardent nos codes jusqu’au bout.'}
           </p>

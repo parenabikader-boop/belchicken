@@ -2,7 +2,8 @@
 // testé dans test/prestataire.test.js). Les accès à la base sont dans features.service.js.
 //
 // Pas de ligne FeatureSwitch = ouvert : sans Prestataire, tout fonctionne comme avant (sauf RELEVE, lot 5d,
-// fermé sans ligne : le Patron ne voit le relevé que si le Prestataire l'ouvre).
+// fermé sans ligne : le Patron ne voit le relevé que si le Prestataire l'ouvre ; de même LIVREURS_INDEPENDANTS,
+// fermé sans ligne).
 // Fermer bloque l'accès, ne supprime aucune donnée, et bloque aussi le Prestataire (il doit rouvrir).
 // Deux niveaux pour les réglages : le Prestataire décide si une fonction est incluse, le Patron l'allume
 // ou l'éteint à l'intérieur. Une fonction n'est active que si elle est incluse et allumée.
@@ -27,17 +28,20 @@ export const FEATURES = [
   { key: 'MENU_BORNE', label: 'Menu façon borne', help: 'Menu du site client en plein écran, comme les bornes du restaurant (si le Patron l’allume). Fermé : le menu actuel du site.' },
   // Lot 12 : nouvelle page Commandes, ouverte sans ligne ; le Patron l'allume en plus (réglage « Nouvelle page Commandes et barre ⋮ »)
   { key: 'NOUVELLE_PAGE_COMMANDES', label: 'Nouvelle page Commandes et barre ⋮', help: 'Page Commandes plus lisible les soirs d’affluence, avec les couleurs d’attente, barre simple en haut de l’espace équipe (bouton ⋮ qui ouvre toutes les pages) et page d’arrivée selon le rôle (Patron : Tableau de bord), si le Patron l’allume. Fermé : la page Commandes, la barre et la page d’arrivée actuelles.' },
-  // Lot 5d : seul interrupteur fermé sans ligne (defaultOpen: false), et qui ne concerne que le Patron :
+  // Lot 5d : interrupteur fermé sans ligne (defaultOpen: false), et qui ne concerne que le Patron :
   // le Prestataire et le Responsable livraison voient toujours le relevé (le Responsable sans les conditions
   // du contrat ni le montant dû, statement.js).
   { key: 'RELEVE', label: 'Relevé de livraison (Patron)', help: 'Ouvert : le Patron voit le relevé de notre équipe de livraison (livraisons, frais, délais, conditions du contrat et montant dû), en lecture seule. Fermé : le relevé lui est caché ; vous et le Responsable livraison le voyez toujours.', defaultOpen: false },
+  // Mode « Livreurs indépendants » : fermé sans ligne. Ouvert, le troisième choix du « Mode de livraison » apparaît
+  // (page Prestataire) et le Patron peut créer des comptes Livreur « Indépendant » (page Équipe).
+  { key: 'LIVREURS_INDEPENDANTS', label: 'Livreurs indépendants', help: 'Ouvert : troisième choix du mode de livraison, avec des livreurs indépendants créés par le Patron. Les frais de livraison se règlent directement entre le client et le livreur : aucun montant de livraison dans les commandes, la Caisse, les ventes ni le tableau de bord. Fermé : modes Restaurant et Prestataire seulement, comme avant.', defaultOpen: false },
 ];
 
 export const FEATURE_KEYS = FEATURES.map((f) => f.key);
 
 export const FEATURE_CLOSED = 'Fonction non incluse dans votre formule, contactez votre prestataire.';
 
-// Ouverte ou fermée quand elle n'a pas de ligne : ouverte, sauf RELEVE (lot 5d)
+// Ouverte ou fermée quand elle n'a pas de ligne : ouverte, sauf RELEVE (lot 5d) et LIVREURS_INDEPENDANTS
 export const featureDefault = (key) => FEATURES.find((f) => f.key === key)?.defaultOpen ?? true;
 
 // Lignes FeatureSwitch -> { HISTORIQUE: true, … } : une fonction sans ligne garde sa valeur par défaut

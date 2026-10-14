@@ -10,7 +10,7 @@
 // (supplément compris) ; le supplément est aussi copié à part (deliveryNightFee) pour les rapports.
 // Réglage éteint ou supplément à 0 F : frais exactement comme avant.
 import { z } from 'zod';
-import { FEE_MAX } from './order-status.js';
+import { FEE_MAX, INDEPENDENT_NO_FEE, isIndependentDelivery } from './order-status.js';
 import { formatFcfa } from '../utils/format.js';
 import { isPatronLevel } from './roles.js';
 
@@ -142,6 +142,9 @@ export const publicGrid = (grid, now = new Date()) => ({
   }),
 });
 
+// Mode Livreurs indépendants : grille cachée au client (comme une grille vide) et phrase des indépendants
+export const INDEPENDENT_GRID = Object.freeze({ active: false, zones: [], gps: false, allowOther: true, independent: true });
+
 // Champs de la commande, copiés au moment de la commande
 export const orderFeeFields = (quote) =>
   quote.source
@@ -165,6 +168,7 @@ const EDITABLE_BY_PATRON = ['EN_LIVRAISON', 'LIVREE'];
 // Qui peut encore modifier les frais : 'TOUS', 'PATRON' ou null (avec la raison)
 export function feeEditRight(order) {
   if (order.mode === 'A_EMPORTER') return { who: null, error: 'Commande à emporter : pas de frais de livraison.' };
+  if (isIndependentDelivery(order)) return { who: null, error: INDEPENDENT_NO_FEE };
   if (EDITABLE_BY_ALL.includes(order.status)) {
     // Anciennes commandes (avant le 6 octobre 2026) : frais payés avant le départ du livreur
     if (order.deliveryFeeMethod != null) return { who: null, error: 'Les frais de cette commande sont déjà payés.' };

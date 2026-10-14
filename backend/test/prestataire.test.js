@@ -174,8 +174,9 @@ test('jeton entre le mot de passe et le code : cookie httpOnly limité à l’ad
 test('interrupteurs : pas de ligne = ouvert, fermer ne touche que la fonction fermée', () => {
   const all = featureMap([]);
   assert.deepEqual(Object.keys(all), FEATURE_KEYS);
-  // Lot 5d : seule exception, RELEVE (relevé de livraison vu par le Patron) est fermé sans ligne
-  assert.ok(Object.entries(all).every(([key, open]) => open === (key !== 'RELEVE')));
+  // Exceptions, fermées sans ligne : RELEVE (lot 5d, relevé vu par le Patron) et LIVREURS_INDEPENDANTS
+  const closed = ['RELEVE', 'LIVREURS_INDEPENDANTS'];
+  assert.ok(Object.entries(all).every(([key, open]) => open === !closed.includes(key)));
   const map = featureMap([{ key: 'CAISSE', enabled: false }, { key: 'HISTORIQUE', enabled: true }, { key: 'INCONNUE', enabled: false }]);
   assert.equal(map.CAISSE, false);
   assert.equal(map.HISTORIQUE, true);

@@ -19,6 +19,9 @@ export const statusLabel = (o, status = o.status) => (isPickup(o) && status === 
 export const ACTIVE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE_LIVRAISON', 'EN_LIVRAISON', 'PRETE'];
 // Lot 5c : livraison par notre partenaire (son responsable choisit le livreur, le livreur confirme la récupération)
 export const isPartner = (o) => !isPickup(o) && o?.deliveryOperator === 'PRESTATAIRE';
+// Livreur indépendant : aucun frais dans la commande (réglés directement entre le client et le livreur)
+export const isIndependent = (o) => !isPickup(o) && o?.deliveryOperator === 'INDEPENDANT';
+export const INDEPENDENT_NOTE = 'Livreur indépendant : frais réglés directement entre le client et le livreur, hors commande.';
 
 // Étapes de la page Commandes, dans l'ordre du travail : un onglet (téléphone) ou une colonne
 // (ordinateur) par statut, avec l'action à faire. Puis l'historique (livrées et annulées).
@@ -154,6 +157,7 @@ export function feeOrigin(o) {
 export const canEditFee = (o, role) => o.feeEdit === 'TOUS' || (o.feeEdit === 'PATRON' && (role === 'PATRON' || role === 'PRESTATAIRE'));
 // Ce qui empêche le livreur de partir, ou null
 export function deliveryBlock(o) {
+  if (isIndependent(o)) return null;
   if (o.deliveryFee == null) return 'Saisissez d’abord les frais de livraison ci-dessous.';
   return null;
 }

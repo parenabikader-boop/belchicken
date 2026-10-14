@@ -36,6 +36,10 @@ const feeCodes = (o, ctx) => {
 // Livraison offerte (0 F, grille du Patron) : rien à payer au livreur, pas de codes marchands.
 // Chaque message avec des frais a sa version « offerte » (modèle Meta à part, même étape).
 const FREE_LINE = 'Livraison offerte : vous n’avez rien à payer au livreur.';
+// Livreur indépendant (Order.deliveryOperator = INDEPENDANT) : aucun montant ni code marchand pour les frais.
+// Chaque message avec des frais a sa version « indépendant » (modèle Meta à part, même étape).
+export const INDEPENDENT_LINE = 'Frais de livraison : à régler directement au livreur, à la réception. Ils ne sont pas compris dans votre paiement.';
+const independent = (o) => o.mode !== 'A_EMPORTER' && o.deliveryOperator === 'INDEPENDANT';
 // Paiement des plats d'une commande saisie par l'agent : le total, puis un code par ligne (montant rempli)
 const payLine = (total, merchant, orange, moov, telecel) =>
   `Total à payer : ${total}, par mobile money avec le code marchand (sans frais, nom affiché : ${merchant}) :\n` +
@@ -49,7 +53,8 @@ const payCodes = (o, ctx) => {
 // Montant des frais : « 1 500 F », ou la nuit « 1 500 F (dont 500 F de supplément de nuit) » (lot 3).
 // Dans la valeur de la variable : le texte des modèles Meta ne change pas.
 const feeAmount = (o) => feeWithNight(o.deliveryFee, o.deliveryNightFee);
-export const feeSentence = (o, ctx) => (o.deliveryFee === 0 ? FREE_LINE : feeLine(feeAmount(o), ...feeCodes(o, ctx)));
+export const feeSentence = (o, ctx) =>
+  independent(o) ? INDEPENDENT_LINE : o.deliveryFee === 0 ? FREE_LINE : feeLine(feeAmount(o), ...feeCodes(o, ctx));
 
 export const MESSAGES = {
   PAIEMENT_CONFIRME: {
@@ -222,6 +227,14 @@ export const MESSAGES = {
   },
 };
 
+// Version « livreur indépendant » de chaque message avec des frais : la version « offerte » avec la phrase des
+// livreurs indépendants à la place (mêmes variables), modèle Meta à part (nom terminé par _independant).
+for (const m of Object.values(MESSAGES)) {
+  if (m.free) {
+    m.independent = { template: m.free.template.replace(/_offerte$/, '_independant'), body: m.free.body.replace(FREE_LINE, INDEPENDENT_LINE), params: m.free.params };
+  }
+}
+
 export const MESSAGE_KEYS = Object.keys(MESSAGES);
 
 // Message de l'ancien fonctionnement (frais payés avant le départ, jusqu'au 5 octobre 2026) : gardé pour
@@ -251,7 +264,7 @@ export const trackingUrl = (o, ctx) => `${ctx.siteUrl.replace(/\/+$/, '')}/suivi
 //   null                   s'il n'y a rien à dire au client à cette étape.
 export function currentMessageKey(o) {
   if (o.mode === 'A_EMPORTER') return pickupMessageKey(o);
-  const feeSet = o.deliveryFee != null;
+  const feeSet = o.deliveryFee != null || independent(o); // livreur indépendant : aucun frais à saisir
   switch (o.status) {
     case 'PAYEE':
     case 'EN_PREPARATION': {
@@ -296,9 +309,12 @@ export const THANKS_KEYS = ['LIVREE', 'RETIREE'];
 
 // Modèle du message pour cette commande : la version « livraison offerte » quand les frais sont de 0 F ;
 // lot 7, le remerciement avec le lien de l'avis quand ctx.reviewLink (messageContextFor). Même clé
-// (LIVREE, RETIREE) : la règle « à remercier » ne change pas.
+// (LIVREE, RETIREE) : la règle « à remercier » ne change pas. Livreur indépendant : la version sans montant.
 export const messageModel = (key, o, ctx) =>
-  (ctx?.reviewLink && o.reviewToken && MESSAGES[key].review) || (o.deliveryFee === 0 && MESSAGES[key].free) || MESSAGES[key];
+  (ctx?.reviewLink && o.reviewToken && MESSAGES[key].review) ||
+  (independent(o) && MESSAGES[key].independent) ||
+  (o.deliveryFee === 0 && MESSAGES[key].free) ||
+  MESSAGES[key];
 
 // Valeurs des variables {{1}}, {{2}}… pour cette commande, nettoyées pour Meta
 export const messageParams = (key, o, ctx) => messageModel(key, o, ctx).params(o, ctx).map((p) => clean(p));

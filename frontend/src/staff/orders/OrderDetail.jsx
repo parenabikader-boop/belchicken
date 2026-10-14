@@ -4,7 +4,7 @@ import { staffApi } from '../../api/client.js';
 import { drinksLabel } from '../../utils/drinks.js';
 import { formatPrice } from '../../utils/format.js';
 import { useOrdersFeed } from './OrdersFeed.jsx';
-import { FEE_METHOD_LABEL, formatDateTime, formatPhone, isPickup, mapsHref, METHOD_LABEL, statusLabel, telHref, timeAgo, timelineOf, whatsappHref } from './labels.js';
+import { FEE_METHOD_LABEL, formatDateTime, formatPhone, INDEPENDENT_NOTE, isIndependent, isPickup, mapsHref, METHOD_LABEL, statusLabel, telHref, timeAgo, timelineOf, whatsappHref } from './labels.js';
 import { Actions, CourierBox, DeliveryFee, Notice, useSteps } from './OrderSteps.jsx';
 import { isPatronLevel, useStaff } from '../StaffContext.jsx';
 import { Notes, when } from '../reviews/ReviewsPage.jsx';
@@ -100,6 +100,7 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
           {isPickup(o) && <span className="st-pill p-EMPORTER">À emporter</span>}
           {/* Lot 5 : livrée par notre équipe, frais sur les codes du Prestataire */}
           {o.deliveryOperator === 'PRESTATAIRE' && <span className="st-pill p-PRESTATAIRE">Livraison Prestataire</span>}
+          {isIndependent(o) && <span className="st-pill p-PRESTATAIRE">Livreur indépendant</span>}
           {/* Lot 8 : commande passée sur le site en anglais (les messages WhatsApp restent en français) */}
           {o.language === 'EN' && <span className="st-pill p-ANGLAIS" title="Commande passée sur le site en anglais">Client anglophone</span>}
           <span className={`st-pill p-${o.status}`}>{statusLabel(o)}</span>
@@ -147,7 +148,9 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
           ) : (
           <p className="st-note">
             Plats seulement. Frais de livraison :{' '}
-            {o.deliveryFee == null
+            {isIndependent(o)
+              ? INDEPENDENT_NOTE.replace('Livreur indépendant : f', 'f').replace(/\.$/, '')
+              : o.deliveryFee == null
               ? o.deliveryFeeSource === 'A_CONFIRMER' ? 'à confirmer avec le client' : 'pas encore saisis'
               : o.deliveryFee === 0
                 ? 'livraison offerte'

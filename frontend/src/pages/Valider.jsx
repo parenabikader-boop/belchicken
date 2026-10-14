@@ -568,7 +568,7 @@ export default function Valider() {
                 {gridOn ? (
                   <FeeSummary grid={grid} quote={quote} />
                 ) : delivery ? (
-                  <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>{C.feeLater}</p>
+                  <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>{grid?.independent ? t.fees.independent : C.feeLater}</p>
                 ) : (
                   <p className="muted" style={{ fontSize: 13, margin: '12px 0 0' }}>{C.pickupNote(t.restaurant.address)}</p>
                 )}

@@ -6,7 +6,7 @@ import { useOrdersFeed } from './OrdersFeed.jsx';
 import { useStaff } from '../StaffContext.jsx';
 import AlertsPrompt from '../alerts/AlertsPrompt.jsx';
 import { useAppSettings } from '../settings/useAppSettings.js';
-import { FEE_METHOD_LABEL, feeText, formatTime, HISTORY, HISTORY_FILTERS, isPartner, isPickup, METHOD_LABEL, STAGES, STAGE_STATUSES, stageCount, statusLabel, timeAgo } from './labels.js';
+import { FEE_METHOD_LABEL, feeText, formatTime, HISTORY, HISTORY_FILTERS, isIndependent, isPartner, isPickup, METHOD_LABEL, STAGES, STAGE_STATUSES, stageCount, statusLabel, timeAgo } from './labels.js';
 import TourPanel from './TourPanel.jsx';
 
 const REFRESH_MS = 5000;
@@ -257,6 +257,8 @@ function stageDetail(o) {
     return 'À emporter · sans frais';
   }
   // Quartier choisi par le client (grille des frais) : utile dès l'arrivée de la commande
+  // Livreur indépendant : aucun frais dans la commande
+  if (isIndependent(o) && ['PAIEMENT_A_VERIFIER', 'PAYEE'].includes(o.status)) return `${o.deliveryZoneName ? `${o.deliveryZoneName} · ` : ''}livreur indépendant`;
   if (o.status === 'PAIEMENT_A_VERIFIER') {
     if (o.deliveryFeeSource === 'A_CONFIRMER') return 'Frais à confirmer au téléphone';
     if (o.deliveryFee != null) return `${o.deliveryZoneName ? `${o.deliveryZoneName} · ` : ''}frais : ${feeText(o.deliveryFee)}`;

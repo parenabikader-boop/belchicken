@@ -7,8 +7,9 @@ import { env } from '../config/env.js';
 import { sameItems } from './menu-edit.js';
 import { featureClosedError, getFeatures } from './features.service.js';
 import {
-  activeGrid, bandRanges, expectedFeeError, isNightTime, minutesToHHMM, publicGrid, quoteDelivery, sameZoneName,
+  activeGrid, bandRanges, expectedFeeError, INDEPENDENT_GRID, isNightTime, minutesToHHMM, publicGrid, quoteDelivery, sameZoneName,
 } from './delivery-fees.js';
+import { getDeliveryMode } from './delivery-mode.service.js';
 
 // Lot 4 : supplément de nuit fermé par le Prestataire = comme si le Patron l'avait éteint (nightIncluded)
 async function readGrid(db = prisma) {
@@ -27,7 +28,12 @@ export const loadGrid = async (db = prisma) => activeGrid(await readGrid(db));
 
 // ─── Site public ───
 
-export const getPublicGrid = async () => publicGrid(await loadGrid());
+// Livreurs indépendants : aucun prix proposé au client (frais réglés directement au livreur), le site affiche
+// la phrase des livreurs indépendants. Autres modes : exactement comme avant.
+export async function getPublicGrid() {
+  if ((await getDeliveryMode()) === 'INDEPENDANT') return INDEPENDENT_GRID;
+  return publicGrid(await loadGrid());
+}
 
 // Frais pour un choix du client (aperçu sur la page Vos informations, puis à la commande)
 // now : heure de la commande, qui décide du supplément de nuit

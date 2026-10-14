@@ -52,6 +52,12 @@ export const NEW_ROLES = [
   { role: 'OPERATEUR', help: 'Voit et fait avancer les commandes, vérifie les dépôts Mobile Money, rend un plat disponible ou non. Ne touche jamais d’espèces. Ni chiffres, ni prix, ni comptes.' },
   { role: 'LIVREUR', help: 'Voit seulement ses courses du jour (client, adresse, plats et frais de livraison à encaisser, sans autre montant) et valide la remise avec le code du client.' },
 ];
+// Interrupteur LIVREURS_INDEPENDANTS ouvert : troisième choix, un Livreur « Indépendant »
+export const INDEPENDENT_ROLE = {
+  key: 'INDEPENDANT', role: 'LIVREUR', independent: true, label: 'Livreur indépendant',
+  help: 'Livre les commandes du mode « Livreurs indépendants ». Voit seulement ses courses du jour, sans aucun montant : il règle ses frais directement avec le client. Valide la remise avec le code du client.',
+};
+const roleKey = (r) => r.key || r.role;
 
 // Actions de la page Équipe du Patron (lot 5b : la page Livraison a les siennes, mêmes écrans)
 const PATRON_ACTIONS = {
@@ -63,7 +69,7 @@ const PATRON_ACTIONS = {
 };
 
 function NewMember({ roles, actions, onCreated, onCancel }) {
-  const [form, setForm] = useState({ role: roles[0].role, name: '', phone: '', password: provisionalPassword() });
+  const [form, setForm] = useState({ choice: roleKey(roles[0]), name: '', phone: '', password: provisionalPassword() });
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
   const set = (field) => (value) => setForm((f) => ({ ...f, [field]: value }));
@@ -76,7 +82,9 @@ function NewMember({ roles, actions, onCreated, onCancel }) {
     setError('');
     setSending(true);
     try {
-      const member = await actions.create(form);
+      const { choice, ...fields } = form;
+      const picked = roles.find((r) => roleKey(r) === choice) || roles[0];
+      const member = await actions.create({ ...fields, role: picked.role, ...(picked.independent && { independent: true }) });
       onCreated(member, form.password);
     } catch (err) {
       setError(err.message);
@@ -89,9 +97,9 @@ function NewMember({ roles, actions, onCreated, onCancel }) {
       <h2>Nouveau compte</h2>
       <div className="cr-pick" role="radiogroup" aria-label="Rôle">
         {roles.map((r) => (
-          <label key={r.role} className="cr-opt">
-            <input type="radio" name="tm-role" value={r.role} checked={form.role === r.role} onChange={() => set('role')(r.role)} />
-            <span><b>{ROLE_LABEL[r.role]}</b><small>{r.help}</small></span>
+          <label key={roleKey(r)} className="cr-opt">
+            <input type="radio" name="tm-role" value={roleKey(r)} checked={form.choice === roleKey(r)} onChange={() => set('choice')(roleKey(r))} />
+            <span><b>{r.label || ROLE_LABEL[r.role]}</b><small>{r.help}</small></span>
           </label>
         ))}
       </div>
@@ -191,7 +199,7 @@ function Member({ m, me, onChange, actions }) {
     <li className={`st-box tm-member${m.isActive ? '' : ' off'}`}>
       <div className="tm-top">
         <b className="tm-name">{m.name}</b>
-        <span className={`tm-role r-${m.role}`}>{ROLE_LABEL[m.role]}</span>
+        <span className={`tm-role r-${m.role}`}>{m.courierTeam === 'INDEPENDANT' ? 'Livreur indépendant' : ROLE_LABEL[m.role]}</span>
         {isMe && <span className="tm-me">C’est vous</span>}
         {!m.isActive && <span className="tm-off">Désactivé</span>}
       </div>
@@ -245,11 +253,12 @@ function Member({ m, me, onChange, actions }) {
 
 // /equipe/equipe (Patron) : comptes de l'équipe. L'API refuse aussi ces actions à l'Opérateur.
 export default function TeamPage() {
+  const { features } = useStaff();
   return (
     <TeamManager
       title="Équipe"
       intro="Les comptes de l’espace équipe. Chacun se connecte avec son numéro et son propre mot de passe."
-      roles={NEW_ROLES}
+      roles={features.LIVREURS_INDEPENDANTS === true ? [...NEW_ROLES, INDEPENDENT_ROLE] : NEW_ROLES}
       actions={PATRON_ACTIONS}
     />
   );

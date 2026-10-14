@@ -768,6 +768,19 @@ lourd. Détails : README « Tableau de bord d'un coup d'œil ».
   1,8 s, mois précédent 2,7 s au lieu de 10 à 14 s) : **attend l'accord du client**.
 - [x] 4. Documentation, enregistrement local. **STOP avant la mise en ligne** (rien sur GitHub sans accord écrit).
 
+### Livreurs indépendants (14 octobre 2026, pas encore en ligne)
+
+Troisième mode de livraison, option (a) choisie par le client : compte Livreur « Indépendant » créé par le Patron.
+Derrière l'interrupteur `LIVREURS_INDEPENDANTS`, fermé par défaut. Détails : README « Livreurs indépendants ».
+
+- [x] Code et tests (`backend/test/livreurs-independants.test.js`, interrupteur fermé = rien ne change, prouvé).
+- [x] Migration `20261014120000_livreurs_independants` écrite sans base (`ALTER TYPE "DeliveryOperator" ADD VALUE 'INDEPENDANT'`).
+- [ ] Sauvegarde Neon de dev par le client, puis migration appliquée sur dev (`npm run db:deploy`), avec son accord écrit.
+- [ ] Essais sur dev (interrupteur ouvert sur dev seulement), puis refermé.
+- [ ] Envoi sur GitHub avec l'accord écrit du client (Render applique alors la migration en production :
+  sauvegarde de production avant).
+- [ ] Modèles Meta `…_independant` à soumettre seulement avant l'envoi automatique.
+
 ## Démonstration commerciale (base dev)
 
 Pour la présentation commerciale à Belchicken : un mois d'activité fictive sur la base **dev** seulement (tableau de

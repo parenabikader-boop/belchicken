@@ -158,7 +158,12 @@ function Course({ course: c, onDelivered, onPickedUp, onRefresh }) {
       {upcoming && <PickUp course={c} onPickedUp={onPickedUp} onRefresh={onRefresh} />}
 
       {/* Frais de livraison : le seul montant que le livreur voit */}
-      {c.feePaidBefore || c.deliveryFee === 0 ? (
+      {c.independent ? (
+        <p className="lv-fee paid">
+          <span>Frais de livraison : avec le client</span>
+          <small>Livreur indépendant : vous réglez vos frais directement avec le client, hors commande{c.deliveryZoneName && ` · ${c.deliveryZoneName}`}.</small>
+        </p>
+      ) : c.feePaidBefore || c.deliveryFee === 0 ? (
         <p className="lv-fee paid">
           <span>{c.deliveryFee === 0 ? 'Livraison offerte' : 'Frais déjà payés'}</span>
           <small>Rien à encaisser pour cette course{c.deliveryZoneName && ` · ${c.deliveryZoneName}`}.</small>
@@ -260,7 +265,7 @@ function PickUp({ course: c, onPickedUp, onRefresh }) {
 function Handover({ course: c, onDelivered, onRefresh }) {
   const [code, setCode] = useState('');
   const [feeMethod, setFeeMethod] = useState('');
-  const needMethod = !c.feePaidBefore && c.deliveryFee !== 0; // livraison offerte : rien à encaisser
+  const needMethod = !c.independent && !c.feePaidBefore && c.deliveryFee !== 0; // livraison offerte ou livreur indépendant : rien à noter
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 

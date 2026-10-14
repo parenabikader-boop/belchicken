@@ -29,10 +29,11 @@ export async function createOrder(input, agent = null) {
   const delivery = input.mode !== 'A_EMPORTER';
   // Frais de livraison : calculés ici avec la grille du Patron et copiés dans la commande
   // (grille vide : rien, l'équipe les saisit comme avant)
-  const fee = delivery ? orderFeeFields(await quoteForOrder(input.delivery, input.location)) : {};
   // Lot 5 : qui livre et encaisse les frais, figé ici (mode Restaurant sans réglage du Prestataire).
   // À emporter : pas de livraison, donc Restaurant.
   const deliveryOperator = delivery ? await getDeliveryMode() : 'RESTAURANT';
+  // Livreurs indépendants : aucun frais dans la commande (réglés entre le client et le livreur), grille ignorée
+  const fee = delivery && deliveryOperator !== 'INDEPENDANT' ? orderFeeFields(await quoteForOrder(input.delivery, input.location)) : {};
 
   const data = {
     mode: input.mode,
@@ -116,6 +117,8 @@ export function toPublicOrder(order, ctx = { payment: env.payment }) {
     // Quartier choisi (copié à la commande) ; A_CONFIRMER = frais confirmés par l'équipe au téléphone
     deliveryZoneName: order.deliveryZoneName ?? null,
     deliveryFeeSource: order.deliveryFeeSource ?? null,
+    // Livreur indépendant : frais à régler directement au livreur, hors commande (champ absent sinon)
+    ...(order.mode !== 'A_EMPORTER' && order.deliveryOperator === 'INDEPENDANT' && { independentDelivery: true }),
     // Frais payés au livreur à la réception (espèces ou mobile money) : payés une fois la commande remise
     deliveryFeePaid: order.deliveryFeeMethod != null,
     // Codes marchands avec le montant des frais (les mêmes que dans les messages), tant qu'ils sont attendus

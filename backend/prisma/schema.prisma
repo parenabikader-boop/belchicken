@@ -65,9 +65,12 @@ enum FeePaymentMethod {
 // Lot 5 : qui livre et encaisse les frais de livraison. RESTAURANT = fonctionnement d'avant le lot 5
 // (livreurs du restaurant, frais sur les codes ECOFOOD). PRESTATAIRE = notre équipe de livreurs, frais
 // sur nos codes marchands. Noté sur chaque commande à sa création (src/services/delivery-mode.js).
+// INDEPENDANT (livreurs indépendants, interrupteur LIVREURS_INDEPENDANTS) : livreurs créés par le Patron, frais
+// réglés directement entre le client et le livreur, jamais dans la commande, la Caisse ni les chiffres.
 enum DeliveryOperator {
   RESTAURANT
   PRESTATAIRE
+  INDEPENDANT
 }
 
 // Lot 5b : disponibilité d'un livreur, choisie par lui (page Courses) ou par l'équipe. « En course » n'est

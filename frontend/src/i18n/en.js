@@ -173,6 +173,7 @@ export default {
     },
     paidToCourier: 'Paid to the delivery rider on arrival, in cash or by mobile money with the merchant code.',
     toConfirm: 'Confirmed by our team by phone',
+    independent: 'Delivery fee: paid directly to the rider on delivery. It is not included in your payment.',
   },
   date: {
     time,

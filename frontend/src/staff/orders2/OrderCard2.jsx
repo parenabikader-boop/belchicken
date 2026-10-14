@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { formatPrice } from '../../utils/format.js';
-import { FEE_METHOD_LABEL, feeText, formatTime, isPartner, isPickup, METHOD_LABEL, statusLabel } from '../orders/labels.js';
+import { FEE_METHOD_LABEL, feeText, formatTime, isIndependent, isPartner, isPickup, METHOD_LABEL, statusLabel } from '../orders/labels.js';
 import { shortLabel, waitLevel, waitMinutes, waitText } from './waiting.js';
 
 // Ce qui compte pour l'étape (même texte que la page actuelle, OrdersList.jsx, qui ne change pas)
@@ -10,6 +10,8 @@ export function stageDetail(o) {
     if (o.status === 'LIVREE') return 'Retirée au comptoir';
     return 'À emporter · sans frais';
   }
+  // Livreur indépendant : aucun frais dans la commande
+  if (isIndependent(o) && ['PAIEMENT_A_VERIFIER', 'PAYEE'].includes(o.status)) return `${o.deliveryZoneName ? `${o.deliveryZoneName} · ` : ''}livreur indépendant`;
   if (o.status === 'PAIEMENT_A_VERIFIER') {
     if (o.deliveryFeeSource === 'A_CONFIRMER') return 'Frais à confirmer au téléphone';
     if (o.deliveryFee != null) return `${o.deliveryZoneName ? `${o.deliveryZoneName} · ` : ''}frais ${feeText(o.deliveryFee)}`;

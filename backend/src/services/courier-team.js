@@ -14,7 +14,7 @@ import { deliveryProofs } from './dispatch.js';
 
 export const AVAILABILITIES = ['DISPONIBLE', 'EN_PAUSE'];
 export const STATE_LABEL = { DISPONIBLE: 'Disponible', EN_PAUSE: 'En pause', EN_COURSE: 'En course' };
-export const TEAM_LABEL = { RESTAURANT: 'Restaurant', PRESTATAIRE: 'Notre équipe' };
+export const TEAM_LABEL = { RESTAURANT: 'Restaurant', PRESTATAIRE: 'Notre équipe', INDEPENDANT: 'Indépendant' };
 
 export const teamOf = (courier) => courier?.courierTeam || 'RESTAURANT';
 export const orderTeam = (order) => order?.deliveryOperator || 'RESTAURANT';
@@ -35,9 +35,9 @@ export function courierState(courier, activeCourses, active) {
 export function courierTeamError(order, courier, active) {
   const team = orderTeam(order);
   if (teamOf(courier) !== team) {
-    return team === 'PRESTATAIRE'
-      ? 'Cette commande est livrée par notre partenaire : choisissez un livreur de son équipe.'
-      : 'Cette commande est livrée par le restaurant : choisissez un livreur du restaurant.';
+    if (team === 'PRESTATAIRE') return 'Cette commande est livrée par notre partenaire : choisissez un livreur de son équipe.';
+    if (team === 'INDEPENDANT') return 'Cette commande est livrée par un livreur indépendant : choisissez un livreur indépendant.';
+    return 'Cette commande est livrée par le restaurant : choisissez un livreur du restaurant.';
   }
   if (active && courier.availability === 'EN_PAUSE') return `${courier.name} est en pause : choisissez un livreur disponible.`;
   return null;

@@ -15,10 +15,20 @@ const password = (label, min = PASSWORD_MIN_LENGTH) =>
 export const MEMBER_ROLES = ['OPERATEUR', 'LIVREUR'];
 
 // Nouveau compte Opérateur ou Livreur : le mot de passe donné est provisoire
+// independent : Livreur « Indépendant » (interrupteur LIVREURS_INDEPENDANTS, vérifié par independentMemberError)
 export const createMemberSchema = z.object({
   role: z.enum(MEMBER_ROLES, { errorMap: () => ({ message: 'Choisissez le rôle : Opérateur ou Livreur.' }) }).default('OPERATEUR'),
+  independent: z.boolean().optional(),
   ...memberFields(),
 });
+
+// Livreur « Indépendant » demandé par le Patron : null si permis (ou pas demandé), sinon le message
+export function independentMemberError({ role, independent }, independentOpen) {
+  if (!independent) return null;
+  if (role !== 'LIVREUR') return 'Seul un compte Livreur peut être indépendant.';
+  if (!independentOpen) return 'Les livreurs indépendants ne sont pas inclus dans votre formule.';
+  return null;
+}
 
 // Lot 5b : compte de notre équipe de livraison (page Livraison ou Prestataire). Le rôle est vérifié
 // ensuite selon qui crée (deliveryCreateError, courier-team.js).

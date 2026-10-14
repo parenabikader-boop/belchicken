@@ -5,6 +5,8 @@
 // Lot 5c, livraison par notre partenaire (Order.deliveryOperator = PRESTATAIRE) :
 //   … -> EN_PREPARATION -> PRETE_LIVRAISON -> EN_LIVRAISON -> LIVREE. « Prête pour livraison » est posé par
 //   l'équipe du restaurant ; EN_LIVRAISON seulement par « Commande récupérée » (dispatch.js).
+// Livreurs indépendants (Order.deliveryOperator = INDEPENDANT) : même parcours que la livraison par le
+//   restaurant, sans aucun frais de livraison dans la commande (réglés entre le client et le livreur).
 // ANNULEE possible depuis tout statut sauf LIVREE et ANNULEE, avec un motif obligatoire.
 // Aucun passage automatique : PAYEE est posé à la main, après vérification sur le téléphone marchand.
 
@@ -20,6 +22,9 @@ export const FLOW = FLOWS.LIVRAISON;
 export const flowKey = (mode = 'LIVRAISON', operator = 'RESTAURANT') =>
   mode === 'A_EMPORTER' ? 'A_EMPORTER' : operator === 'PRESTATAIRE' ? 'PARTENAIRE' : 'LIVRAISON';
 export const isPartnerDelivery = (order) => order?.mode !== 'A_EMPORTER' && order?.deliveryOperator === 'PRESTATAIRE';
+// Livraison par un livreur indépendant : aucun frais de livraison dans la commande, ni à saisir, ni à encaisser
+export const isIndependentDelivery = (order) => order?.mode !== 'A_EMPORTER' && order?.deliveryOperator === 'INDEPENDANT';
+export const INDEPENDENT_NO_FEE = 'Livreur indépendant : les frais de livraison se règlent directement entre le client et le livreur, pas dans la commande.';
 export const ACTIVE = ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE_LIVRAISON', 'EN_LIVRAISON', 'PRETE'];
 export const INITIAL_STATUS = 'PAIEMENT_A_VERIFIER';
 export const isPickup = (order) => order?.mode === 'A_EMPORTER';
@@ -83,10 +88,12 @@ export const FEE_METHOD_LABEL = { ESPECES: 'Espèces', MOBILE_MONEY: 'Mobile mon
 export const feeAlreadyPaid = (order) => order.deliveryFeeMethod != null;
 
 // Le livreur a-t-il des frais à encaisser à la remise ? Non pour une livraison offerte (0 F).
-export const feeToCollect = (order) => !isPickup(order) && !feeAlreadyPaid(order) && order.deliveryFee !== 0;
+// Livreur indépendant : non plus, il s'arrange directement avec le client.
+export const feeToCollect = (order) => !isPickup(order) && !isIndependentDelivery(order) && !feeAlreadyPaid(order) && order.deliveryFee !== 0;
 
 // Avant le départ du livreur : null si permis, sinon le message
 export function deliveryError(order) {
+  if (isIndependentDelivery(order)) return null;
   if (order.deliveryFee == null) return 'Saisissez d’abord les frais de livraison : le livreur les encaisse à la réception.';
   return null;
 }
@@ -95,8 +102,10 @@ export function deliveryError(order) {
 // « paiement confirmé » les annonce au client
 // À emporter : pas de frais de livraison. current : frais déjà dans la commande (grille), gardés tels quels
 // même à 0 F (livraison offerte) ; un montant tapé par l'agent est d'au moins 1 F.
-export function paymentConfirmError(fee, mode = 'LIVRAISON', current = null) {
+// operator INDEPENDANT : aucun frais dans la commande.
+export function paymentConfirmError(fee, mode = 'LIVRAISON', current = null, operator = 'RESTAURANT') {
   if (mode === 'A_EMPORTER') return fee == null ? null : 'Commande à emporter : pas de frais de livraison.';
+  if (operator === 'INDEPENDANT') return fee == null ? null : INDEPENDENT_NO_FEE;
   if (fee == null) return 'Indiquez les frais de livraison : ils sont annoncés au client avec la confirmation du paiement.';
   if (current != null && fee === current) return null;
   if (!Number.isInteger(fee) || fee < FEE_MIN || fee > FEE_MAX) return 'Frais de livraison invalides (de 1 F à 50 000 F).';

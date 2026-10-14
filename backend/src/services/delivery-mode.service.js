@@ -17,8 +17,15 @@ const pick = (row) => Object.fromEntries(FIELDS.map((f) => [f, row?.[f] ?? DEFAU
 // Notre société (pas de ligne = mode Restaurant, rien de rempli)
 export const getCompany = async (db = prisma) => pick(await db.deliveryCompany.findUnique({ where: { id: 1 } }));
 
-// Mode des nouvelles commandes (noté sur la commande à sa création)
-export const getDeliveryMode = async (db = prisma) => effectiveMode(await getCompany(db));
+// Interrupteur LIVREURS_INDEPENDANTS (fermé sans ligne)
+const independentOpen = (db = prisma) => isFeatureOpen('LIVREURS_INDEPENDANTS', db);
+
+// Mode des nouvelles commandes (noté sur la commande à sa création). L'interrupteur n'est lu que pour le
+// mode Indépendants : en mode Restaurant ou Prestataire, rien de plus n'est demandé à la base.
+export async function getDeliveryMode(db = prisma) {
+  const company = await getCompany(db);
+  return effectiveMode(company, { independentOpen: company.mode === 'INDEPENDANT' && (await independentOpen(db)) });
+}
 
 // Commandes en mode Prestataire dont le client va encore payer les frais sur nos codes
 const awaitingFeesWhere = {
@@ -46,14 +53,16 @@ async function reviewLinkFor(order) {
 
 // Page Prestataire : réglages, ce qui manque pour le mode Prestataire, commandes qui attendent nos codes
 export async function getCompanyPage() {
-  const [company, awaitingFees, row] = await Promise.all([
+  const [company, awaitingFees, row, indep] = await Promise.all([
     getCompany(),
     prisma.order.count({ where: awaitingFeesWhere }),
     prisma.deliveryCompany.findUnique({ where: { id: 1 }, select: { updatedAt: true, updatedByName: true } }),
+    independentOpen(),
   ]);
   return {
     company,
-    effectiveMode: effectiveMode(company),
+    effectiveMode: effectiveMode(company, { independentOpen: indep }),
+    independentOpen: indep, // troisième choix « Livreurs indépendants » proposé
     ready: companyReady(company),
     missing: missingForPrestataire(company),
     awaitingFees,
@@ -67,7 +76,11 @@ export async function updateCompany(input, staff, meta) {
   await prisma.$transaction(async (tx) => {
     const before = await getCompany(tx);
     const after = { ...before, ...cleanCompanyInput(input) };
-    const error = companyUpdateError(after, { awaitingFees: await tx.order.count({ where: awaitingFeesWhere }) });
+    const error = companyUpdateError(after, {
+      awaitingFees: await tx.order.count({ where: awaitingFeesWhere }),
+      independentOpen: await independentOpen(tx),
+      previousMode: before.mode,
+    });
     if (error) throw new AppError(400, error, 'LIVRAISON_REFUSEE');
     const changes = companyChanges(before, after);
     if (!changes.length) return;

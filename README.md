@@ -633,6 +633,30 @@ table `DeliveryCompany`, une ligne ; pas de ligne = mode Restaurant). Règles : 
 - Journal de sécurité : `MOT_DE_PASSE` (mot de passe du Prestataire changé dans l'application) et `LIVRAISON` (mode,
   société, codes).
 
+## Livreurs indépendants (troisième mode de livraison)
+
+Interrupteur `LIVREURS_INDEPENDANTS` (page Prestataire), **fermé sans ligne** : fermé, le troisième choix n'apparaît pas,
+l'API le refuse, et un mode déjà enregistré compte comme Restaurant. Rien ne change pour les modes Restaurant et
+Prestataire (`backend/test/livreurs-independants.test.js`). Migration `20261014120000_livreurs_independants` (valeur
+`INDEPENDANT` de `DeliveryOperator`, aucune donnée).
+
+- **Mode** : troisième choix « Livreurs indépendants » du « Mode de livraison » (page Prestataire), sans société ni codes.
+  Figé sur chaque commande (`Order.deliveryOperator = INDEPENDANT`) ; à emporter = toujours Restaurant.
+- **Comptes** : le Patron crée un Livreur « Indépendant » (page Équipe, `POST /api/staff/team` avec `independent: true`,
+  refusé interrupteur fermé), équipe `StaffUser.courierTeam = INDEPENDANT`. Seuls ces livreurs partent avec ces commandes.
+- **Aucun montant de livraison** : pas de grille ni de supplément de nuit (`GET /api/delivery/grid` renvoie
+  `{ active: false, independent: true }`), rien à saisir en confirmant le paiement, rien à demander au départ ni à la
+  remise, aucune correction (`feeEditRight`). Ces commandes n'entrent jamais dans la Caisse, le relevé, les ventes ni les
+  frais du tableau de bord (`feeCounted`). Elles comptent dans les délais et la carte des livreurs.
+- **Course** : livreur, étapes, code de remise, délais, comme le mode Restaurant. Le livreur voit « Frais de livraison :
+  avec le client » (`independent: true` dans sa course), sans montant.
+- **Client** (site, suivi, messages) : « Frais de livraison : à régler directement au livreur, à la réception. Ils ne sont
+  pas compris dans votre paiement. » (`INDEPENDENT_LINE`, `fees.independent` dans `fr.js` / `en.js`), sans montant ni
+  code marchand. Page de suivi : `independentDelivery: true`.
+- **Modèles Meta en plus** (pour l'envoi automatique seulement) : `commande_paiement_confirme_independant`,
+  `commande_en_preparation_independant`, `commande_en_route_independant`, `commande_paiement_preparation_independant`
+  (version « offerte » avec la phrase des indépendants, mêmes variables ; champ `independent` dans `customer-messages.js`).
+
 ## Équipes de livraison et disponibilité (lot 5b)
 
 Suite du mode de livraison (5a, `Order.deliveryOperator`). Règles : `backend/src/services/courier-team.js`, base :

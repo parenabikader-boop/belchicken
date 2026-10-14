@@ -4,7 +4,7 @@ import { formatPrice } from '../../utils/format.js';
 import { hourLabel, nightLine } from '../../utils/deliveryFee.js';
 import { useStaff } from '../StaffContext.jsx';
 import { useAppSettings } from '../settings/useAppSettings.js';
-import { ACTIVE, canEditFee, deliveryBlock, feeOrigin, feeText, FEE_METHODS, formatPhone, formatTime, isPartner, isPickup, METHOD_LABEL, nextAction, proofLines } from './labels.js';
+import { ACTIVE, canEditFee, deliveryBlock, feeOrigin, feeText, FEE_METHODS, formatPhone, formatTime, INDEPENDENT_NOTE, isIndependent, isPartner, isPickup, METHOD_LABEL, nextAction, proofLines } from './labels.js';
 
 // « 1 500 » -> 1500 ; champ vide -> NaN (jamais 0 par erreur : 0 F = livraison offerte)
 const toAmount = (v) => (v.trim() === '' ? NaN : Number(v.replace(/\s/g, '')));
@@ -218,6 +218,7 @@ export function Actions({ order: o, steps }) {
   const next = nextAction(o, { shortFlow });
   const pickup = isPickup(o);
   const partner = isPartner(o); // lot 5c : livrée par notre partenaire
+  const noFee = pickup || isIndependent(o); // à emporter ou livreur indépendant : aucun frais dans la commande
   const [mode, setMode] = useState(null); // null | 'confirm' | 'depart' | 'handover' | 'counter' | 'pickedUp' | 'cancel'
   const [reason, setReason] = useState('');
   const [fee, setFee] = useState('');
@@ -244,22 +245,22 @@ export function Actions({ order: o, steps }) {
   const amount = toAmount(fee);
   // Frais calculés par la grille et changés par l'agent : c'est une correction, avec un motif
   const gridFee = o.deliveryFee;
-  const changed = !pickup && gridFee != null && amount !== gridFee;
+  const changed = !noFee && gridFee != null && amount !== gridFee;
   // Frais tapés par l'agent (à confirmer, grille vide, ou changés) : « dont supplément de nuit » facultatif
-  const typed = !pickup && (gridFee == null || changed);
+  const typed = !noFee && (gridFee == null || changed);
   const nightFee = toNight(night);
-  const feeOk = pickup || ((Number.isInteger(amount) && (amount === gridFee || amount >= 1)) && (!changed || feeReason.trim().length >= 3) && (!typed || nightOk(nightFee, amount)));
+  const feeOk = noFee || ((Number.isInteger(amount) && (amount === gridFee || amount >= 1)) && (!changed || feeReason.trim().length >= 3) && (!typed || nightOk(nightFee, amount)));
 
   if (mode === 'confirm' && o.status === 'PAIEMENT_A_VERIFIER') {
     return (
-      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: next.to, ...(pickup ? {} : { deliveryFee: amount, ...(changed ? { feeReason } : {}), ...(typed ? { nightFee } : {}) }) })); }}>
+      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: next.to, ...(noFee ? {} : { deliveryFee: amount, ...(changed ? { feeReason } : {}), ...(typed ? { nightFee } : {}) }) })); }}>
         <b>Avez-vous vérifié le paiement sur le téléphone marchand ?</b>
         <p>
           <strong>{formatPrice(o.itemsTotal)}</strong> reçus par {METHOD_LABEL[o.paymentMethod]}
           {o.paymentPayerPhone && <> depuis le <strong>{formatPhone(o.paymentPayerPhone)}</strong></>}.
         </p>
-        {pickup ? (
-          <p className="st-muted">Commande à emporter : pas de frais de livraison.</p>
+        {noFee ? (
+          <p className="st-muted">{pickup ? 'Commande à emporter : pas de frais de livraison.' : INDEPENDENT_NOTE}</p>
         ) : (
           <>
             <label htmlFor="st-fee" className="st-fee-label">
@@ -331,7 +332,7 @@ export function Actions({ order: o, steps }) {
   // Client sans son code : l'agent valide à la place du livreur, avec un motif et la façon dont
   // les frais ont été payés au livreur (comme le livreur le fait avec le code)
   if (mode === 'handover' && o.status === 'EN_LIVRAISON') {
-    const needMethod = !o.feeAlreadyPaid && o.deliveryFee !== 0; // rien à encaisser pour une livraison offerte
+    const needMethod = !isIndependent(o) && !o.feeAlreadyPaid && o.deliveryFee !== 0; // rien à encaisser pour une livraison offerte
     return (
       <form className="st-action cancel" onSubmit={async (e) => { e.preventDefault(); if (await go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'LIVREE', reason, feeMethod: needMethod ? feeMethod : undefined }))) setReason(''); }}>
         <label htmlFor="st-handover"><b>Pourquoi valider la livraison sans le code ?</b></label>
@@ -339,7 +340,7 @@ export function Actions({ order: o, steps }) {
         {needMethod ? (
           <FeeMethodPicker fee={o.deliveryFee} value={feeMethod} onChange={setFeeMethod} />
         ) : (
-          <p className="st-muted">{o.deliveryFee === 0 ? 'Livraison offerte : rien à encaisser.' : 'Frais de livraison déjà payés avant le départ du livreur.'}</p>
+          <p className="st-muted">{isIndependent(o) ? INDEPENDENT_NOTE : o.deliveryFee === 0 ? 'Livraison offerte : rien à encaisser.' : 'Frais de livraison déjà payés avant le départ du livreur.'}</p>
         )}
         <p className="st-muted">À faire seulement si la commande a bien été remise. Le motif est noté dans l’historique.</p>
         {steps.error && <p className="st-err">{steps.error}</p>}
@@ -486,7 +487,20 @@ export function Actions({ order: o, steps }) {
 // Corrigeables avec un motif : par toute l'équipe jusqu'au départ du livreur, par le Patron seulement ensuite
 // (le client reçoit alors le nouveau montant). Payés au livreur à la réception : une fois la commande
 // livrée, on voit comment, et l'agent coche le mobile money après vérification sur le téléphone marchand.
-export function DeliveryFee({ order: o, steps }) {
+export function DeliveryFee(props) {
+  // Livreur indépendant : aucun montant, seulement la mention
+  if (isIndependent(props.order)) {
+    return (
+      <section className="st-box of-fee">
+        <h2>Frais de livraison</h2>
+        <p className="st-note">{INDEPENDENT_NOTE}</p>
+      </section>
+    );
+  }
+  return <DeliveryFeeAmount {...props} />;
+}
+
+function DeliveryFeeAmount({ order: o, steps }) {
   const { user } = useStaff();
   const editable = o.deliveryFee != null && canEditFee(o, user.role);
   const patronOnly = o.feeEdit === 'PATRON';

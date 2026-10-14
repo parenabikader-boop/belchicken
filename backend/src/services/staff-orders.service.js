@@ -354,7 +354,7 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, n
       // Lot 5c : une commande Prestataire part avec « Commande récupérée », jamais par ce bouton
       (to === 'EN_LIVRAISON' && partner ? PARTNER_ONLY : null) ||
       (to !== 'ANNULEE' ? noticeError(notice(order)) : null) ||
-      (paying ? paymentConfirmError(fee, order.mode, order.deliveryFee) : null) ||
+      (paying ? paymentConfirmError(fee, order.mode, order.deliveryFee, order.deliveryOperator) : null) ||
       night?.error ||
       // Frais de la grille changés par l'agent en confirmant le paiement : c'est une correction, avec un motif
       (paying && !pickup && order.deliveryFee != null && fee !== order.deliveryFee && (!feeReason || feeReason.trim().length < 3)
