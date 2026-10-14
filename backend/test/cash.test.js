@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cashByCourier, remitError, remitTotal } from '../src/services/cash.js';
+import { cashByCourier, cashFor, remitError, remitTotal } from '../src/services/cash.js';
 
 // Caisse : espèces des frais de livraison encore chez les livreurs, et « Espèces remises »
 const now = new Date('2026-10-06T18:00:00Z');
@@ -32,4 +32,11 @@ test('espèces remises : seulement les courses en espèces de ce livreur, pas en
   assert.match(remitError(ok, 'ali', ['BC-1', 'BC-2']), /pas été livrée par ce livreur/);
   assert.match(remitError([{ ...ok[0], deliveryFeeMethod: 'MOBILE_MONEY' }], 'issa', ['BC-1']), /pas été payée en espèces/);
   assert.match(remitError([{ ...ok[0], cashRemittanceId: 'r1' }], 'issa', ['BC-1']), /déjà remises/);
+});
+
+test('le call center ne touche jamais d’espèces : l’Opérateur voit seulement les frais à vérifier', () => {
+  const all = { toVerify: [{ reference: 'BC-1' }], verified: [], couriers: [{ courierId: 'issa', amount: 3000 }], remittances: [{ id: 'r1' }] };
+  assert.deepEqual(cashFor(all, 'OPERATEUR'), { toVerify: all.toVerify, verified: [], couriers: null, remittances: null });
+  assert.equal(cashFor(all, 'PATRON'), all);
+  assert.equal(cashFor(all, 'PRESTATAIRE'), all);
 });

@@ -417,9 +417,10 @@ Connexion par numéro de téléphone et mot de passe ; trois rôles : `PATRON` (
   `{ verified }` (`Order.deliveryFeeVerifiedAt`, événements `FRAIS_VERIFIES` / `FRAIS_NON_VERIFIES`). Règles dans
   `src/services/order-status.js`. Anciennes commandes (avant le 6 octobre 2026, frais reçus avant le départ) : notées
   `MOBILE_MONEY` par la migration `frais_au_livreur`, le livreur voit « Frais déjà payés ».
-- Caisse (Patron et Opérateur), page `/equipe/caisse` (`frontend/src/staff/cash/`), deux onglets :
-  « Frais à vérifier » (mobile money pas encore vérifié) et « Caisse livreurs » (espèces encore chez chaque livreur,
-  dont celles des jours précédents). `GET /api/staff/caisse` ; « Espèces remises » : `POST /api/staff/caisse/remises`
+- Caisse, page `/equipe/caisse` (`frontend/src/staff/cash/`), deux onglets :
+  « Frais à vérifier » (mobile money pas encore vérifié, Patron et Opérateur) et « Caisse livreurs » (espèces encore chez
+  chaque livreur, dont celles des jours précédents, **Patron seulement**). Le call center (Opérateur) ne touche jamais
+  d'espèces : l'API ne lui envoie ni les espèces ni les remises (`cashFor()`), et refuse « Espèces remises » (403). `GET /api/staff/caisse` ; « Espèces remises » : `POST /api/staff/caisse/remises`
   `{ courierId, references }` crée une `CashRemittance` (livreur, montant, nombre de courses, qui l'a reçue, quand) et la
   relie aux commandes (`Order.cashRemittanceId`). Règles dans `src/services/cash.js` (testées dans `test/cash.test.js`).
 - Message préparé : `POST /api/staff/orders/:reference/messages` `{ key }` (voir « Messages WhatsApp au client »).
@@ -657,7 +658,7 @@ Suite du mode de livraison (5a, `Order.deliveryOperator`). Règles : `backend/sr
   nos courses en cours, frais de livraison seulement), `GET/POST /api/staff/livraison/equipe`,
   `POST …/equipe/:id/password|deactivate|reactivate`, `GET /api/staff/livraison/caisse`, `POST …/caisse/remises`,
   `POST …/caisse/:reference/verifie { verified }`. Sur la page Équipe du Patron, notre équipe apparaît sans numéro ni action.
-- **Caisse séparée** : la page Caisse (Patron, Opérateur) ne montre que les commandes en mode Restaurant ; celles en mode
+- **Caisse séparée** : la page Caisse (Patron ; Opérateur pour les frais à vérifier seulement) ne montre que les commandes en mode Restaurant ; celles en mode
   Prestataire sont dans notre caisse (page Livraison). Une vérification ou une remise est refusée dans la mauvaise caisse
   (`CashRemittance.operator`). Tableau de bord : frais de notre partenaire comptés à part (`partnerFees`), jamais dans ceux du restaurant.
 - Migration `20261010180000_livraison_equipes_5b` : structure seulement, aucune ligne écrite.

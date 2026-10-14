@@ -100,6 +100,7 @@ test('rien ne change pour les autres rôles : le Livreur reste sur ses courses, 
   assert.equal(allowed(get('GET /orders'), 'LIVREUR'), false);
   assert.equal(allowed(get('PUT /orders/livreurs/:id/disponibilite'), 'OPERATEUR'), true);
   assert.equal(allowed(get('GET /caisse'), 'OPERATEUR'), true);
+  assert.equal(allowed(get('POST /orders/:reference/delivery-fee/verified'), 'OPERATEUR'), true); // vérifier le mobile money
   assert.equal(allowed(get('GET /dashboard'), 'OPERATEUR'), false);
   assert.equal(allowed(get('GET /dashboard'), 'PATRON'), true);
 });
@@ -166,4 +167,11 @@ test('tableau de bord, bloc « Aujourd’hui » : Patron et Prestataire seulemen
   for (const role of ['PATRON', 'PRESTATAIRE']) assert.equal(allowed(r, role), true, role);
   for (const role of ['OPERATEUR', 'LIVREUR', 'RESPONSABLE_LIVRAISON']) assert.equal(allowed(r, role), false, role);
   assert.ok(r.features.includes('TABLEAU_DE_BORD'));
+});
+
+test('« Espèces remises » : Patron et Prestataire seulement, jamais l’Opérateur (le call center ne touche jamais d’espèces)', () => {
+  const r = ROUTES.find((x) => key(x) === 'POST /caisse/remises');
+  assert.ok(r, 'adresse introuvable');
+  for (const role of ['PATRON', 'PRESTATAIRE']) assert.equal(allowed(r, role), true, role);
+  for (const role of ['OPERATEUR', 'LIVREUR', 'RESPONSABLE_LIVRAISON']) assert.equal(allowed(r, role), false, role);
 });

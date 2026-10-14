@@ -5,9 +5,20 @@
 // - Espèces : le livreur les garde jusqu'à ce qu'il les remette au restaurant. « Espèces remises »
 //   regroupe toutes les courses payées en espèces qu'il avait encore sur lui (CashRemittance).
 // - Lot 5b : deux caisses, jamais mélangées, selon le mode de la commande (Order.deliveryOperator) :
-//   RESTAURANT (page Caisse, Patron et Opérateur) et PRESTATAIRE (page Livraison, notre Responsable
+//   RESTAURANT (page Caisse) et PRESTATAIRE (page Livraison, notre Responsable
 //   livraison et le Prestataire). Les commandes d'avant le lot 5 sont toutes RESTAURANT.
+// - Page Caisse du restaurant : vérification du mobile money (constatée sur le téléphone marchand) pour le
+//   Patron et l'Opérateur ; espèces : Patron seulement (« Espèces remises » refusé à l'Opérateur par l'API).
+//   Le call center ne touche jamais d'espèces.
+import { isPatronLevel } from './roles.js';
+
 export const CASH_OPERATORS = ['RESTAURANT', 'PRESTATAIRE'];
+
+// Ce que la page Caisse montre à ce rôle : l'Opérateur ne voit que les frais à vérifier (ni espèces, ni remises)
+export function cashFor(cash, role) {
+  if (isPatronLevel(role)) return cash;
+  return { toVerify: cash.toVerify, verified: cash.verified, couriers: null, remittances: null };
+}
 
 // La commande est-elle dans la caisse de cette page ? Renvoie null si oui, sinon le message.
 export function feeOperatorError(order, operator) {

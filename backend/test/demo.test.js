@@ -90,6 +90,18 @@ test('chaque commande respecte les règles de l’équipe et les prix du serveur
   }
 });
 
+test('espèces de la démonstration : jamais reçues par le call center, celles du restaurant par le Patron', () => {
+  assert.ok(plan.remittances.length > 0);
+  const role = (id) => plan.staff.find((x) => x.id === id)?.role;
+  for (const r of plan.remittances) {
+    assert.notEqual(role(r.receivedById), 'OPERATEUR', r.receivedByName);
+    if (r.operator === 'RESTAURANT') assert.equal(role(r.receivedById), 'PATRON', r.receivedByName);
+  }
+  const agent = plan.staff.find((x) => x.role === 'OPERATEUR');
+  const bad = { ...plan, remittances: [{ ...plan.remittances[0], receivedById: agent.id }] };
+  assert.ok(checkPlan(bad, PRODUCTS).errors.some((e) => e.includes('call center')));
+});
+
 test('plan faussé : la vérification le voit', () => {
   const o = plan.orders.find((x) => x.status === 'LIVREE' && x.mode === 'LIVRAISON');
   const bad = { ...plan, orders: [{ ...o, itemsTotal: o.itemsTotal + 500 }] };

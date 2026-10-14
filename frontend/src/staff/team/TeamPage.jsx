@@ -49,7 +49,7 @@ function Handover({ info, onClose }) {
 
 // Rôles créés depuis cette page (les comptes Patron : npm run equipe:patron)
 export const NEW_ROLES = [
-  { role: 'OPERATEUR', help: 'Voit et fait avancer les commandes, rend un plat disponible ou non. Ni chiffres, ni prix, ni comptes.' },
+  { role: 'OPERATEUR', help: 'Voit et fait avancer les commandes, vérifie les dépôts Mobile Money, rend un plat disponible ou non. Ne touche jamais d’espèces. Ni chiffres, ni prix, ni comptes.' },
   { role: 'LIVREUR', help: 'Voit seulement ses courses du jour (client, adresse, plats et frais de livraison à encaisser, sans autre montant) et valide la remise avec le code du client.' },
 ];
 

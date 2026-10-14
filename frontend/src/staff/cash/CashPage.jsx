@@ -7,9 +7,10 @@ import { formatDateTime, formatPhone, formatTime, timeAgo } from '../orders/labe
 
 const REFRESH_MS = 15000;
 
-// Page Caisse (Patron et Opérateur) : frais de livraison payés au livreur à la réception.
+// Page Caisse : frais de livraison payés au livreur à la réception. L'Opérateur (call center) ne voit que
+// « Frais à vérifier » : il ne touche jamais d'espèces (l'API ne lui envoie ni les espèces ni les remises).
 //   - Frais à vérifier : payés par mobile money (code marchand), à cocher après vérification.
-//   - Caisse livreurs : espèces encore chez chaque livreur, bouton « Espèces remises », historique.
+//   - Caisse livreurs (Patron) : espèces encore chez chaque livreur, bouton « Espèces remises », historique.
 // Adresse : ?onglet=verifier|livreurs
 // Lot 5b : seulement les commandes livrées par le restaurant ; celles de notre partenaire de livraison sont
 // dans sa caisse (page Livraison, même écran).
@@ -50,24 +51,29 @@ export function CashBoard({ tab, onTab, cashApi, partner = false }) {
     return () => clearInterval(t);
   }, [load]);
 
-  const cashTotal = data ? data.couriers.reduce((s, c) => s + c.amount, 0) : 0;
+  // Opérateur : pas d'espèces (couriers = null), un seul onglet
+  const showCash = !data || data.couriers != null;
+  const shownTab = showCash ? tab : 'verifier';
+  const cashTotal = data?.couriers ? data.couriers.reduce((s, c) => s + c.amount, 0) : 0;
 
   const ctx = { cashApi, partner };
   return (
     <>
       <nav className="od-tabs" aria-label="Caisse">
-        <button type="button" className={`od-tab${tab === 'verifier' ? ' on' : ''}${data?.toVerify.length ? ' has warn' : ''}`} aria-pressed={tab === 'verifier'} onClick={() => onTab('verifier')}>
+        <button type="button" className={`od-tab${shownTab === 'verifier' ? ' on' : ''}${data?.toVerify.length ? ' has warn' : ''}`} aria-pressed={shownTab === 'verifier'} onClick={() => onTab('verifier')}>
           Frais à vérifier <span>{data ? data.toVerify.length : '…'}</span>
         </button>
-        <button type="button" className={`od-tab${tab === 'livreurs' ? ' on' : ''}${cashTotal ? ' has' : ''}`} aria-pressed={tab === 'livreurs'} onClick={() => onTab('livreurs')}>
-          Caisse livreurs <span>{data ? formatPrice(cashTotal) : '…'}</span>
-        </button>
+        {showCash && (
+          <button type="button" className={`od-tab${tab === 'livreurs' ? ' on' : ''}${cashTotal ? ' has' : ''}`} aria-pressed={tab === 'livreurs'} onClick={() => onTab('livreurs')}>
+            Caisse livreurs <span>{data ? formatPrice(cashTotal) : '…'}</span>
+          </button>
+        )}
       </nav>
 
       {error && <div className="alert err" role="alert" style={{ marginBottom: 12 }}><span>{error} Nouvel essai automatique…</span></div>}
       {!data ? (
         !error && <p className="st-muted">Chargement de la caisse…</p>
-      ) : tab === 'verifier' ? (
+      ) : shownTab === 'verifier' ? (
         <ToVerify data={data} onChange={load} ctx={ctx} />
       ) : (
         <Couriers data={data} onChange={load} ctx={ctx} />

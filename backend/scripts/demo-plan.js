@@ -498,7 +498,8 @@ export function generatePlan({ products, now = new Date(), days = 30, prestatair
         // Les dernières 30 heures : un livreur sur trois n'est pas encore passé remettre ses espèces
         if (moment > nowMs - 30 * HOUR && rng.chance(0.35)) continue;
         const at = Math.min(moment + rng.minutes(0, 20), nowMs);
-        const receivedBy = courier.courierTeam === 'PRESTATAIRE' ? who.mariam : agentAt(moment);
+        // Le call center ne touche jamais d'espèces : celles du restaurant sont reçues par le Patron
+        const receivedBy = courier.courierTeam === 'PRESTATAIRE' ? who.mariam : who.patron;
         const remittance = { id: newId(rng), courier, receivedBy, operator: courier.courierTeam, createdAt: at, orders: list };
         remittances.push(remittance);
         for (const o of list) {
@@ -721,6 +722,8 @@ export function checkPlan(plan, products) {
     const e = remitError(list.map((o) => ({ ...o, cashRemittanceId: null })), r.courierId, list.map((o) => o.reference), r.operator);
     if (e) errors.push(`remise ${r.courierName} : ${e}`);
     if (remitTotal(list) !== r.amount || list.length !== r.orderCount) errors.push(`remise ${r.courierName} : montant ou nombre faux`);
+    // Le call center ne touche jamais d'espèces
+    if (plan.staff?.find((x) => x.id === r.receivedById)?.role === 'OPERATEUR') errors.push(`remise ${r.courierName} : reçue par un agent du call center`);
   }
 
   // Avis : notes cohérentes, dans les 7 jours après la livraison, jamais dans le futur

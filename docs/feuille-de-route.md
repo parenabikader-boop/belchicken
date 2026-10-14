@@ -800,9 +800,11 @@ réservé », pas de migration pour l'instant.
 
 **Questions à poser :**
 
-- [ ] **Qui reçoit l'argent des livreurs dans l'application ?** Aujourd'hui, le bouton « Espèces remises » de la page
-  Caisse (frais de livraison payés en espèces au livreur) est ouvert au Patron **et** au call center (Opérateur), alors
-  que le call center ne touche jamais d'espèces. Vérifier un dépôt Mobile Money (constater sur le téléphone marchand)
+- [x] **Qui reçoit l'argent des livreurs dans l'application ?** Réponse du client le 14 octobre 2026 : **le Patron
+  seulement** (à confirmer plus tard avec Belchicken ; si c'est le caissier, on adaptera). Fait le 14 octobre 2026, sans
+  migration : « Espèces remises » refusé à l'Opérateur par l'API, sa page Caisse n'a plus que « Frais à vérifier »,
+  textes corrigés, remises de la démonstration reçues par « Patron (Démo) » (au prochain remplissage). Avant, le bouton
+  était ouvert au Patron **et** au call center (Opérateur), alors que le call center ne touche jamais d'espèces. Vérifier un dépôt Mobile Money (constater sur le téléphone marchand)
   n'est pas encaisser : seul « Espèces remises » est un vrai encaissement.
 - [ ] **Veulent-ils un jour rapprocher les commandes de l'application et les tickets de caisse ?** (par exemple
   retrouver le ticket d'une commande, ou vérifier que chaque commande payée a bien son ticket)
@@ -834,5 +836,6 @@ Chaque point se fait avec l'accord du client, et chaque action sur la production
 - [ ] **Créer les comptes** des agents du call center (Opérateur) et des livreurs (Livreur), page Équipe du Patron.
 - [ ] **Faire remplir la grille des frais de livraison** par le Patron (quartiers, tranches de distance, et supplément
   de nuit une fois le lot 3 en ligne).
-- [ ] **Former le call center** : commandes une étape à la fois, messages WhatsApp, caisse, prise de commande par l'agent,
+- [ ] **Former le call center** : commandes une étape à la fois, messages WhatsApp, vérification Mobile Money (jamais
+  d'espèces), prise de commande par l'agent,
   bon de commande ; et les livreurs à leur page de courses.

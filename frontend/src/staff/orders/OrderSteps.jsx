@@ -562,7 +562,7 @@ export function DeliveryFee({ order: o, steps }) {
           <small>
             {partner
               ? o.cashRemitted ? 'Espèces remises à notre partenaire de livraison.' : `Encore chez ${o.courier?.name || 'le livreur'} : à remettre à son responsable.`
-              : o.cashRemitted ? 'Espèces remises au restaurant.' : `Encore chez ${o.courier?.name || 'le livreur'} : à remettre (page Caisse).`}
+              : o.cashRemitted ? 'Espèces remises au restaurant.' : `Encore chez ${o.courier?.name || 'le livreur'} : à remettre au restaurant.`}
           </small>
         </p>
       )}
