@@ -559,6 +559,15 @@ Les messages `PAIEMENT_CONFIRME`, `EN_PREPARATION` et `EN_ROUTE` ont une version
 d'activer `WHATSAPP_CUSTOMER_AUTO`, faire aussi approuver chez Meta `commande_paiement_confirme_offerte`,
 `commande_en_preparation_offerte` et `commande_en_route_offerte` (textes dans `customer-messages.js`, champ `free`).
 
+## Tranches de distance par la route
+
+Interrupteur `TRANCHES_PAR_ROUTE` (page Prestataire), **fermé sans ligne** : fermé, les tranches se mesurent à vol
+d'oiseau, comme avant (`backend/test/frais-par-km.test.js`). Ouvert, la distance d'une tranche est la distance **par la
+route** depuis le restaurant (OpenRouteService, variable `OPENROUTESERVICE_API_KEY` ; sans elle, ligne droite × 1,3,
+annoncée « environ »), la même que celle annoncée au client (« Vous êtes à X km »). Copiée dans la commande
+(`deliveryDistanceM`). Aucune migration. Avec la commande simplifiée, la distance maximale est la fin de la dernière
+tranche (au-delà : « trop loin »).
+
 ## Supplément de nuit (lot 3)
 
 Page Patron `/equipe/frais-livraison`, encadré « Supplément de nuit » : interrupteur (éteint par défaut), début et fin de la

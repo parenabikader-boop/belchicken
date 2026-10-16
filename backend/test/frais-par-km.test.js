@@ -168,3 +168,44 @@ test('call center : plus de correction des frais calculés quand la grille par k
   assert.equal(lockedEditRight('PATRON', o), 'PATRON');
   assert.equal(lockedEditRight(null, o), null);
 });
+
+test('tranches par la route (TRANCHES_PAR_ROUTE) : fermé, à vol d’oiseau comme avant ; ouvert, distance par la route', async () => {
+  const { ROAD_BANDS, featureMap: fm } = await import('../src/services/features.js');
+  assert.equal(ROAD_BANDS, 'TRANCHES_PAR_ROUTE');
+  assert.equal(fm([])[ROAD_BANDS], false);
+  // Grille de Belchicken : 7 / 10 / 12 / 16 / 25 km (la tranche 7-12 coupée à 10 km pour le supplément de nuit)
+  const bands = activeGrid({ zones: [], settings: null, bands: [band('a', 7000, 1000), band('b', 10000, 1500), band('c', 12000, 1500), band('d', 16000, 2000), band('e', 25000, 2500)] });
+  const opts = { grid: bands, km: null, location: CLIENT, restaurant: RESTAURANT, now: NOW, maxAccuracy: MAX_ACCURACY_METERS };
+  const straight = distanceMeters(RESTAURANT, CLIENT); // ~2,4 km en ligne droite
+  // Fermé : ligne droite, jamais de distance par la route
+  assert.deepEqual(await quoteWith(opts, noRoad), quoteDelivery(bands, { location: CLIENT }, RESTAURANT, NOW));
+  assert.equal((await quoteWith(opts, noRoad)).distanceM, straight);
+  // Ouvert : la distance par la route décide de la tranche (7,5 km par la route = 1 500 F)
+  const road = await quoteWith({ ...opts, roadBands: true }, async () => ({ meters: 7500, estimated: false }));
+  assert.equal(road.fee, 1500);
+  assert.equal(road.distanceM, 7500);
+  assert.equal(road.source, 'DISTANCE');
+  assert.equal('roadEstimated' in road, false);
+  assert.equal((await quoteWith({ ...opts, roadBands: true }, async () => ({ meters: 7000, estimated: false }))).fee, 1000); // 7 km pile : 1 000 F
+  assert.equal((await quoteWith({ ...opts, roadBands: true }, async () => ({ meters: 16500, estimated: false }))).fee, 2500);
+  // Estimée : notée, et annoncée « environ » au client
+  const est = await quoteWith({ ...opts, roadBands: true }, async () => ({ meters: 7500, estimated: true }));
+  assert.equal(est.roadEstimated, true);
+  assert.equal(publicQuote(est).estimate, true);
+  // Quartier choisi : son prix, sans distance par la route
+  const zoned = activeGrid({ zones: [zone('z1', 'Gounghin', 1000)], bands: bands.bands, settings: null });
+  assert.equal((await quoteWith({ ...opts, grid: zoned, roadBands: true, choice: { zoneId: 'z1' } }, noRoad)).fee, 1000);
+});
+
+test('supplément de nuit de Belchicken : à partir de 20 h, +500 F au-delà de 10 km (tranches coupées à 10 km)', async () => {
+  const night = { nightEnabled: true, nightStartMin: 20 * 60, nightEndMin: 6 * 60 };
+  const b = (id, up, fee, nightFee) => ({ ...band(id, up, fee), nightFee });
+  const grid = activeGrid({ zones: [], settings: night, bands: [b('a', 7000, 1000, 0), b('b', 10000, 1500, 0), b('c', 12000, 1500, 500), b('d', 16000, 2000, 500), b('e', 25000, 2500, 500)] });
+  const at = (h) => new Date(Date.UTC(2026, 9, 16, h, 30)); // heure du Burkina = UTC
+  const q = (meters, h) => quoteWith({ grid, km: null, location: CLIENT, restaurant: RESTAURANT, now: at(h), maxAccuracy: MAX_ACCURACY_METERS, roadBands: true }, async () => ({ meters, estimated: false }));
+  assert.equal((await q(9500, 21)).fee, 1500); // la nuit, mais 9,5 km : pas de supplément
+  assert.deepEqual([(await q(11000, 21)).fee, (await q(11000, 21)).nightFee], [2000, 500]); // 11 km après 20 h
+  assert.equal((await q(11000, 19)).fee, 1500); // 11 km avant 20 h
+  assert.equal((await q(20000, 2)).fee, 3000); // 20 km à 2 h du matin
+  assert.equal((await q(20000, 7)).fee, 2500); // 20 km à 7 h
+});

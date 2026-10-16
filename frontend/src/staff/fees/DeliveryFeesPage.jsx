@@ -196,7 +196,8 @@ function BandForm({ band, onSave, onCancel }) {
   );
 }
 
-function Bands({ bands, run }) {
+// roadBands : interrupteur TRANCHES_PAR_ROUTE ouvert (distance par la route), sinon à vol d'oiseau comme avant
+function Bands({ bands, run, roadBands = null }) {
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(null);
   const [removing, setRemoving] = useState(null);
@@ -223,8 +224,17 @@ function Bands({ bands, run }) {
       </p>
       <div className="alert info fe-crow">
         <span>
-          La distance est calculée <b>à vol d’oiseau</b> (en ligne droite) depuis le restaurant, {RESTAURANT.address}.
-          Par la route, le trajet est plus long : prévoyez des tranches un peu larges.
+          {roadBands ? (
+            <>
+              La distance est calculée <b>par la route</b> depuis le restaurant, {RESTAURANT.address} : c’est celle annoncée au client.
+              {!roadBands.routeService && ' Service de distance pas encore réglé : ligne droite × 1,3, notée « estimation ».'}
+            </>
+          ) : (
+            <>
+              La distance est calculée <b>à vol d’oiseau</b> (en ligne droite) depuis le restaurant, {RESTAURANT.address}.
+              Par la route, le trajet est plus long : prévoyez des tranches un peu larges.
+            </>
+          )}
         </span>
       </div>
       <ul className="fe-list">
@@ -468,7 +478,7 @@ export default function DeliveryFeesPage() {
           {/* Plan 3 : seulement quand le Prestataire a ouvert l'interrupteur FRAIS_PAR_KM */}
           {grid.km && <KmGrid km={grid.km} run={run} />}
           <Zones zones={grid.zones} run={run} />
-          <Bands bands={grid.bands} run={run} />
+          <Bands bands={grid.bands} run={run} roadBands={grid.roadBands || null} />
           <NightHours settings={grid.settings} run={run} />
           <section className="st-box fe-sec">
             <h2>Autre quartier</h2>

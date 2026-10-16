@@ -19,7 +19,7 @@ Projet totalement indépendant de TWIA FOOD : aucun code partagé.
 - backend : Node.js 20+, Express, Prisma 6, PostgreSQL (Neon), Zod. Port 3006. Déploiement Render.
 - frontend : React + Vite. Port 5173. Déploiement Vercel.
 - Tout le texte visible par les clients est en français.
-- `npm run dev` à la racine lance les deux ; `npm test` dans `backend/` (390 tests au 16 octobre 2026) et dans `frontend/` (60 tests : `utils/borne.test.js`, `utils/site-choice.test.js`, `staff/orders2/waiting.test.js`, `staff/nav-pages.test.js`, `staff/session.test.js`, `staff/dashboard/compare.test.js`, `staff/dashboard/now.test.js`, `staff/nv/visual.test.js`, `staff/orders/print-slip.test.js`, `utils/tracking.test.js`, `utils/km-fee.test.js`, `utils/simple-order.test.js`).
+- `npm run dev` à la racine lance les deux ; `npm test` dans `backend/` (392 tests au 16 octobre 2026) et dans `frontend/` (60 tests : `utils/borne.test.js`, `utils/site-choice.test.js`, `staff/orders2/waiting.test.js`, `staff/nav-pages.test.js`, `staff/session.test.js`, `staff/dashboard/compare.test.js`, `staff/dashboard/now.test.js`, `staff/nv/visual.test.js`, `staff/orders/print-slip.test.js`, `utils/tracking.test.js`, `utils/km-fee.test.js`, `utils/simple-order.test.js`).
 
 ## État actuel (16 octobre 2026)
 

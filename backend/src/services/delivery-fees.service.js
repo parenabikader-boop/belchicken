@@ -11,7 +11,7 @@ import {
 } from './delivery-fees.js';
 import { getDeliveryMode } from './delivery-mode.service.js';
 import { MAX_ACCURACY_METERS } from './delivery-fees.js';
-import { FEES_BY_KM, SIMPLE_ORDER } from './features.js';
+import { FEES_BY_KM, ROAD_BANDS, SIMPLE_ORDER } from './features.js';
 import { simpleQuoteCheck } from './simple-order.js';
 import { kmActive, NEED_ACCEPT, publicGridWith, quoteWith, staffKm } from './delivery-km.js';
 import { roadDistance } from './route-distance.service.js';
@@ -58,12 +58,14 @@ export async function quoteFor(choice, location, { legacy = false, now = new Dat
   const features = await getFeatures();
   const [grid, km] = await Promise.all([loadGrid(), legacy ? null : kmGrid(prisma, features)]);
   const quote = await quoteWith(
-    { grid, km, choice, location, legacy, restaurant: env.restaurantPosition, now, maxAccuracy: MAX_ACCURACY_METERS },
+    { grid, km, choice, location, legacy, restaurant: env.restaurantPosition, now, maxAccuracy: MAX_ACCURACY_METERS, roadBands: features[ROAD_BANDS] },
     (from, to) => roadDistance(from, to),
   );
   // Commande simplifiée (position seule, sans quartier) : un prix calculé, ou « trop loin » / « position imprécise »
   if (features[SIMPLE_ORDER] && !legacy && !choice.zoneId && !choice.other && location) {
-    const bad = simpleQuoteCheck(quote, { location, maxKm: km?.maxKm ?? null, maxAccuracy: MAX_ACCURACY_METERS });
+    // Distance maximale : celle de la grille par km, sinon la fin de la dernière tranche, sinon 30 km
+    const maxKm = km ? km.maxKm ?? null : grid.bands.length ? grid.bands.at(-1).upToMeters / 1000 : null;
+    const bad = simpleQuoteCheck(quote, { location, maxKm, maxAccuracy: MAX_ACCURACY_METERS });
     if (bad) throw new AppError(400, bad.error, bad.code, { km: bad.km, path: 'delivery' });
   }
   if (quote.error) throw new AppError(400, quote.error, 'FRAIS_LIVRAISON', [{ path: 'delivery', message: quote.error }]);
@@ -92,7 +94,7 @@ export const publicQuote = (q) => ({
   ...(q.nightFee ? { nightFee: q.nightFee } : {}), // lot 3 : part du supplément de nuit dans fee
   // Plan 3 : grille par km active (montant à accepter) ; distance estimée faute de service
   ...(q.kmMode && { kmMode: true }),
-  ...(q.source === 'KM_ESTIMATION' && { estimate: true }),
+  ...((q.source === 'KM_ESTIMATION' || q.roadEstimated) && { estimate: true }),
 });
 
 // Heures de nuit réglées et « c'est la nuit maintenant » (null = réglage éteint) : rappel à l'agent qui
@@ -108,7 +110,9 @@ export async function nightInfo(at = new Date()) {
 export async function getStaffGrid() {
   const { zones, bands, settings, nightIncluded } = await readGrid();
   // Plan 3 : grille par km, seulement quand l'interrupteur est ouvert (sinon la page est celle d'avant)
-  const kmOpen = (await getFeatures())[FEES_BY_KM];
+  const staffFeatures = await getFeatures();
+  const kmOpen = staffFeatures[FEES_BY_KM];
+  const roadBands = staffFeatures[ROAD_BANDS];
   const kmRow = kmOpen ? await prisma.deliveryKmGrid.findUnique({ where: { id: 1 } }) : null;
   const active = activeGrid({ zones, bands, settings });
   const ranges = new Map(bandRanges(active.bands).map((b) => [b.id, b.fromMeters]));
@@ -129,6 +133,8 @@ export async function getStaffGrid() {
     isEmpty: active.isEmpty,
     restaurant: env.restaurantPosition,
     ...(kmOpen && { km: { ...staffKm(kmRow), routeService: Boolean(env.openRouteServiceKey) } }),
+    // Tranches mesurées par la route (interrupteur TRANCHES_PAR_ROUTE ; rien sinon, comme avant)
+    ...(roadBands && { roadBands: { routeService: Boolean(env.openRouteServiceKey) } }),
   };
 }
 

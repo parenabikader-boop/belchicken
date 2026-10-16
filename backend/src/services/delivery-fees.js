@@ -91,7 +91,7 @@ const toConfirm = (extra = {}) => ({ source: 'A_CONFIRMER', fee: null, zoneId: n
 // La nuit, avec un supplément : fee le comprend et nightFee donne sa part.
 // Grille vide : { source: null } (frais saisis par l'équipe, comme avant).
 // now : heure de la commande (ou de l'aperçu).
-export function quoteDelivery(grid, { zoneId, other, location, legacy = false } = {}, restaurant, now = new Date()) {
+export function quoteDelivery(grid, { zoneId, other, location, legacy = false, roadMeters } = {}, restaurant, now = new Date()) {
   if (grid.isEmpty) return { source: null, fee: null, zoneId: null, zoneName: null, distanceM: null };
   if (zoneId) {
     const zone = grid.zones.find((z) => z.id === zoneId);
@@ -103,7 +103,8 @@ export function quoteDelivery(grid, { zoneId, other, location, legacy = false } 
     return toConfirm();
   }
   if (location && grid.bands.length) {
-    const distanceM = distanceMeters(restaurant, location);
+    // Distance par la route quand elle est donnée (interrupteur TRANCHES_PAR_ROUTE), sinon à vol d'oiseau comme avant
+    const distanceM = Number.isFinite(roadMeters) ? roadMeters : distanceMeters(restaurant, location);
     if (location.accuracy != null && location.accuracy > MAX_ACCURACY_METERS) return toConfirm({ distanceM });
     const band = bandFor(grid.bands, distanceM);
     return band

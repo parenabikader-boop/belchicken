@@ -119,8 +119,16 @@ export const lockedEditRight = (who, order) => (who === 'TOUS' && order.delivery
 // Devis complet, sans base (testé) : grille par km active (km) ou grille d'avant (km = null : exactement comme
 // avant). road : fonction asynchrone qui donne la distance par la route ({ meters, estimated }), appelée
 // seulement quand il faut une distance. Renvoie un devis ou { error }.
-export async function quoteWith({ grid, km, choice = {}, location, legacy = false, restaurant, now = new Date(), maxAccuracy }, road) {
-  if (!km || legacy) return quoteDelivery(grid, { ...choice, location, legacy }, restaurant, now);
+// roadBands (interrupteur TRANCHES_PAR_ROUTE) : les tranches de distance se mesurent par la route (même service que la
+// grille par km) ; fermé, à vol d'oiseau comme avant. Le devis note alors roadEstimated si la distance est estimée.
+export async function quoteWith({ grid, km, choice = {}, location, legacy = false, restaurant, now = new Date(), maxAccuracy, roadBands = false }, road) {
+  if (!km || legacy) {
+    const byRoad = roadBands && !legacy && location && !choice.zoneId && !choice.other && grid.bands?.length > 0;
+    if (!byRoad) return quoteDelivery(grid, { ...choice, location, legacy }, restaurant, now);
+    const r = await road(restaurant, location);
+    const quote = quoteDelivery(grid, { ...choice, location, legacy, roadMeters: r.meters }, restaurant, now);
+    return r.estimated && !quote.error ? { ...quote, roadEstimated: true } : quote;
+  }
   const refused = kmChoiceError({ ...choice, location }, maxAccuracy);
   if (refused) return { error: refused };
   const quote = choice.zoneId ? quoteDelivery(grid, { zoneId: choice.zoneId }, restaurant, now) : kmQuote(km, await road(restaurant, location));

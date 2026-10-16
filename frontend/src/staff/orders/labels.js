@@ -137,7 +137,8 @@ const km = (m) => `${String(Math.round(m / 100) / 10).replace('.', ',')} km`;
 
 // D'où viennent les frais (grille du Patron, copiés à la commande), en une phrase pour l'équipe
 export function feeOrigin(o) {
-  const distance = o.deliveryDistanceM != null ? `environ ${km(o.deliveryDistanceM)} du restaurant, à vol d’oiseau` : null;
+  // Distance copiée à la commande : à vol d'oiseau, ou par la route (interrupteur TRANCHES_PAR_ROUTE)
+  const distance = o.deliveryDistanceM != null ? `environ ${km(o.deliveryDistanceM)} du restaurant` : null;
   switch (o.deliveryFeeSource) {
     case 'QUARTIER':
       return `Prix du quartier choisi par le client : ${o.deliveryZoneName}`;
