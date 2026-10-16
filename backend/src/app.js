@@ -9,6 +9,7 @@ import { paymentRouter } from './routes/payment.routes.js';
 import { deliveryRouter } from './routes/delivery.routes.js';
 import { reviewRouter } from './routes/review.routes.js';
 import { siteRouter } from './routes/site.routes.js';
+import { paymentAutoRouter } from './routes/payment-auto.routes.js';
 import { staffRouter } from './routes/staff.routes.js';
 import { errorHandler, notFound } from './middlewares/errors.js';
 
@@ -26,7 +27,8 @@ app.use('/api/orders', orderRouter);
 app.use('/api/payment', paymentRouter);
 app.use('/api/delivery', deliveryRouter); // grille des frais de livraison et aperçu
 app.use('/api/avis', reviewRouter); // lot 7 : avis des clients (page publique, par la clé du lien)
-app.use('/api/site', siteRouter); // lot 8 : bouton FR / EN du site client
+app.use('/api/site', siteRouter);
+app.use('/api/paiements', paymentAutoRouter); // plan 2 : paiements reçus (SMS du téléphone marchand, Ligdicash) // lot 8 : bouton FR / EN du site client
 app.use('/api/staff', staffRouter); // espace équipe, protégé par connexion
 
 app.use(notFound);

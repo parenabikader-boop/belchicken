@@ -4,6 +4,7 @@ import { useStaff } from '../StaffContext.jsx';
 import { formatDateTime } from '../orders/labels.js';
 import DeliveryMode from './DeliveryMode.jsx';
 import ContractTerms from './ContractTerms.jsx';
+import AutoPayments from './AutoPayments.jsx';
 
 // Lot 4 : page Prestataire (/equipe/prestataire, Prestataire seulement).
 // Interrupteurs des fonctions incluses dans la formule (confirmation avant chaque changement) et journal de
@@ -161,6 +162,8 @@ export default function PrestatairePage() {
       <Features />
       <DeliveryMode />
       <ContractTerms />
+      {/* Plan 2 : paiement du repas validé automatiquement */}
+      <AutoPayments />
       <Journal />
     </div>
   );

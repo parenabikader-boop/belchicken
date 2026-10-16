@@ -63,6 +63,17 @@ services:
       # Plan 3 : distance par la route pour les frais par km (clé gratuite sur openrouteservice.org). Vide : estimation
       - key: OPENROUTESERVICE_API_KEY
         sync: false
+      # Plan 2 : clé secrète de l'application Android qui transmet les SMS du téléphone marchand (24 caractères au moins)
+      - key: SMS_PAIEMENT_CLE
+        sync: false
+      # Plan 2 (facultatif) : formats des SMS en JSON (voir backend/src/services/payment-sms-formats.js). Vide : le fichier
+      - key: SMS_PAIEMENT_FORMATS
+        sync: false
+      # Plan 2, Ligdicash (préparé) : identifiants donnés après la signature du contrat
+      - key: LIGDICASH_API_KEY
+        sync: false
+      - key: LIGDICASH_API_TOKEN
+        sync: false
       # Notifications de l'équipe sur téléphone : mêmes valeurs que dans backend/.env, à ne jamais changer ensuite
       - key: VAPID_PUBLIC_KEY
         sync: false

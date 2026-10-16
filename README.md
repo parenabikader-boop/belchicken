@@ -1080,6 +1080,53 @@ Ouvert, et grille allumée par le Patron :
   `kmLockError()`) ; le Patron le peut encore, avec un motif. Le livreur voit le montant, sans pouvoir le changer
   (comme avant).
 
+## Paiement du repas validé automatiquement (plan 2)
+
+Interrupteur `PAIEMENT_AUTO` (page Prestataire), **fermé sans ligne** : fermé, tout est comme avant (`backend/test/paiement-auto.test.js`).
+Règles : `payment-sms.js` (SMS), `payment-sms-formats.js` (formats, données seulement), `ligdicash.js` (préparé) ;
+base : `auto-payment.service.js` ; adresses : `routes/payment-auto.routes.js` (`/api/paiements`).
+
+**Migration `20261016220000_paiement_auto`, NON APPLIQUÉE**, rangée dans `backend/prisma/migrations-en-attente/` :
+table `AutoPayment` (journal des paiements reçus), vide. Aucune colonne ajoutée à une table existante, et la table
+n'est lue que l'interrupteur ouvert. **Ne pas ouvrir l'interrupteur avant de l'avoir appliquée.**
+
+**Variables Render** : `SMS_PAIEMENT_CLE` (clé de l'application Android, 24 caractères au moins ; vide = adresse
+fermée), `SMS_PAIEMENT_FORMATS` (facultatif, formats en JSON ; vide = le fichier), `LIGDICASH_API_KEY` et
+`LIGDICASH_API_TOKEN` (après le contrat), `PUBLIC_API_URL` (facultatif, adresse de l'API pour Ligdicash).
+
+### Solution B : SMS du téléphone marchand ECOFOOD
+
+- **Application Android** « SMS to URL Forwarder » (gratuite, open source, Google Play et F-Droid, auteur
+  bogkonstantin) sur le téléphone marchand : filtre d'expéditeurs (les expéditeurs officiels), adresse
+  `https://belchicken-api.onrender.com/api/paiements/sms`, en-tête `{"X-Cle-Sms":"<SMS_PAIEMENT_CLE>"}`, modèle
+  `{"from":"%from%","text":"%text%","receivedStamp":%receivedStamp%}`. L'application qui ne sait pas ajouter
+  d'en-tête peut mettre `?cle=…` dans l'adresse (moins discret). Le téléphone doit rester allumé, chargé et connecté.
+- **Seuls les expéditeurs officiels** des formats sont lus ; tout autre SMS est ignoré sans rien garder. Un SMS
+  d'envoi, de retrait ou d'échec est écarté.
+- **Rapprochement sans rien demander au client** : même opérateur, numéro qui a payé (saisi à la commande), montant
+  exact des plats, commande « paiement à vérifier » passée au plus 3 h avant le SMS ou 30 min après (le client paie
+  souvent avant d'envoyer : chaque nouvelle commande regarde aussi les SMS déjà reçus). Une seule commande possible :
+  validée (« Paiement automatique », `PAYEE`, ou `EN_PREPARATION` avec le parcours court). Aucune, ou plusieurs :
+  la commande reste à vérifier par le call center, comme avant. Frais de livraison inconnus : le paiement est
+  rattaché, l'équipe saisit les frais et confirme.
+- **Un SMS ne compte qu'une fois** (n° de transaction, sinon empreinte du texte : `dedupeKey` unique) et **une
+  commande n'a qu'un paiement** (`orderId` unique).
+- **Formats réglables** (expéditeurs, phrase « reçu », montant, numéro, n° de transaction) : le fichier, ou la variable
+  `SMS_PAIEMENT_FORMATS`. Les formats actuels sont **supposés** : ils ne valident **aucune** commande (statut
+  `FORMAT_A_VERIFIER`) tant que les vrais SMS n'ont pas été fournis et vérifiés (`supposed: false`).
+- **Page Prestataire**, section « Paiement du repas validé automatiquement » : état des réglages, formats, « Tester un
+  SMS » (lit un SMS collé, sans rien enregistrer) et journal des 50 derniers paiements reçus.
+- **Call center** : la commande validée seule passe directement à l'étape suivante (historique « Paiement
+  automatique » avec le montant, le numéro et la transaction) ; un paiement reconnu mais pas validé s'affiche sur la
+  commande.
+
+### Solution A : Ligdicash (préparée, à terminer après le contrat)
+
+« Payin avec redirection » (developers.ligdicash.com) : `createLigdicashPayment()` crée la facture du montant des plats
+(`custom_data.transaction_id` = référence) et garde le token ; `POST /api/paiements/ligdicash` reçoit le message de
+Ligdicash, qui n'est **jamais** cru : référence → token gardé → `confirm` → seul `completed`, code `00` et montant exact
+valident, avec la même validation que les SMS. Pas encore proposé au client (bouton « Payer en ligne » à ajouter).
+
 ## Démonstration commerciale (base dev seulement)
 
 Un mois d'activité fictive mais réaliste sur la base **dev**, pour présenter le tableau de bord, les ventes,

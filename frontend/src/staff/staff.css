@@ -1108,3 +1108,15 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 /* Plan 4 : suivi sans WhatsApp, lien de suivi du client */
 .nt-tracking{display:grid;gap:8px}
 .nt-tracking input{flex:1;min-width:0;font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:var(--r);background:#fff}
+/* Plan 2 : paiement du repas validé automatiquement (page Prestataire) */
+.ap h3{margin:16px 0 6px;font-size:15px}
+.ap-state,.ap-formats,.ap-list{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+.ap-tag{margin-left:8px;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--bad-soft);color:var(--bad)}
+.ap-tag.ok{background:var(--ok-soft,#e5f4ec);color:var(--ok,#136c3d)}
+.ap-test textarea{width:100%;box-sizing:border-box;font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r)}
+.ap-result{margin-top:8px;padding:10px 12px;border-radius:var(--r);background:#fff8ea}
+.ap-result p{margin:0}
+.ap-row{display:grid;gap:2px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:#fff}
+.ap-row small{color:var(--muted)}
+.ap-row.ok{border-color:var(--ok,#136c3d)}
+.ap-row.bad{border-color:var(--bad)}

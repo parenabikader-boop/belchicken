@@ -96,6 +96,9 @@ export const staffApi = {
   // Lot 5 : mode de livraison, notre société et nos codes marchands (Prestataire)
   deliveryCompany: () => staffRequest('/prestataire/livraison'),
   setDeliveryCompany: (body) => staffRequest('/prestataire/livraison', { method: 'PUT', body: JSON.stringify(body) }),
+  // Plan 2 : paiements reçus automatiquement (journal, formats des SMS) et « Tester un SMS » (sans rien enregistrer)
+  autoPayments: () => staffRequest('/prestataire/paiements-auto'),
+  testPaymentSms: (sender, text) => staffRequest('/prestataire/paiements-auto/test', { method: 'POST', body: JSON.stringify({ sender, text }) }).then((d) => d.result),
   logout: () => staffRequest('/logout', { method: 'POST' }),
   // Lot 5b : page Livraison (Responsable livraison et Prestataire) : nos livreurs, nos courses, notre caisse
   deliveryOverview: () => staffRequest('/livraison'),

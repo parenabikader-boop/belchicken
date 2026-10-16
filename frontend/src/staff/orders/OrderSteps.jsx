@@ -491,6 +491,16 @@ export function Actions({ order: o, steps }) {
           {o.paymentPayerPhone && <> depuis le <b>{formatPhone(o.paymentPayerPhone)}</b></>}.
         </p>
       )}
+      {/* Plan 2 : paiement reçu par SMS (ou Ligdicash) rattaché à la commande, mais pas validé seul */}
+      {o.status === 'PAIEMENT_A_VERIFIER' && o.autoPayment && (
+        <p className="st-note">
+          Paiement reçu {o.autoPayment.source === 'SMS' ? 'par SMS' : 'par Ligdicash'}
+          {o.autoPayment.amount != null && <> : <b>{formatPrice(o.autoPayment.amount)}</b></>}
+          {o.autoPayment.payerPhone && <> du {formatPhone(o.autoPayment.payerPhone)}</>}
+          {o.autoPayment.at && <> à {formatTime(o.autoPayment.at)}</>}.
+          {o.autoPayment.detail && <> {o.autoPayment.detail}</>}
+        </p>
+      )}
       {o.status === 'PRETE' && (
         <p className="st-wait">
           À emporter : le client vient la retirer au restaurant et donne son <b>code de retrait</b> au comptoir.

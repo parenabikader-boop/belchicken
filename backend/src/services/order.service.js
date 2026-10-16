@@ -16,6 +16,7 @@ import { pushEnabled } from '../config/env.js';
 import { isFeatureOpen } from './features.service.js';
 import { CUSTOMER_TRACKING } from './features.js';
 import { keyMatches, lockedView, newTrackingKey, trackingExtras } from './tracking.js';
+import { matchNewOrder } from './auto-payment.service.js';
 
 // Commande du site, ou saisie par un agent (lot 2) : `agent` = { source, staff } (provenance déjà vérifiée).
 // Même calcul des prix et des frais, même départ « paiement à vérifier », dans les deux cas.
@@ -90,6 +91,8 @@ export async function createOrder(input, agent = null) {
   // (saisie par un agent : pas sur ses propres téléphones, il vient de la créer)
   notifyTeamNewOrder(order).catch((e) => console.error('[whatsapp]', e));
   pushTeamNewOrder(order, { exceptStaffId: agent?.staff.id }).catch((e) => console.error('[push]', e));
+  // Plan 2 : un paiement déjà reçu par SMS valide-t-il cette commande ? (interrupteur PAIEMENT_AUTO ; ne fait rien fermé)
+  matchNewOrder(order.id);
 
   return order;
 }

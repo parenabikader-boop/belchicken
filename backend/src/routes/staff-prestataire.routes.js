@@ -5,6 +5,7 @@ import { listFeatures, setFeature } from '../services/features.service.js';
 import { listSecurityLog, requestMeta } from '../services/security-log.service.js';
 import { getCompanyPage, updateCompany } from '../services/delivery-mode.service.js';
 import { OPERATORS } from '../services/delivery-mode.js';
+import { autoPaymentOverview, testSms } from '../services/auto-payment.service.js';
 
 // Page Prestataire (lot 4) : interrupteurs des fonctions et journal de sécurité, Prestataire seulement.
 // Le journal se lit ici et ne se modifie nulle part.
@@ -51,4 +52,15 @@ const companySchema = z.object({
 
 staffPrestataireRouter.put('/livraison', handle(async (req, res) => {
   res.json(await updateCompany(companySchema.parse(req.body), req.staff, requestMeta(req)));
+}));
+
+// Plan 2 : paiement du repas validé automatiquement. Journal des paiements reçus (SMS, Ligdicash), formats des SMS,
+// et « Tester un SMS » : lit un SMS collé dans la page, sans rien enregistrer ni valider.
+staffPrestataireRouter.get('/paiements-auto', handle(async (req, res) => {
+  res.json(await autoPaymentOverview());
+}));
+
+staffPrestataireRouter.post('/paiements-auto/test', handle(async (req, res) => {
+  const input = z.object({ sender: z.string().min(1, 'Indiquez l’expéditeur.').max(60), text: z.string().min(1, 'Collez le SMS.').max(1000) }).parse(req.body);
+  res.json({ result: testSms(input) });
 }));

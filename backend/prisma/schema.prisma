@@ -385,6 +385,9 @@ model Order {
   // page de suivi ne montre ni le code, ni le montant, ni le livreur. Vide = commande d'avant, ou suivi éteint.
   trackingKey          String?                    @unique
   customerPushes       CustomerPushSubscription[]
+  // Plan 2 : paiement du repas validé automatiquement (SMS du téléphone marchand, ou Ligdicash). Relation seule :
+  // aucune colonne dans Order.
+  autoPayment          AutoPayment?
 
   items         OrderItem[]
   notifications NotificationLog[]
@@ -821,4 +824,31 @@ model DeliveryKmGrid {
   maxKm         Float? // distance maximale de livraison par la route, en km (vide = pas de limite)
   updatedByName String? // copie figée
   updatedAt     DateTime @updatedAt
+}
+
+// Plan 2, paiement du repas validé automatiquement (interrupteur PAIEMENT_AUTO, fermé par défaut). Journal de chaque
+// paiement reçu : SMS du téléphone marchand ECOFOOD transmis au serveur (source SMS), ou paiement Ligdicash (source
+// LIGDICASH, préparé). Un paiement ne valide qu'UNE commande (orderId unique), une seule fois (dedupeKey unique).
+// status : VALIDEE (commande validée), AUCUNE (aucune commande ne correspond, ou pas encore passée), DOUTE (plusieurs
+// commandes possibles : l'équipe vérifie), FRAIS_MANQUANTS (paiement reconnu, frais de livraison à saisir par l'équipe),
+// ILLISIBLE (SMS d'un expéditeur officiel mais format inconnu), EN_ATTENTE (Ligdicash, facture créée).
+// Lu et écrit seulement quand l'interrupteur est ouvert. Règles : src/services/payment-sms.js, ligdicash.js.
+model AutoPayment {
+  id         String         @id @default(cuid())
+  source     String // SMS | LIGDICASH
+  dedupeKey  String         @unique // SMS : opérateur + n° de transaction (sinon empreinte du SMS) ; Ligdicash : token
+  operator   PaymentMethod?
+  amount     Int? // en F, lu dans le SMS (ou confirmé par Ligdicash)
+  payerPhone String? // numéro qui a payé, normalisé +226XXXXXXXX
+  externalId String? // n° de transaction de l'opérateur, ou token Ligdicash
+  sender     String? // expéditeur du SMS
+  text       String? // SMS reçu, tel quel (preuve)
+  status     String
+  detail     String? // explication pour l'équipe
+  orderId    String?        @unique
+  order      Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  receivedAt DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([status, receivedAt])
 }

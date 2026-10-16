@@ -846,6 +846,22 @@ Interrupteur `FRAIS_PAR_KM` (Prestataire), fermé sans ligne. Détails : README 
 - [ ] Avec l'accord écrit du client : sauvegarde Neon, migration déplacée dans `backend/prisma/migrations/`, envoi ;
   puis le Prestataire ouvre l'interrupteur et le Patron règle et allume sa grille.
 
+### Plan 2 : paiement du repas validé automatiquement (16 octobre 2026, pas encore en ligne)
+
+Interrupteur `PAIEMENT_AUTO` (Prestataire), fermé sans ligne. Détails : README « Paiement du repas validé
+automatiquement (plan 2) ».
+
+- [x] Solution B (SMS du téléphone marchand) : lecteur, rapprochement, journal, « Tester un SMS », call center.
+- [x] Solution A (Ligdicash) : structure seulement, sans identifiants.
+- [x] Tests (`backend/test/paiement-auto.test.js`), construction.
+- [x] Migration `20261016220000_paiement_auto` écrite sans base, **non appliquée**, dans `backend/prisma/migrations-en-attente/`.
+- [ ] Le client fournit un vrai SMS de paiement reçu par opérateur (Orange Money, Moov Money, Telecel Money) ; formats
+  corrigés et marqués vérifiés (`supposed: false`).
+- [ ] Le client crée `SMS_PAIEMENT_CLE` sur Render et installe « SMS to URL Forwarder » sur le téléphone marchand.
+- [ ] Accord écrit de Belchicken pour transmettre les SMS du téléphone marchand.
+- [ ] Avec l'accord écrit du client : sauvegarde Neon, migration déplacée, envoi ; puis ouverture de l'interrupteur.
+- [ ] Ligdicash : contrat, identifiants, bouton « Payer en ligne » pour le client.
+
 ## Démonstration commerciale (base dev)
 
 Pour la présentation commerciale à Belchicken : un mois d'activité fictive sur la base **dev** seulement (tableau de

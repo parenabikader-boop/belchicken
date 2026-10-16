@@ -19,6 +19,8 @@ export const env = {
   },
   // Adresse du site public : lien de suivi envoyé au client (/suivi/BC-XXXXXX)
   siteUrl: process.env.PUBLIC_SITE_URL || 'https://belchicken-six.vercel.app',
+  // Adresse publique de l'API (plan 2 : adresse de retour de Ligdicash, callback_url)
+  apiUrl: process.env.PUBLIC_API_URL || 'https://belchicken-api.onrender.com',
   // Paiement mobile money par code marchand (USSD), sans frais pour le client. MONTANT est remplacé par
   // le montant à payer (plats sur la page Vos informations, frais de livraison sur la page de suivi et
   // dans les messages). Modifiables sur Render sans toucher au code. Le site les lit par GET /api/payment.
@@ -44,6 +46,17 @@ export const env = {
   // Plan 3 : clé OpenRouteService (distance par la route), seulement sur Render et dans backend/.env, jamais dans le
   // code. Vide ou service injoignable : distance à vol d'oiseau × 1,3, notée « estimation » sur la commande.
   openRouteServiceKey: process.env.OPENROUTESERVICE_API_KEY || '',
+  // Plan 2 : paiement du repas validé automatiquement. Valeurs seulement sur Render et dans backend/.env, jamais
+  // dans le code. Vides : rien ne se fait (le call center vérifie comme avant).
+  autoPayment: {
+    // Clé secrète de l'application Android qui transmet les SMS du téléphone marchand (au moins 24 caractères)
+    smsKey: process.env.SMS_PAIEMENT_CLE || '',
+    // Formats des SMS de paiement (JSON, voir payment-sms-formats.js) ; vide = formats du fichier
+    smsFormats: process.env.SMS_PAIEMENT_FORMATS || '',
+    // Ligdicash (préparé, contrat pas encore signé)
+    ligdicashApiKey: process.env.LIGDICASH_API_KEY || '',
+    ligdicashApiToken: process.env.LIGDICASH_API_TOKEN || '',
+  },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
     apiKey: process.env.CLOUDINARY_API_KEY || '',

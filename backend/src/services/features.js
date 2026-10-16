@@ -3,7 +3,7 @@
 //
 // Pas de ligne FeatureSwitch = ouvert : sans Prestataire, tout fonctionne comme avant (sauf RELEVE, lot 5d,
 // fermé sans ligne : le Patron ne voit le relevé que si le Prestataire l'ouvre ; de même LIVREURS_INDEPENDANTS,
-// NOUVEAU_VISUEL, CALL_CENTER_ALLEGE, SUIVI_SANS_WHATSAPP et FRAIS_PAR_KM, fermés sans ligne).
+// NOUVEAU_VISUEL, CALL_CENTER_ALLEGE, SUIVI_SANS_WHATSAPP, FRAIS_PAR_KM et PAIEMENT_AUTO, fermés sans ligne).
 // Fermer bloque l'accès, ne supprime aucune donnée, et bloque aussi le Prestataire (il doit rouvrir).
 // Deux niveaux pour les réglages : le Prestataire décide si une fonction est incluse, le Patron l'allume
 // ou l'éteint à l'intérieur. Une fonction n'est active que si elle est incluse et allumée.
@@ -44,6 +44,9 @@ export const FEATURES = [
   // secrète) et reçoit des alertes gratuites ; plus de message à confirmer ni de remerciement pour le call center.
   // Plan 3, frais par kilomètre avant le paiement : fermé sans ligne. Ouvert, le Patron règle sa grille par km
   // (page Frais de livraison) ; allumée, le client voit et accepte ses frais avant de payer son repas.
+  // Plan 2, paiement du repas validé automatiquement : fermé sans ligne. Ouvert, un paiement reconnu (SMS du téléphone
+  // marchand, ou Ligdicash) valide seul la commande ; sinon, le call center vérifie comme avant.
+  { key: 'PAIEMENT_AUTO', label: 'Paiement du repas validé automatiquement', help: 'Ouvert : quand le téléphone marchand reçoit le SMS d’un paiement (numéro qui a payé et montant exact d’une seule commande en attente), la commande est validée toute seule. Rien ne correspond, ou deux commandes possibles : la commande reste « à vérifier » par le call center, comme avant. Fermé : comme avant.', defaultOpen: false },
   { key: 'FRAIS_PAR_KM', label: 'Frais par kilomètre avant le paiement', help: 'Ouvert : le Patron règle une grille par kilomètre (prix de départ, prix par km, arrondi, minimum, maximum) ; une fois allumée, le site calcule les frais avec la distance par la route, le client les voit (« Livraison : X F (Y km), à payer au livreur ») et les accepte avant de payer son repas. Sans position, il choisit son quartier ; « Autre quartier » n’est plus proposé ; le call center ne corrige plus les frais (le Patron, toujours avec un motif). Fermé : comme avant.', defaultOpen: false },
   { key: 'SUIVI_SANS_WHATSAPP', label: 'Suivi sans WhatsApp', help: 'Ouvert : le client suit sa commande en direct sur sa page de suivi (lien secret donné à la commande : livreur à appeler, code de livraison, montant à payer au livreur, avis) et reçoit des alertes gratuites sur son téléphone (« en route », « livrée, merci »). Le call center n’a plus de message à confirmer ni de client à remercier. Fermé : comme avant.', defaultOpen: false },
   { key: 'CALL_CENTER_ALLEGE', label: 'Call center allégé', help: 'Ouvert : aucune étape n’attend plus la confirmation d’un message au client (le message reste proposé, sauf le remerciement qui reste demandé) ; « Paiement vérifié » imprime aussi le bon ; le livreur peut valider une livraison sans le code du client, avec un motif obligatoire (signalée en rouge au Responsable livraison et comptée à part dans le relevé). Fermé : comme avant.', defaultOpen: false },
@@ -57,11 +60,13 @@ export const CALL_CENTER_LIGHT = 'CALL_CENTER_ALLEGE';
 export const CUSTOMER_TRACKING = 'SUIVI_SANS_WHATSAPP';
 // Plan 3 : clé de l'interrupteur « Frais par kilomètre avant le paiement »
 export const FEES_BY_KM = 'FRAIS_PAR_KM';
+// Plan 2 : clé de l'interrupteur « Paiement du repas validé automatiquement »
+export const AUTO_PAYMENT = 'PAIEMENT_AUTO';
 
 export const FEATURE_CLOSED = 'Fonction non incluse dans votre formule, contactez votre prestataire.';
 
 // Ouverte ou fermée quand elle n'a pas de ligne : ouverte, sauf RELEVE (lot 5d), LIVREURS_INDEPENDANTS, NOUVEAU_VISUEL
-// CALL_CENTER_ALLEGE, SUIVI_SANS_WHATSAPP et FRAIS_PAR_KM
+// CALL_CENTER_ALLEGE, SUIVI_SANS_WHATSAPP, FRAIS_PAR_KM et PAIEMENT_AUTO
 export const featureDefault = (key) => FEATURES.find((f) => f.key === key)?.defaultOpen ?? true;
 
 // Lignes FeatureSwitch -> { HISTORIQUE: true, … } : une fonction sans ligne garde sa valeur par défaut

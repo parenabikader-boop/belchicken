@@ -10,7 +10,7 @@ import { feeCorrectionError, feeEditRight, isNightTime, minutesToHHMM, nightFeeA
 import { kmGrid, loadGrid } from './delivery-fees.service.js';
 import { getAppSettings } from './app-settings.service.js';
 import { featureClosedError, getFeatures, isFeatureOpen } from './features.service.js';
-import { CALL_CENTER_LIGHT, CUSTOMER_TRACKING, historyCutoff } from './features.js';
+import { AUTO_PAYMENT, CALL_CENTER_LIGHT, CUSTOMER_TRACKING, historyCutoff } from './features.js';
 import { quietMode, trackingPath } from './tracking.js';
 import { kmLockError, lockedEditRight } from './delivery-km.js';
 import { notifyCustomer } from './customer-push.service.js';
@@ -149,15 +149,20 @@ const notice = (o, { light = false, quiet = false } = {}) => noticeState(o, { au
 const staffModes = async (db = prisma) => {
   const features = await getFeatures(db);
   const feesLocked = Boolean(await kmGrid(db, features));
-  return { light: features[CALL_CENTER_LIGHT], quiet: features[CUSTOMER_TRACKING], feesLocked };
+  return { light: features[CALL_CENTER_LIGHT], quiet: features[CUSTOMER_TRACKING], feesLocked, autoPay: features[AUTO_PAYMENT] };
 };
+
+// Plan 2 : paiement reçu automatiquement pour cette commande (lu seulement l'interrupteur PAIEMENT_AUTO ouvert)
+const withAutoPayment = async (order, modes) =>
+  modes.autoPay ? { ...modes, autoPayment: await prisma.autoPayment.findUnique({ where: { orderId: order.id } }) } : modes;
 
 // night : heures de nuit réglées (null = réglage éteint), pour le rappel « commande passée de nuit »
 // ctx : contexte des messages (lot 5 : avec nos codes pour une commande en mode Prestataire, messageContextFor)
 // light : call center allégé (plan 1), le message de l'étape est proposé sans bloquer (skippable)
 // quiet : suivi sans WhatsApp (plan 4), aucun message à envoyer (notice.tracking) ; lien de suivi du client
 // feesLocked : grille par km active (plan 3), le call center ne corrige plus des frais calculés (feeEdit 'PATRON')
-export function toStaffOrder(order, night = null, ctx = messageContext(), { light = false, quiet = false, feesLocked = false } = {}) {
+// autoPayment (plan 2) : paiement reçu par SMS ou Ligdicash rattaché à la commande
+export function toStaffOrder(order, night = null, ctx = messageContext(), { light = false, quiet = false, feesLocked = false, autoPayment = null } = {}) {
   const o = withCancelReason(order);
   const state = notice(o, { light, quiet });
   const from = sendFrom(o);
@@ -204,6 +209,9 @@ export function toStaffOrder(order, night = null, ctx = messageContext(), { ligh
     deliveryDistanceM: o.deliveryDistanceM,
     feeEdit: feesLocked ? lockedEditRight(feeEditRight(o).who, o) : feeEditRight(o).who,
     ...(feesLocked && { feesLocked: true }),
+    ...(autoPayment && {
+      autoPayment: { status: autoPayment.status, source: autoPayment.source, amount: autoPayment.amount, payerPhone: autoPayment.payerPhone, externalId: autoPayment.externalId, detail: autoPayment.detail, at: autoPayment.receivedAt },
+    }),
     // Livreur et code de remise (ou de retrait, à emporter). Le code est montré à l'équipe (il est dans
     // le message « en route » ou « prête », et peut être dicté au client par appel), jamais au livreur.
     courier: o.courierName ? { id: o.courierId, name: o.courierName, assignedAt: o.courierAssignedAt } : null,
@@ -267,7 +275,7 @@ export async function afterChange(reference) {
   const order = await prisma.order.findUnique({ where: { reference }, include: DETAIL_INCLUDE });
   autoNotifyCustomer(withCancelReason(order)).catch((e) => console.error('[whatsapp]', e));
   notifyCustomer(reference, ['EN_LIVRAISON', 'PRETE']);
-  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order), await staffModes());
+  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order), await withAutoPayment(order, await staffModes()));
 }
 
 export const event = (orderId, type, staff, extra = {}) => ({ orderId, type, staffUserId: staff.id, staffName: staff.name, ...extra });
@@ -289,7 +297,7 @@ export async function getOrder(reference, { checkHistory = false } = {}) {
     const visible = await prisma.order.count({ where: { id: order.id, ...visibleWhere(false, { auto }) } });
     if (!visible) throw featureClosedError();
   }
-  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order), modes);
+  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order), await withAutoPayment(order, modes));
 }
 
 // Commande lue dans une transaction, avec ce qu'il faut pour les règles (statuts et événements)
@@ -446,7 +454,7 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, n
 
 // Lot 5c : alertes du Responsable livraison (commande prête, commande sans livreur), et au livreur déjà
 // choisi quand la commande est prête. N'échoue jamais.
-function notifyPartner(reference, to) {
+export function notifyPartner(reference, to) {
   prisma.order
     .findUnique({ where: { reference }, select: { id: true, reference: true, courierId: true, courierName: true, deliveryZoneName: true } })
     .then(async (order) => {
