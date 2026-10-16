@@ -123,9 +123,9 @@ export const MESSAGES = {
   },
   COMMANDE_A_PAYER_EMPORTER: {
     template: 'emporter_commande_a_payer',
-    label: 'Commande enregistrée, à payer (à emporter)',
+    label: 'Commande enregistrée, à payer (à récupérer)',
     body:
-      'Bonjour {{1}}, merci pour votre commande à emporter {{2}} : {{3}}.\n\n' +
+      'Bonjour {{1}}, merci pour votre commande à récupérer {{2}} : {{3}}.\n\n' +
       payLine('{{4}}', '{{5}}', '{{6}}', '{{7}}', '{{8}}') + '\n\n' +
       'Payez de préférence depuis le {{9}} : c’est le numéro que nous vérifions. Votre commande est préparée dès que le paiement est vérifié, ' +
       'puis nous vous écrivons quand elle est prête à retirer au restaurant.\n\n' +
@@ -151,9 +151,9 @@ export const MESSAGES = {
   },
   PAIEMENT_PREPARATION_EMPORTER: {
     template: 'emporter_paiement_preparation',
-    label: 'Paiement confirmé, commande en préparation (à emporter)',
+    label: 'Paiement confirmé, commande en préparation (à récupérer)',
     body:
-      'Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande à emporter {{2}}. Merci ! Votre commande est en préparation : ' +
+      'Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande à récupérer {{2}}. Merci ! Votre commande est en préparation : ' +
       'nous vous écrivons dès qu’elle est prête à retirer au restaurant.\n\n' +
       'Suivez votre commande ici : {{4}}\n\nBelchicken Burkina',
     params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), trackingUrl(o, ctx)],
@@ -174,21 +174,21 @@ export const MESSAGES = {
       params: (o, ctx) => [firstName(o.customerName), o.reference, reviewUrl(o.reviewToken, ctx)],
     },
   },
-  // ─── À emporter : pas de frais de livraison, le client vient au restaurant ───
+  // ─── À récupérer : pas de frais de livraison, le client vient au restaurant ───
   PAIEMENT_CONFIRME_EMPORTER: {
     template: 'emporter_paiement_confirme',
-    label: 'Paiement confirmé (à emporter)',
+    label: 'Paiement confirmé (à récupérer)',
     body:
-      'Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande à emporter {{2}}. Merci !\n\n' +
+      'Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande à récupérer {{2}}. Merci !\n\n' +
       'Nous vous écrivons dès qu’elle est prête à retirer au restaurant.\n\n' +
       'Suivez votre commande ici : {{4}}\n\nBelchicken Burkina',
     params: (o, ctx) => [firstName(o.customerName), o.reference, formatFcfa(o.itemsTotal), trackingUrl(o, ctx)],
   },
   EN_PREPARATION_EMPORTER: {
     template: 'emporter_en_preparation',
-    label: 'Commande en préparation (à emporter)',
+    label: 'Commande en préparation (à récupérer)',
     body:
-      'Bonjour {{1}}, votre commande à emporter {{2}} est en préparation. Nous vous écrivons dès qu’elle est prête.\n\n' +
+      'Bonjour {{1}}, votre commande à récupérer {{2}} est en préparation. Nous vous écrivons dès qu’elle est prête.\n\n' +
       'Suivez votre commande ici : {{3}}\n\nBelchicken Burkina',
     params: (o, ctx) => [firstName(o.customerName), o.reference, trackingUrl(o, ctx)],
   },
@@ -289,7 +289,7 @@ export function currentMessageKey(o) {
 // récapitulatif avec les codes marchands, que l'agent peut envoyer (optional : jamais obligatoire).
 const toPay = (o) => (o.createdById ? { key: o.mode === 'A_EMPORTER' ? 'COMMANDE_A_PAYER_EMPORTER' : 'COMMANDE_A_PAYER', optional: true } : null);
 
-// À emporter : pas de frais à attendre, le message « prête » donne l'adresse du restaurant
+// À récupérer : pas de frais à attendre, le message « prête » donne l'adresse du restaurant
 const PICKUP_KEYS = {
   PAYEE: 'PAIEMENT_CONFIRME_EMPORTER',
   EN_PREPARATION: 'EN_PREPARATION_EMPORTER',

@@ -75,7 +75,7 @@ export default function DeliveryMode() {
       <h2>Mode de livraison</h2>
       <p className="st-muted pr-intro">
         Le mode est noté sur chaque commande au moment où elle est passée : le changer ne touche pas les commandes déjà
-        passées. Les commandes à emporter ne sont pas concernées. Chaque changement est noté au journal.
+        passées. Les commandes à récupérer ne sont pas concernées. Chaque changement est noté au journal.
       </p>
       {error && <div className="alert err" role="alert"><span>{error.message}</span></div>}
 

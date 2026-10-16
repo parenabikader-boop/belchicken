@@ -7,7 +7,7 @@
 // - Un seul avis par commande (Order unique dans OrderReview), seulement pour une commande livrée ou retirée,
 //   dans les 7 jours qui suivent. Interrupteur AVIS fermé : plus aucun avis reçu, plus de lien dans le message.
 // - Trois notes de 1 à 5 : call center, restaurant (la nourriture), livraison (jamais pour une commande à
-//   emporter), et un commentaire facultatif. Une note de 2 ou moins = mauvais avis : alerte et client à rappeler.
+//   récupérer), et un commentaire facultatif. Une note de 2 ou moins = mauvais avis : alerte et client à rappeler.
 // - Moyennes comptées à la date de l'avis. Call center : l'agent qui a vérifié le paiement (verificationOf,
 //   comme les ventes). Livraison : le livreur de la commande, avec l'équipe de la commande.
 // - Responsable livraison : la note de livraison des commandes de notre équipe seulement, jamais les autres
@@ -102,7 +102,7 @@ export function checkReviewInput(input, o) {
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Avis incomplet.' };
   const { callCenter, food, delivery, comment } = parsed.data;
   const pickup = o.mode === 'A_EMPORTER';
-  if (pickup && delivery != null) return { error: 'Pas de note de livraison pour une commande à emporter.' };
+  if (pickup && delivery != null) return { error: 'Pas de note de livraison pour une commande à récupérer.' };
   if (!pickup && delivery == null) return { error: 'Donnez une note au livreur.' };
   const text = String(comment ?? '').replace(/\s+/g, ' ').trim();
   const data = {

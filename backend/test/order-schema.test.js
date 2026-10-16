@@ -55,7 +55,7 @@ test('accepte Telecel Money, 3e opérateur', () => {
   assert.deepEqual(o.payment, { method: 'TELECEL_MONEY', payerPhone: '+22658123456' });
 });
 
-test('à emporter : ni position ni repères demandés, livraison par défaut', () => {
+test('à récupérer : ni position ni repères demandés, livraison par défaut', () => {
   const o = createOrderSchema.parse({ ...base, addressNote: undefined, mode: 'A_EMPORTER' });
   assert.equal(o.mode, 'A_EMPORTER');
   assert.equal(createOrderSchema.parse(base).mode, 'LIVRAISON');

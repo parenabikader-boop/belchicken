@@ -9,7 +9,7 @@
 //   jamais le code : l'API le vérifie. Après 5 codes faux, la saisie est bloquée sur cette commande.
 // - Client sans son code : l'agent valide à sa place, avec un motif noté dans l'historique. Plan 1 (interrupteur
 //   CALL_CENTER_ALLEGE ouvert) : le livreur peut aussi valider lui-même sans code, avec un motif (courierNoCodeError).
-// - À emporter : même code (mêmes colonnes deliveryCode / deliveryCodeAttempts), créé au passage PRETE
+// - À récupérer : même code (mêmes colonnes deliveryCode / deliveryCodeAttempts), créé au passage PRETE
 //   et envoyé dans le message « commande prête ». L'agent le tape au comptoir (checkPickupCode).
 import { randomInt, timingSafeEqual } from 'node:crypto';
 import { courierTeamError } from './courier-team.js';
@@ -56,7 +56,7 @@ export function checkHandover(order, courierId, code) {
   });
 }
 
-// Vérification du code, la même pour le livreur et pour le comptoir (à emporter) ; texts : les
+// Vérification du code, la même pour le livreur et pour le comptoir (à récupérer) ; texts : les
 // messages propres à chacun (pas de code, saisie bloquée, dernier code faux).
 function checkCode(order, code, texts) {
   if (!order.deliveryCode) return { ok: false, error: texts.noCode };
@@ -71,7 +71,7 @@ function checkCode(order, code, texts) {
   return { ok: true };
 }
 
-// À emporter : l'agent tape au comptoir le code de retrait donné par le client (créé au passage PRETE,
+// À récupérer : l'agent tape au comptoir le code de retrait donné par le client (créé au passage PRETE,
 // envoyé dans le message « commande prête »). Même réponse que checkHandover. 5 codes faux au plus ;
 // ensuite, ou si le client n'a plus son code, l'agent valide sans code avec un motif (RETRAIT_SANS_CODE).
 export function checkPickupCode(order, code) {
@@ -97,7 +97,7 @@ export function courierNoCodeError(order, courierId, reason) {
   if (order.status === 'LIVREE') return 'Cette commande est déjà livrée.';
   if (order.status === 'ANNULEE') return 'Cette commande a été annulée : ne la livrez pas. Appelez l’équipe.';
   if (order.status !== 'EN_LIVRAISON') return 'Cette commande n’est pas en livraison.';
-  if (order.mode === 'A_EMPORTER') return 'Commande à emporter : elle se remet au comptoir.';
+  if (order.mode === 'A_EMPORTER') return 'Commande à récupérer : elle se remet au comptoir.';
   return handoverReasonError(reason);
 }
 

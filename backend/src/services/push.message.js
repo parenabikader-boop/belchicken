@@ -8,7 +8,7 @@ export function newOrderNotification(order) {
   return {
     title: `Nouvelle commande ${order.reference} · ${formatFcfa(order.itemsTotal)}`,
     body:
-      `${count} article${count > 1 ? 's' : ''}${order.mode === 'A_EMPORTER' ? ' · à emporter' : ''} · ${PAYMENT_LABELS[order.paymentMethod] || 'Paiement'} à vérifier` +
+      `${count} article${count > 1 ? 's' : ''}${order.mode === 'A_EMPORTER' ? ' · à récupérer' : ''} · ${PAYMENT_LABELS[order.paymentMethod] || 'Paiement'} à vérifier` +
       // Saisie par un agent : provenance et agent (jamais le client sur l'écran verrouillé)
       (order.createdByName ? ` · ${order.sourceName || 'Site'}, saisie par ${order.createdByName}` : ''),
     url: `/equipe/commandes/${encodeURIComponent(order.reference)}`,
@@ -30,7 +30,7 @@ export function courseNotification(order) {
 
 // Commande livrée : à l'équipe (Patron et Opérateurs), pour remercier le client.
 // « Commande BC-XXXX livrée par Issa à 14:32 ». Heure du Burkina = UTC.
-// À emporter : « Commande BC-XXXX retirée au comptoir à 14:32 ».
+// À récupérer : « Commande BC-XXXX retirée au comptoir à 14:32 ».
 export function deliveredNotification(order, { courierName, at, byAgent = null, auto = false }) {
   const time = new Date(at).toISOString().slice(11, 16).replace(':', ' h ');
   const pickup = order.mode === 'A_EMPORTER';

@@ -8,7 +8,7 @@ export function stageDetail(o) {
   if (isPickup(o)) {
     if (o.status === 'PRETE') return 'Le client vient la retirer';
     if (o.status === 'LIVREE') return 'Retirée au comptoir';
-    return 'À emporter · sans frais';
+    return 'À récupérer · sans frais';
   }
   // Livreur indépendant : aucun frais dans la commande
   if (isIndependent(o) && ['PAIEMENT_A_VERIFIER', 'PAYEE'].includes(o.status)) return `${o.deliveryZoneName ? `${o.deliveryZoneName} · ` : ''}livreur indépendant`;

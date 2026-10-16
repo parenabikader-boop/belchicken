@@ -69,12 +69,12 @@ const orderFields = {
   // utilisés comme prix). Absent = ancienne version du site.
   delivery: deliveryChoiceSchema.optional(),
   addressNote: optionalText(300),
-  // Livraison (par défaut, anciennes versions du site) ou à emporter (retrait au restaurant)
-  mode: z.enum(['LIVRAISON', 'A_EMPORTER'], { errorMap: () => ({ message: 'Choisissez livraison ou à emporter.' }) }).default('LIVRAISON'),
+  // Livraison (par défaut, anciennes versions du site) ou à récupérer (retrait au restaurant)
+  mode: z.enum(['LIVRAISON', 'A_EMPORTER'], { errorMap: () => ({ message: 'Choisissez livraison ou à récupérer.' }) }).default('LIVRAISON'),
   items: z.array(item).min(1, 'La commande est vide.').max(40),
 };
 
-// Livraison : une position ou des repères. À emporter : rien à demander.
+// Livraison : une position ou des repères. À récupérer : rien à demander.
 const hasPlace = [
   (o) => o.mode === 'A_EMPORTER' || o.location || (o.addressNote && o.addressNote.length >= 5),
   { message: 'Partagez votre position ou indiquez votre quartier et un repère.', path: ['addressNote'] },

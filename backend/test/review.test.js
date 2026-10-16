@@ -74,13 +74,13 @@ test('lien dans le remerciement : clé, AVIS ouvert, livrée, 7 jours au plus', 
   assert.equal(reviewLinkActive(delivered({ review: { id: 'r1' } }), { avisOpen: true, now: NOW }), true);
 });
 
-test('avis envoyé : trois notes pour une livraison, deux pour une commande à emporter', () => {
+test('avis envoyé : trois notes pour une livraison, deux pour une commande à récupérer', () => {
   const ok = checkReviewInput({ callCenter: 5, food: 4, delivery: 3, comment: '  Très bon,\n merci  ' }, { mode: 'LIVRAISON' });
   assert.deepEqual(ok.data, { callCenterRating: 5, foodRating: 4, deliveryRating: 3, comment: 'Très bon, merci', lowRating: false });
   assert.match(checkReviewInput({ callCenter: 5, food: 4 }, { mode: 'LIVRAISON' }).error, /livreur/);
   const pickup = checkReviewInput({ callCenter: 5, food: 5, comment: '' }, { mode: 'A_EMPORTER' });
   assert.deepEqual(pickup.data, { callCenterRating: 5, foodRating: 5, deliveryRating: null, comment: null, lowRating: false });
-  assert.match(checkReviewInput({ callCenter: 5, food: 5, delivery: 4 }, { mode: 'A_EMPORTER' }).error, /à emporter/);
+  assert.match(checkReviewInput({ callCenter: 5, food: 5, delivery: 4 }, { mode: 'A_EMPORTER' }).error, /à récupérer/);
 });
 
 test('avis envoyé : notes de 1 à 5 entières, commentaire de 500 caractères au plus, rien d’autre', () => {
@@ -152,7 +152,7 @@ test('page Avis du Patron : moyennes, par agent (paiement vérifié), par livreu
   assert.equal(s.lowCount, 1);
   assert.equal(s.criteria.callCenter.average, 4.3);
   assert.equal(s.criteria.food.average, 4.5);
-  assert.equal(s.criteria.delivery.count, 3); // pas de note de livraison à emporter
+  assert.equal(s.criteria.delivery.count, 3); // pas de note de livraison à récupérer
   assert.equal(s.criteria.delivery.average, 3.7);
   assert.deepEqual(s.byAgent.map((a) => [a.name, a.count, a.average]), [['Moussa', 1, 4], ['Awa', 3, 4.3]]);
   assert.deepEqual(s.byCourier.map((c) => [c.name, c.team, c.count, c.average]), [['Issa', 'RESTAURANT', 2, 3.5], ['Ali', 'PRESTATAIRE', 1, 4]]);

@@ -17,7 +17,7 @@ const DRAFT_KEY = 'belchicken.infos.v1';
 // zone : quartier choisi dans la grille des frais ({ id, name }) ; other : « Autre quartier »
 const EMPTY = { name: '', phone: '', method: null, payer: '', mode: 'LIVRAISON', addr: '', geo: null, zone: null, other: false };
 
-// Livraison à domicile, ou à emporter (retrait au restaurant, sans frais de livraison).
+// Livraison à domicile, ou à récupérer (retrait au restaurant, sans frais de livraison).
 // Libellés : i18n, checkout.modes
 const MODES = [{ id: 'LIVRAISON' }, { id: 'A_EMPORTER' }];
 

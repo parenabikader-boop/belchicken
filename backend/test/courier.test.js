@@ -59,7 +59,7 @@ test('livraison validée par l’agent : motif obligatoire', () => {
   assert.match(handoverReasonError('', true), /la remise au comptoir est validée sans code/);
 });
 
-// ─── À emporter : code de retrait tapé au comptoir ───
+// ─── À récupérer : code de retrait tapé au comptoir ───
 const ready = (extra = {}) => ({ mode: 'A_EMPORTER', status: 'PRETE', deliveryCode: '4827', deliveryCodeAttempts: 0, ...extra });
 
 test('retrait au comptoir : le bon code valide, un code faux est compté', () => {

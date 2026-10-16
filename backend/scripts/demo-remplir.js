@@ -94,7 +94,7 @@ function printSummary(plan, s, check, before) {
   console.log(`Période : ${s.period}`);
   console.log(`Commandes : ${s.orders} (lignes de plats ${s.items}, étapes ${s.statusChanges}, événements ${s.events})`);
   console.log(`Ventes (payées) : ${s.sales.count} commandes, ${s.sales.amount}, panier moyen ${s.sales.average}`);
-  console.log(`Livraison ${s.modes.livraison} (restaurant ${s.modes.restaurant}, Prestataire ${s.modes.prestataire}) · à emporter ${s.modes.emporter}`);
+  console.log(`Livraison ${s.modes.livraison} (restaurant ${s.modes.restaurant}, Prestataire ${s.modes.prestataire}) · à récupérer ${s.modes.emporter}`);
   console.log(`Provenance : site ${s.sources.site} · appel ${s.sources.appel} · WhatsApp ${s.sources.whatsapp}`);
   console.log(`Paiement des plats : Orange ${s.payments.ORANGE_MONEY} · Moov ${s.payments.MOOV_MONEY} · Telecel ${s.payments.TELECEL_MONEY}`);
   console.log(`Annulées : ${s.cancelled} · livraisons offertes : ${s.free} · supplément de nuit : ${s.night} · frais fixés par l'agent : ${s.agentFees}`);

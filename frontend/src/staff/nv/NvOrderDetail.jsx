@@ -91,7 +91,7 @@ function Loaded({ order: o, setOrder, error, load, refreshFeed }) {
         <span className={`nv-step ${toneOf(o)}`}>{statusLabel(o)}</span>
       </div>
       <p className="nvd-tags">
-        {pickup && <span className="nv-tag">À emporter</span>}
+        {pickup && <span className="nv-tag">À récupérer</span>}
         {o.deliveryOperator === 'PRESTATAIRE' && <span className="nv-tag">Livraison Prestataire</span>}
         {isIndependent(o) && <span className="nv-tag">Livreur indépendant</span>}
         {o.language === 'EN' && <span className="nv-tag">Client anglophone</span>}
@@ -180,7 +180,7 @@ function Loaded({ order: o, setOrder, error, load, refreshFeed }) {
 
         {pickup ? (
           <section className="nv-card">
-            <h2>À emporter</h2>
+            <h2>À récupérer</h2>
             <p>Le client vient retirer sa commande au restaurant. Pas de livreur, pas de frais.</p>
           </section>
         ) : (

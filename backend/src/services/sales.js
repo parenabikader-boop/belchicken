@@ -17,7 +17,7 @@ import { DAY, dayKey } from './statement.js';
 
 export const SALE_METHODS = ['ORANGE_MONEY', 'MOOV_MONEY', 'TELECEL_MONEY'];
 export const METHOD_LABEL = { ...PAYMENT_LABELS, ESPECES: 'Espèces (anciennes commandes)' };
-export const MODE_LABEL = { LIVRAISON: 'Livraison', A_EMPORTER: 'À emporter' };
+export const MODE_LABEL = { LIVRAISON: 'Livraison', A_EMPORTER: 'À récupérer' };
 const SITE_KEY = 'SITE';
 
 export const isSale = (o) => PAID.includes(o.status);

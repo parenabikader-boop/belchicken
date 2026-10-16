@@ -21,10 +21,10 @@ test('parcours Prestataire : préparation → prête pour livraison → en livra
   assert.equal(transitionError('PRETE_LIVRAISON', 'ANNULEE', 'Client injoignable', 'LIVRAISON', 'PRESTATAIRE'), null);
 });
 
-test('rien ne change pour le restaurant et l’emporter : pas d’étape « Prête pour livraison »', () => {
+test('rien ne change pour le restaurant et la commande à récupérer : pas d’étape « Prête pour livraison »', () => {
   assert.equal(nextStatus('EN_PREPARATION'), 'EN_LIVRAISON');
   assert.equal(nextStatus('EN_PREPARATION', 'LIVRAISON', 'RESTAURANT'), 'EN_LIVRAISON');
-  assert.equal(nextStatus('EN_PREPARATION', 'A_EMPORTER', 'PRESTATAIRE'), 'PRETE'); // à emporter : toujours le restaurant
+  assert.equal(nextStatus('EN_PREPARATION', 'A_EMPORTER', 'PRESTATAIRE'), 'PRETE'); // à récupérer : toujours le restaurant
   assert.match(transitionError('EN_PREPARATION', 'PRETE_LIVRAISON', null, 'LIVRAISON', 'RESTAURANT'), /Passage impossible/);
   assert.equal(isPartnerDelivery(resto()), false);
   assert.equal(isPartnerDelivery(partner({ mode: 'A_EMPORTER' })), false);
@@ -81,7 +81,7 @@ test('tournée du restaurant : seulement avec le réglage, des commandes du rest
   assert.match(restaurantTourError({ ...ok, orders: [resto(), partner({ reference: 'BC-R2' })] }), /BC-R2 est livrée par notre partenaire/);
   assert.match(restaurantTourError({ ...ok, orders: [resto({ status: 'PAYEE' }), resto({ reference: 'BC-R2' })] }), /déjà changé/);
   assert.match(restaurantTourError({ ...ok, seen: {}, orders: [resto({ status: 'PAYEE' }), resto({ reference: 'BC-R2' })] }), /n’est pas en préparation/);
-  assert.match(restaurantTourError({ ...ok, orders: [resto({ mode: 'A_EMPORTER' }), resto({ reference: 'BC-R2' })] }), /à emporter/);
+  assert.match(restaurantTourError({ ...ok, orders: [resto({ mode: 'A_EMPORTER' }), resto({ reference: 'BC-R2' })] }), /à récupérer/);
   assert.match(restaurantTourError({ ...ok, references: ['BC-R1', 'BC-R1'] }), /deux fois/);
 });
 

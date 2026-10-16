@@ -12,7 +12,7 @@ export const STATUS_LABEL = {
   ANNULEE: 'Annulée',
 };
 
-// À emporter : retirée au restaurant (PRETE, puis LIVREE affichée « Retirée »), sans frais ni livreur
+// À récupérer : retirée au restaurant (PRETE, puis LIVREE affichée « Retirée »), sans frais ni livreur
 export const isPickup = (o) => o?.mode === 'A_EMPORTER';
 export const statusLabel = (o, status = o.status) => (isPickup(o) && status === 'LIVREE' ? 'Retirée' : STATUS_LABEL[status]);
 
@@ -29,7 +29,7 @@ export const STAGES = [
   {
     id: 'PAIEMENT_A_VERIFIER',
     label: 'À vérifier',
-    hint: 'Vérifiez ces paiements sur le téléphone marchand, puis confirmez-les avec les frais de livraison (aucun frais pour les commandes à emporter).',
+    hint: 'Vérifiez ces paiements sur le téléphone marchand, puis confirmez-les avec les frais de livraison (aucun frais pour les commandes à récupérer).',
     empty: 'Aucun paiement à vérifier.',
   },
   {
@@ -42,7 +42,7 @@ export const STAGES = [
     id: 'EN_PREPARATION',
     label: 'En préparation',
     // Lot 5c : avec aussi les commandes de notre partenaire prêtes, qui attendent son livreur (PRETE_LIVRAISON)
-    hint: 'Préparez ces commandes, puis choisissez le livreur au départ. À emporter : prévenez le client qu’elle est prête. Livraison Prestataire : appuyez sur « Prête pour livraison », son livreur vient la récupérer.',
+    hint: 'Préparez ces commandes, puis choisissez le livreur au départ. À récupérer : prévenez le client qu’elle est prête. Livraison Prestataire : appuyez sur « Prête pour livraison », son livreur vient la récupérer.',
     empty: 'Aucune commande en préparation.',
   },
   {
@@ -52,10 +52,10 @@ export const STAGES = [
     empty: 'Aucune commande en route.',
   },
   {
-    // À emporter : prêtes, le client vient au comptoir
+    // À récupérer : prêtes, le client vient au comptoir
     id: 'PRETE',
     label: 'À retirer',
-    hint: 'Commandes à emporter prêtes : au comptoir, tapez le code de retrait du client, puis remettez-lui la commande.',
+    hint: 'Commandes à récupérer prêtes : au comptoir, tapez le code de retrait du client, puis remettez-lui la commande.',
     empty: 'Aucune commande à retirer.',
   },
   {
@@ -87,7 +87,7 @@ const PARTNER_ACTION = {
   EN_PREPARATION: { to: 'PRETE_LIVRAISON', label: 'Prête pour livraison : prévenir le livreur' },
   PRETE_LIVRAISON: { to: 'EN_LIVRAISON', label: 'Commande récupérée' },
 };
-// À emporter : « prête » au lieu du départ du livreur, puis remise au comptoir
+// À récupérer : « prête » au lieu du départ du livreur, puis remise au comptoir
 const PICKUP_ACTION = {
   EN_PREPARATION: { to: 'PRETE', label: 'Commande prête : prévenir le client' },
   PRETE: { to: 'LIVREE', label: 'Remise au client : le remercier' },

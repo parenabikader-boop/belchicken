@@ -19,10 +19,11 @@ const MapPicker = lazy(() => import('../components/MapPicker.jsx'));
 
 // Lot « Commande simplifiée » (interrupteur COMMANDE_SIMPLIFIEE) : une seule page, dans l'ordre, très peu de texte :
 //   0. récapitulatif replié (« 3 articles · 7 500 F », « Modifier » : plats, + et −, retirer) ;
-//   a. Livraison ou À emporter ;
-//   b. livraison : « Utiliser ma position » (ou un point sur la carte), puis le prix calculé par le serveur, et un repère ;
+//   a. Livraison ou À récupérer ;
+//   b. livraison : « Ma position » (ou un point sur la carte) OBLIGATOIRE ; le prix calculé par le serveur s'affiche
+//      dans le bouton « Livraison · 1 400 F » (km en petit) ; un repère facultatif ;
 //   c. nom et téléphone ;
-//   d. paiement, seulement une fois le prix de livraison affiché (tout de suite à emporter), puis « Envoyer ma commande ».
+//   d. paiement, seulement une fois le prix de livraison affiché (tout de suite à récupérer), puis « Envoyer ma commande ».
 // Jamais de quartier. Les prix sont toujours calculés par le serveur : le site renvoie seulement le montant affiché.
 const DRAFT_KEY = 'belchicken.simple.v1';
 const EMPTY = { mode: 'LIVRAISON', name: '', phone: '', method: null, payer: '', note: '' };
@@ -174,13 +175,11 @@ export default function CommandeSimple() {
     }
   };
 
-  let priceText = null;
-  if (quote?.loading) priceText = S.priceLoading;
-  else if (quote?.error) priceText = quote.error;
-  else if (price) {
-    const km = price.km != null ? S.km(price.km) : null;
-    priceText = price.fee == null ? S.priceLater : price.fee === 0 ? S.priceFree(km) : S.price(formatPrice(price.fee), km);
-  }
+  // Prix de livraison collé au mot « Livraison » : « Livraison · 1 400 F », les km en petit (rien sans position)
+  let feeShort = null;
+  if (delivery && geo && quote?.loading) feeShort = '…';
+  else if (delivery && geo && price) feeShort = price.fee == null ? S.priceTbc : price.fee === 0 ? S.priceFreeShort : formatPrice(price.fee);
+  const kmShort = delivery && geo && price?.km != null ? `${S.km(price.km)}${price.estimate ? ' ~' : ''}` : null;
   const recap = !delivery || price?.fee === 0
     ? S.recap(formatPrice(total), null)
     : price?.fee ? S.recap(formatPrice(total), formatPrice(price.fee)) : S.recapLater(formatPrice(total));
@@ -200,11 +199,14 @@ export default function CommandeSimple() {
         {items.some((i) => i.problem) && <p className="cs-bad">{t.cart.blocked}</p>}
       </section>
 
-      {/* a. Livraison ou À emporter */}
+      {/* a. Livraison ou À récupérer */}
       <section className="cs-block">
         <div className="cs-modes" role="radiogroup" aria-label={S.title}>
           {[['LIVRAISON', S.delivery], ['A_EMPORTER', S.pickup]].map(([id, label]) => (
-            <button key={id} type="button" role="radio" aria-checked={f.mode === id} className={`cs-mode${f.mode === id ? ' on' : ''}`} onClick={() => set('mode', id)}>{label}</button>
+            <button key={id} type="button" role="radio" aria-checked={f.mode === id} className={`cs-mode${f.mode === id ? ' on' : ''}`} onClick={() => set('mode', id)}>
+              <span>{label}{id === 'LIVRAISON' && feeShort && <> · {feeShort}</>}</span>
+              {id === 'LIVRAISON' && kmShort && <small className="cs-km">{kmShort}</small>}
+            </button>
           ))}
         </div>
       </section>
@@ -225,12 +227,8 @@ export default function CommandeSimple() {
             ) : (
               <button type="button" className="lnk cs-link" onClick={() => setShowMap(true)}>{S.onMap}</button>
             )}
-            {geo && priceText && (
-              <p className={`cs-price${quote?.error ? ' bad' : ''}`} aria-live="polite">
-                <b>{priceText}</b>
-                {price?.estimate && <small>{S.estimate}</small>}
-              </p>
-            )}
+            {/* Prix impossible (trop loin, position imprécise…) : une seule ligne, le paiement reste caché */}
+            {geo && quote?.error && <p className="cs-bad" role="alert">{quote.error}</p>}
             <label className="cs-label" htmlFor="cs-note">{S.landmark}</label>
             <input id="cs-note" className="cs-input" value={f.note} onChange={(e) => set('note', e.target.value)} placeholder={S.landmarkPh} maxLength={300} />
           </>
@@ -247,7 +245,7 @@ export default function CommandeSimple() {
         <input id="cs-phone" className="cs-input" type="tel" inputMode="tel" value={f.phone} onChange={(e) => set('phone', e.target.value)} autoComplete="tel" placeholder="70 12 34 56" />
       </section>
 
-      {/* d. Paiement : seulement une fois le prix de livraison affiché (tout de suite à emporter) */}
+      {/* d. Paiement : seulement une fois le prix de livraison affiché (tout de suite à récupérer) */}
       {showPay && (
         <section className="cs-block">
           <h2 className="cs-h">{S.pay}</h2>

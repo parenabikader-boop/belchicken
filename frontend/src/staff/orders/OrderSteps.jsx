@@ -256,7 +256,7 @@ export function Actions({ order: o, steps }) {
   const next = nextAction(o, { shortFlow });
   const pickup = isPickup(o);
   const partner = isPartner(o); // lot 5c : livrée par notre partenaire
-  const noFee = pickup || isIndependent(o); // à emporter ou livreur indépendant : aucun frais dans la commande
+  const noFee = pickup || isIndependent(o); // à récupérer ou livreur indépendant : aucun frais dans la commande
   const [mode, setMode] = useState(null); // null | 'confirm' | 'depart' | 'handover' | 'counter' | 'pickedUp' | 'cancel'
   const [reason, setReason] = useState('');
   const [fee, setFee] = useState('');
@@ -307,7 +307,7 @@ export function Actions({ order: o, steps }) {
           {o.paymentPayerPhone && <> depuis le <strong>{formatPhone(o.paymentPayerPhone)}</strong></>}.
         </p>
         {noFee ? (
-          <p className="st-muted">{pickup ? 'Commande à emporter : pas de frais de livraison.' : INDEPENDENT_NOTE}</p>
+          <p className="st-muted">{pickup ? 'Commande à récupérer : pas de frais de livraison.' : INDEPENDENT_NOTE}</p>
         ) : (
           <>
             <label htmlFor="st-fee" className="st-fee-label">
@@ -409,7 +409,7 @@ export function Actions({ order: o, steps }) {
     );
   }
 
-  // À emporter : remise au comptoir avec le code de retrait que le client a reçu dans le message « prête »
+  // À récupérer : remise au comptoir avec le code de retrait que le client a reçu dans le message « prête »
   if (mode === 'counter' && o.status === 'PRETE') {
     const digits = code.replace(/\D/g, '');
     const left = o.maxCodeAttempts - o.codeAttempts;
@@ -432,7 +432,7 @@ export function Actions({ order: o, steps }) {
     );
   }
 
-  // À emporter, client sans son code (ou 5 codes faux) : l'agent valide avec un motif
+  // À récupérer, client sans son code (ou 5 codes faux) : l'agent valide avec un motif
   if (mode === 'counterNoCode' && o.status === 'PRETE') {
     return (
       <form className="st-action cancel" onSubmit={async (e) => { e.preventDefault(); if (await go(() => staffApi.setStatus(o.reference, { from: o.status, to: 'LIVREE', reason }))) setReason(''); }}>
@@ -503,7 +503,7 @@ export function Actions({ order: o, steps }) {
       )}
       {o.status === 'PRETE' && (
         <p className="st-wait">
-          À emporter : le client vient la retirer au restaurant et donne son <b>code de retrait</b> au comptoir.
+          À récupérer : le client vient la retirer au restaurant et donne son <b>code de retrait</b> au comptoir.
           {o.codeLocked && <> <b>Trop de codes faux</b> : si c’est bien le client, validez sans code, avec un motif.</>}
         </p>
       )}

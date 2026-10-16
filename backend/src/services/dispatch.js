@@ -64,7 +64,7 @@ export function restaurantTourError({ dispatch, orders, seen, references }) {
   if (new Set(references).size !== references.length) return 'Une commande est cochée deux fois.';
   if (orders.length !== references.length) return 'Une commande est introuvable. La page est mise à jour.';
   for (const o of orders) {
-    if (o.mode === 'A_EMPORTER') return `La commande ${o.reference} est à emporter.`;
+    if (o.mode === 'A_EMPORTER') return `La commande ${o.reference} est à récupérer.`;
     if (isPartnerDelivery(o)) return `La commande ${o.reference} est livrée par notre partenaire.`;
     if (seen[o.reference] && seen[o.reference] !== o.status) return `Quelqu’un a déjà changé la commande ${o.reference}. La page est mise à jour.`;
     if (o.status !== 'EN_PREPARATION') return `La commande ${o.reference} n’est pas en préparation.`;

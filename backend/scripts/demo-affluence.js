@@ -88,7 +88,7 @@ function printSummary(p, now) {
     console.log(`  ${name.padEnd(22)} ${String(c.n).padStart(2)}   ${c.ok} / ${c.warn} / ${c.late}   ✉ ${c.msg}`);
   }
   const deliveries = live.filter((o) => o.mode === 'LIVRAISON');
-  console.log(`\nLivraisons en cours : ${deliveries.filter((o) => o.deliveryOperator === 'PRESTATAIRE').length} par notre équipe, ${deliveries.filter((o) => o.deliveryOperator === 'RESTAURANT').length} par le restaurant · à emporter : ${live.filter((o) => o.mode === 'A_EMPORTER').length} · tournées : ${p.runs.length}`);
+  console.log(`\nLivraisons en cours : ${deliveries.filter((o) => o.deliveryOperator === 'PRESTATAIRE').length} par notre équipe, ${deliveries.filter((o) => o.deliveryOperator === 'RESTAURANT').length} par le restaurant · à récupérer : ${live.filter((o) => o.mode === 'A_EMPORTER').length} · tournées : ${p.runs.length}`);
   console.log(`Saisies par un agent : ${live.filter((o) => o.createdById).length} · sur le site : ${live.filter((o) => !o.createdById).length}`);
   console.log('\nExemples (les plus longues attentes) :');
   for (const o of [...live].sort((a, b) => waitMinutes(b, now.getTime()) - waitMinutes(a, now.getTime())).slice(0, 8)) {

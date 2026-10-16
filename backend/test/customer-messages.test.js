@@ -218,10 +218,10 @@ test('confirmer le paiement demande les frais', () => {
   assert.match(paymentConfirmError(0, 'LIVRAISON', 1000), /invalides/);
 });
 
-// ─── À emporter ───
+// ─── À récupérer ───
 const pickup = (extra = {}) => order({ mode: 'A_EMPORTER', ...extra });
 
-test('à emporter : messages sans frais, à chaque étape', () => {
+test('à récupérer : messages sans frais, à chaque étape', () => {
   assert.deepEqual(currentMessageKey(pickup({ status: 'PAIEMENT_A_VERIFIER' })), null);
   assert.deepEqual(currentMessageKey(pickup({ status: 'PAYEE' })), { key: 'PAIEMENT_CONFIRME_EMPORTER' });
   assert.deepEqual(currentMessageKey(pickup({ status: 'EN_PREPARATION' })), { key: 'EN_PREPARATION_EMPORTER' });
@@ -229,7 +229,7 @@ test('à emporter : messages sans frais, à chaque étape', () => {
   assert.deepEqual(currentMessageKey(pickup({ status: 'LIVREE' })), { key: 'RETIREE' });
   assert.deepEqual(currentMessageKey(pickup({ status: 'ANNULEE' })), { key: 'ANNULEE' });
   const paid = renderMessage('PAIEMENT_CONFIRME_EMPORTER', pickup({ status: 'PAYEE' }), ctx);
-  assert.match(paid, /paiement de 7 000 F pour la commande à emporter BC-7K2Q9M/);
+  assert.match(paid, /paiement de 7 000 F pour la commande à récupérer BC-7K2Q9M/);
   assert.doesNotMatch(paid, /Frais de livraison/);
 });
 
@@ -244,7 +244,7 @@ test('commande prête : code de retrait, adresse du restaurant et lien Itinérai
   assert.doesNotMatch(MESSAGES.COMMANDE_PRETE.body, /BP/);
 });
 
-test('à emporter : l’étape « prête » demande que le client soit prévenu avant la remise', () => {
+test('à récupérer : l’étape « prête » demande que le client soit prévenu avant la remise', () => {
   const at = new Date('2026-10-06T12:00:00Z');
   const o = pickup({ status: 'PRETE', statusChanges: [{ toStatus: 'PRETE', createdAt: at }], events: [] });
   assert.match(noticeError(noticeState(o)), /Commande prête à retirer/);

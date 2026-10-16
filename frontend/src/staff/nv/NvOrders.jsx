@@ -143,7 +143,7 @@ function OrderCard({ o, now, isNew, shortFlow, withStatus = false }) {
   const min = waitMinutes(o, now);
   const action = withStatus ? null : cardAction(o, { shortFlow });
   const pickup = isPickup(o);
-  const type = pickup ? 'À emporter' : `Livraison${o.deliveryZoneName ? ` · ${o.deliveryZoneName}` : ''}`;
+  const type = pickup ? 'À récupérer' : `Livraison${o.deliveryZoneName ? ` · ${o.deliveryZoneName}` : ''}`;
   const detail = stageDetail(o)?.replace(/🛵\s?/u, ''); // pas d'emoji dans le nouveau visuel
   const label = o.status === 'LIVREE' && o.toThank && !withStatus ? 'À remercier' : statusLabel(o);
   return (
@@ -165,7 +165,7 @@ function OrderCard({ o, now, isNew, shortFlow, withStatus = false }) {
             <span className="nv-type">{pickup ? <ShoppingBag size={14} aria-hidden="true" /> : <Bike size={14} aria-hidden="true" />} {type}</span>
           </span>
           <span className="nv-order-items">
-            {plural(o.itemCount, 'article')} · {(METHOD_LABEL[o.paymentMethod] || '').trim()}{detail && !(pickup && /^À emporter/.test(detail)) ? ` · ${detail}` : ''}
+            {plural(o.itemCount, 'article')} · {(METHOD_LABEL[o.paymentMethod] || '').trim()}{detail && !(pickup && /^À récupérer/.test(detail)) ? ` · ${detail}` : ''}
           </span>
           <span className="nv-order-l3">
             <span className={`nv-step ${toneOf(o)}`}>{label}</span>

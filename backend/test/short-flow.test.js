@@ -38,11 +38,11 @@ test('parcours court : un seul message, paiement et préparation', () => {
   const free = short({ deliveryFee: 0 });
   assert.equal(messageModel('PAIEMENT_PREPARATION', free).template, 'commande_paiement_preparation_offerte');
   assert.match(renderMessage('PAIEMENT_PREPARATION', free, ctx), /Livraison offerte : vous n’avez rien à payer au livreur\./);
-  // À emporter
+  // À récupérer
   const pickup = short({ mode: 'A_EMPORTER', deliveryFee: null });
   assert.equal(currentMessageKey(pickup).key, 'PAIEMENT_PREPARATION_EMPORTER');
   const p = renderMessage('PAIEMENT_PREPARATION_EMPORTER', pickup, ctx);
-  assert.match(p, /commande à emporter BC-ABC123\. Merci ! Votre commande est en préparation : nous vous écrivons dès qu’elle est prête/);
+  assert.match(p, /commande à récupérer BC-ABC123\. Merci ! Votre commande est en préparation : nous vous écrivons dès qu’elle est prête/);
   assert.doesNotMatch(p, /Frais de livraison/);
 });
 

@@ -134,7 +134,7 @@ test('précision 2 : le numéro d’envoi reste à toutes les étapes suivantes,
   }
   const cancelled = agentOrder({ status: 'ANNULEE', statusChanges: [...agentOrder().statusChanges, { fromStatus: 'PAIEMENT_A_VERIFIER', toStatus: 'ANNULEE', reason: 'Client injoignable', staffName: 'Awa (essai)', createdAt: at(5) }] });
   assert.equal(toStaffOrder(cancelled).notice.sendFrom.text, 'Envoyez depuis WhatsApp +226 50 62 70 70');
-  // À emporter aussi
+  // À récupérer aussi
   const pickup = toStaffOrder(agentOrder({ mode: 'A_EMPORTER' }));
   assert.equal(pickup.notice.key, 'COMMANDE_A_PAYER_EMPORTER');
   assert.equal(pickup.notice.sendFrom.text, 'Envoyez depuis WhatsApp +226 50 62 70 70');

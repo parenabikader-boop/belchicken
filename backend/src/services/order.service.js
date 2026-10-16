@@ -14,13 +14,17 @@ import { getDeliveryMode, messageContextFor } from './delivery-mode.service.js';
 import { pushTeamNewOrder } from './push.service.js';
 import { pushEnabled } from '../config/env.js';
 import { isFeatureOpen } from './features.service.js';
-import { CUSTOMER_TRACKING } from './features.js';
+import { CUSTOMER_TRACKING, SIMPLE_ORDER } from './features.js';
+import { positionRequiredError } from './simple-order.js';
 import { keyMatches, lockedView, newTrackingKey, trackingExtras } from './tracking.js';
 import { matchNewOrder } from './auto-payment.service.js';
 
 // Commande du site, ou saisie par un agent (lot 2) : `agent` = { source, staff } (provenance déjà vérifiée).
 // Même calcul des prix et des frais, même départ « paiement à vérifier », dans les deux cas.
 export async function createOrder(input, agent = null) {
+  // Commande simplifiée : une livraison sans position est refusée (interrupteur fermé : comme avant)
+  const noPosition = positionRequiredError({ mode: input.mode, location: input.location, byAgent: Boolean(agent), simpleOpen: !agent && input.mode !== 'A_EMPORTER' && !input.location && (await isFeatureOpen(SIMPLE_ORDER)) });
+  if (noPosition) throw new AppError(400, noPosition, 'POSITION_OBLIGATOIRE', [{ path: 'location', message: noPosition }]);
   // Plats et boissons choisies dans les formules
   const productIds = [...new Set(input.items.flatMap((i) => [i.productId, ...(i.drinks || []).map((d) => d.productId)]))];
   const products = await prisma.product.findMany({
@@ -30,12 +34,12 @@ export async function createOrder(input, agent = null) {
   const { lines, itemsTotal } = priceItems(input.items, products);
 
   const { payment } = input;
-  // À emporter : ni position ni repères (le client vient au restaurant)
+  // À récupérer : ni position ni repères (le client vient au restaurant)
   const delivery = input.mode !== 'A_EMPORTER';
   // Frais de livraison : calculés ici avec la grille du Patron et copiés dans la commande
   // (grille vide : rien, l'équipe les saisit comme avant)
   // Lot 5 : qui livre et encaisse les frais, figé ici (mode Restaurant sans réglage du Prestataire).
-  // À emporter : pas de livraison, donc Restaurant.
+  // À récupérer : pas de livraison, donc Restaurant.
   const deliveryOperator = delivery ? await getDeliveryMode() : 'RESTAURANT';
   // Livreurs indépendants : aucun frais dans la commande (réglés entre le client et le livreur), grille ignorée
   const fee = delivery && deliveryOperator !== 'INDEPENDANT' ? orderFeeFields(await quoteForOrder(input.delivery, input.location)) : {};

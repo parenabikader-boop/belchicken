@@ -1,7 +1,7 @@
 // Règles des statuts de commande (sans base de données, testées dans test/order-status.test.js).
 //
 // Livraison  : PAIEMENT_A_VERIFIER -> PAYEE -> EN_PREPARATION -> EN_LIVRAISON -> LIVREE
-// À emporter : PAIEMENT_A_VERIFIER -> PAYEE -> EN_PREPARATION -> PRETE -> LIVREE (affichée « Retirée »)
+// À récupérer : PAIEMENT_A_VERIFIER -> PAYEE -> EN_PREPARATION -> PRETE -> LIVREE (affichée « Retirée »)
 // Lot 5c, livraison par notre partenaire (Order.deliveryOperator = PRESTATAIRE) :
 //   … -> EN_PREPARATION -> PRETE_LIVRAISON -> EN_LIVRAISON -> LIVREE. « Prête pour livraison » est posé par
 //   l'équipe du restaurant ; EN_LIVRAISON seulement par « Commande récupérée » (dispatch.js).
@@ -18,7 +18,7 @@ export const FLOWS = {
   PARTENAIRE: ['PAIEMENT_A_VERIFIER', 'PAYEE', 'EN_PREPARATION', 'PRETE_LIVRAISON', 'EN_LIVRAISON', 'LIVREE'],
 };
 export const FLOW = FLOWS.LIVRAISON;
-// Parcours d'une commande : à emporter, livraison par notre partenaire (lot 5c), sinon livraison par le restaurant
+// Parcours d'une commande : à récupérer, livraison par notre partenaire (lot 5c), sinon livraison par le restaurant
 export const flowKey = (mode = 'LIVRAISON', operator = 'RESTAURANT') =>
   mode === 'A_EMPORTER' ? 'A_EMPORTER' : operator === 'PRESTATAIRE' ? 'PARTENAIRE' : 'LIVRAISON';
 export const isPartnerDelivery = (order) => order?.mode !== 'A_EMPORTER' && order?.deliveryOperator === 'PRESTATAIRE';
@@ -39,7 +39,7 @@ export const STATUS_LABEL = {
   LIVREE: 'Livrée',
   ANNULEE: 'Annulée',
 };
-// Libellé selon le mode : une commande à emporter remise au comptoir est « Retirée »
+// Libellé selon le mode : une commande à récupérer remise au comptoir est « Retirée »
 export const statusLabel = (status, mode) => (mode === 'A_EMPORTER' && status === 'LIVREE' ? 'Retirée' : STATUS_LABEL[status]);
 
 export const nextStatus = (status, mode = 'LIVRAISON', operator = 'RESTAURANT') => {
@@ -100,11 +100,11 @@ export function deliveryError(order) {
 
 // Confirmer le paiement : les frais de livraison sont donnés en même temps, car le message
 // « paiement confirmé » les annonce au client
-// À emporter : pas de frais de livraison. current : frais déjà dans la commande (grille), gardés tels quels
+// À récupérer : pas de frais de livraison. current : frais déjà dans la commande (grille), gardés tels quels
 // même à 0 F (livraison offerte) ; un montant tapé par l'agent est d'au moins 1 F.
 // operator INDEPENDANT : aucun frais dans la commande.
 export function paymentConfirmError(fee, mode = 'LIVRAISON', current = null, operator = 'RESTAURANT') {
-  if (mode === 'A_EMPORTER') return fee == null ? null : 'Commande à emporter : pas de frais de livraison.';
+  if (mode === 'A_EMPORTER') return fee == null ? null : 'Commande à récupérer : pas de frais de livraison.';
   if (operator === 'INDEPENDANT') return fee == null ? null : INDEPENDENT_NO_FEE;
   if (fee == null) return 'Indiquez les frais de livraison : ils sont annoncés au client avec la confirmation du paiement.';
   if (current != null && fee === current) return null;
@@ -115,7 +115,7 @@ export function paymentConfirmError(fee, mode = 'LIVRAISON', current = null, ope
 // À la remise (livreur avec le code, ou agent sans code) : comment le client a payé les frais.
 // Obligatoire, sauf si les frais étaient déjà payés (anciennes commandes).
 export function feeMethodError(order, method) {
-  if (!feeToCollect(order)) return null; // à emporter, anciennes commandes, livraison offerte
+  if (!feeToCollect(order)) return null; // à récupérer, anciennes commandes, livraison offerte
   if (!FEE_METHODS.includes(method)) return 'Indiquez comment le client a payé les frais de livraison : espèces ou mobile money.';
   return null;
 }

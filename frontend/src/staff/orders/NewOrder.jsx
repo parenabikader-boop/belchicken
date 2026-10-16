@@ -18,7 +18,7 @@ const CART_KEY = 'belchicken.equipe.saisie.v1';
 
 const MODES = [
   { id: 'LIVRAISON', label: 'Livraison' },
-  { id: 'A_EMPORTER', label: 'À emporter' },
+  { id: 'A_EMPORTER', label: 'À récupérer' },
 ];
 const EMPTY = { sourceId: '', phone: '', name: '', mode: 'LIVRAISON', zone: null, other: false, addr: '', method: null, payer: '' };
 
@@ -214,7 +214,7 @@ function NewOrderForm() {
             <input id="no-name" type="text" autoComplete="off" maxLength={80} value={form.name} onChange={(e) => set('name', e.target.value)} />
           </div>
         </div>
-        <div className="no-opts" role="radiogroup" aria-label="Livraison ou à emporter" style={{ marginTop: 14 }}>
+        <div className="no-opts" role="radiogroup" aria-label="Livraison ou à récupérer" style={{ marginTop: 14 }}>
           {MODES.map((m) => (
             <button key={m.id} type="button" role="radio" aria-checked={form.mode === m.id} className={`no-opt${form.mode === m.id ? ' on' : ''}`} onClick={() => set('mode', m.id)}>
               {m.label}

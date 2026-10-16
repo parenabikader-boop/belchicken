@@ -212,7 +212,7 @@ export function toStaffOrder(order, night = null, ctx = messageContext(), { ligh
     ...(autoPayment && {
       autoPayment: { status: autoPayment.status, source: autoPayment.source, amount: autoPayment.amount, payerPhone: autoPayment.payerPhone, externalId: autoPayment.externalId, detail: autoPayment.detail, at: autoPayment.receivedAt },
     }),
-    // Livreur et code de remise (ou de retrait, à emporter). Le code est montré à l'équipe (il est dans
+    // Livreur et code de remise (ou de retrait, à récupérer). Le code est montré à l'équipe (il est dans
     // le message « en route » ou « prête », et peut être dicté au client par appel), jamais au livreur.
     courier: o.courierName ? { id: o.courierId, name: o.courierName, assignedAt: o.courierAssignedAt } : null,
     deliveryCode: o.deliveryCode,
@@ -357,7 +357,7 @@ export const statusChange = (order, to, staff, reason = null) => ({
 // Livrée (LIVREE) depuis l'espace équipe : seulement quand le client n'a plus son code, avec un motif
 // et la façon dont les frais ont été payés au livreur (feeMethod) ; le livreur, lui, valide avec le code
 // (courier.service.js).
-// À emporter : PRETE (« Commande prête », message avec l'adresse et le code de retrait), puis LIVREE
+// À récupérer : PRETE (« Commande prête », message avec l'adresse et le code de retrait), puis LIVREE
 // quand l'agent remet la commande au comptoir : il tape le code donné par le client (code), ou, client
 // sans son code, valide avec un motif (reason, événement RETRAIT_SANS_CODE). Jamais de frais.
 // Chaque étape, sauf l'annulation, demande que le client ait été prévenu de l'étape en cours.

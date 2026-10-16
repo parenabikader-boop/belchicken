@@ -26,7 +26,7 @@ const order = (status, extra = {}) => ({
   ...extra,
 });
 
-// Toutes les situations d'un message : chaque étape, à emporter, frais manquants, déjà confirmé, commande d'agent
+// Toutes les situations d'un message : chaque étape, à récupérer, frais manquants, déjà confirmé, commande d'agent
 const SAMPLES = [
   order('PAIEMENT_A_VERIFIER'),
   order('PAIEMENT_A_VERIFIER', { createdById: 'agent' }),
@@ -71,7 +71,7 @@ test('ouvert : aucune étape n’attend plus un message, le message reste propos
     assert.equal(noticeError(state), null, status);
   }
   assert.equal(noticePending(order('EN_LIVRAISON'), { light: true }), false);
-  // À emporter : « commande prête » ne bloque plus non plus
+  // À récupérer : « commande prête » ne bloque plus non plus
   assert.equal(noticeState(order('PRETE', { mode: 'A_EMPORTER' }), { light: true }).required, false);
   // Message déjà confirmé, envoi automatique, message facultatif : rien de nouveau
   const sent = order('EN_PREPARATION', { events: [{ type: 'MESSAGE_ENVOYE', messageKey: 'PAIEMENT_PREPARATION', createdAt: at(6) }] });

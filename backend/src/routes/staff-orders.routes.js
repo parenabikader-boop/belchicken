@@ -132,7 +132,7 @@ const statusSchema = z.object({
   nightFee: nightFeeField,
   // Motif quand l'agent change les frais calculés par la grille (to = PAYEE)
   feeReason: z.string().max(300, 'Motif trop long (300 caractères au plus).').optional(),
-  // À emporter, remise au comptoir (to = LIVREE) : code de retrait donné par le client
+  // À récupérer, remise au comptoir (to = LIVREE) : code de retrait donné par le client
   code: z.string().max(20).optional(),
   // Livraison validée sans code (to = LIVREE) : comment le client a payé les frais au livreur
   feeMethod: z

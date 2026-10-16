@@ -166,7 +166,7 @@ export default function ReviewsPage() {
               <Tile strong label="Avis reçus" value={data.count} note={data.lowCount ? `dont ${data.lowCount} mauvais avis` : 'aucun mauvais avis'} />
               <Tile label="Call center" value={outOf(data.criteria.callCenter)} note={plural(data.criteria.callCenter.count, 'note')} />
               <Tile label="Restaurant" value={outOf(data.criteria.food)} note={plural(data.criteria.food.count, 'note')} />
-              <Tile label="Livraison" value={outOf(data.criteria.delivery)} note={`${plural(data.criteria.delivery.count, 'note')} (pas pour les commandes à emporter)`} />
+              <Tile label="Livraison" value={outOf(data.criteria.delivery)} note={`${plural(data.criteria.delivery.count, 'note')} (pas pour les commandes à récupérer)`} />
             </section>
 
             <div className="sv-two">
@@ -208,7 +208,7 @@ export default function ReviewsPage() {
                       <div className="rv-call-head">
                         <Link to={`/equipe/commandes/${r.reference}`}>{r.reference}</Link>
                         <span>{r.customerName}</span>
-                        {r.mode === 'A_EMPORTER' && <span className="st-muted">à emporter</span>}
+                        {r.mode === 'A_EMPORTER' && <span className="st-muted">à récupérer</span>}
                         <span className="st-muted">{when(r.at)}</span>
                       </div>
                       <Notes r={r} />

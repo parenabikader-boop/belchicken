@@ -148,7 +148,7 @@ export async function salesWorkbook(s) {
     { header: 'Passée le', key: 'createdAt', width: 18, format: DATE_TIME },
     { header: 'Comptée', key: 'counted', width: 18 },
     { header: 'Statut', key: 'status', width: 20 },
-    { header: 'Livraison / à emporter', key: 'mode', width: 14 },
+    { header: 'Livraison / à récupérer', key: 'mode', width: 14 },
     { header: 'Provenance', key: 'source', width: 26 },
     { header: 'Saisie par', key: 'enteredBy', width: 20 },
     { header: 'Paiement vérifié par', key: 'verifiedBy', width: 20 },

@@ -254,7 +254,7 @@ function stageDetail(o) {
   if (isPickup(o)) {
     if (o.status === 'PRETE') return 'Le client vient la retirer';
     if (o.status === 'LIVREE') return 'Retirée au comptoir';
-    return 'À emporter · sans frais';
+    return 'À récupérer · sans frais';
   }
   // Quartier choisi par le client (grille des frais) : utile dès l'arrivée de la commande
   // Livreur indépendant : aucun frais dans la commande
@@ -285,7 +285,7 @@ function OrderCard({ order: o, isNew, withStatus }) {
         <div className="st-order-top">
           <b className="st-ref">{o.reference}</b>
           {isNew && <span className="st-new">Nouvelle</span>}
-          {isPickup(o) && <span className="st-pickup">À emporter</span>}
+          {isPickup(o) && <span className="st-pickup">À récupérer</span>}
           {o.status === 'PRETE_LIVRAISON' && <span className="st-pickup st-ready">Prête</span>}
           <span className="st-time">{formatTime(o.createdAt)} · {timeAgo(o.createdAt)}</span>
         </div>

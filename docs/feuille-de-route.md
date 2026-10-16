@@ -878,6 +878,8 @@ simplifiée (site client) ».
   replié et modifiable en haut de la page de commande (commit local).
 - [x] Écran large : panneau seulement avec des plats, glisse depuis la droite, disparaît à « Commander » ou panier vide
   (commit local).
+- [x] Prix collé à « Livraison » (« Livraison · 1 400 F »), position obligatoire pour toute livraison (site et serveur),
+  « À récupérer » au lieu de « À emporter » partout (site, messages, espace équipe) (commit local).
 - [ ] Essai par le client sur téléphone et ordinateur (de préférence avec la grille par km du plan 3 allumée).
 - [ ] Envoi sur GitHub avec l'accord écrit du client.
 

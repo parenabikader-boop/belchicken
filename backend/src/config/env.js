@@ -34,7 +34,7 @@ export const env = {
     },
   },
   // Adresse du restaurant et lien Google Maps « Itinéraire » (Plus Code 9F2J+V8 Ouagadougou), pour le
-  // message « commande prête » des commandes à emporter. Les mêmes que frontend/src/restaurant.js.
+  // message « commande prête » des commandes à récupérer. Les mêmes que frontend/src/restaurant.js.
   // Jamais la boîte postale.
   restaurantAddress: process.env.RESTAURANT_ADDRESS || 'Kamsonghin, en face de Sonia Hôtel',
   restaurantMapsUrl: process.env.RESTAURANT_MAPS_URL || 'https://www.google.com/maps/dir/?api=1&destination=12.352187,-1.519188',

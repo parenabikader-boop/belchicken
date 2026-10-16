@@ -97,7 +97,7 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
           </p>
         </div>
         <span className="st-pills">
-          {isPickup(o) && <span className="st-pill p-EMPORTER">À emporter</span>}
+          {isPickup(o) && <span className="st-pill p-EMPORTER">À récupérer</span>}
           {/* Lot 5 : livrée par notre équipe, frais sur les codes du Prestataire */}
           {o.deliveryOperator === 'PRESTATAIRE' && <span className="st-pill p-PRESTATAIRE">Livraison Prestataire</span>}
           {isIndependent(o) && <span className="st-pill p-PRESTATAIRE">Livreur indépendant</span>}
@@ -144,7 +144,7 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
             <dd>{o.paymentVerified ? <>{o.paymentVerified.by || '—'}, le {formatDateTime(o.paymentVerified.at)}</> : <span className="st-muted">pas encore vérifié</span>}</dd>
           </dl>
           {isPickup(o) ? (
-            <p className="st-note">À emporter : pas de frais de livraison.</p>
+            <p className="st-note">À récupérer : pas de frais de livraison.</p>
           ) : (
           <p className="st-note">
             Plats seulement. Frais de livraison :{' '}
@@ -162,7 +162,7 @@ function Loaded({ order, setOrder, error, load, refreshFeed }) {
 
         {isPickup(o) ? (
           <section className="st-box">
-            <h2>À emporter</h2>
+            <h2>À récupérer</h2>
             <p>Le client vient retirer sa commande au restaurant. Pas de livreur, pas de frais.</p>
           </section>
         ) : (

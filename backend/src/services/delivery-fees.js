@@ -167,7 +167,7 @@ const EDITABLE_BY_PATRON = ['EN_LIVRAISON', 'LIVREE'];
 
 // Qui peut encore modifier les frais : 'TOUS', 'PATRON' ou null (avec la raison)
 export function feeEditRight(order) {
-  if (order.mode === 'A_EMPORTER') return { who: null, error: 'Commande à emporter : pas de frais de livraison.' };
+  if (order.mode === 'A_EMPORTER') return { who: null, error: 'Commande à récupérer : pas de frais de livraison.' };
   if (isIndependentDelivery(order)) return { who: null, error: INDEPENDENT_NO_FEE };
   if (EDITABLE_BY_ALL.includes(order.status)) {
     // Anciennes commandes (avant le 6 octobre 2026) : frais payés avant le départ du livreur

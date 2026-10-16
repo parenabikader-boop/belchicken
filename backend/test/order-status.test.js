@@ -57,7 +57,7 @@ test('recherche par référence, nom ou téléphone', () => {
   assert.deepEqual(searchWhere('Awa').OR[1], { customerName: { contains: 'Awa', mode: 'insensitive' } });
 });
 
-test('à emporter : préparation, prête, puis retirée (jamais en livraison)', () => {
+test('à récupérer : préparation, prête, puis retirée (jamais en livraison)', () => {
   assert.equal(nextStatus('EN_PREPARATION', 'A_EMPORTER'), 'PRETE');
   assert.equal(nextStatus('PRETE', 'A_EMPORTER'), 'LIVREE');
   assert.equal(transitionError('EN_PREPARATION', 'PRETE', null, 'A_EMPORTER'), null);
@@ -68,7 +68,7 @@ test('à emporter : préparation, prête, puis retirée (jamais en livraison)', 
   assert.equal(canCancel('PRETE'), true);
 });
 
-test('à emporter : pas de frais de livraison', () => {
+test('à récupérer : pas de frais de livraison', () => {
   assert.equal(paymentConfirmError(undefined, 'A_EMPORTER'), null);
   assert.match(paymentConfirmError(1000, 'A_EMPORTER'), /pas de frais/);
   assert.match(feeEditRight({ mode: 'A_EMPORTER', status: 'PAYEE' }).error, /pas de frais/);

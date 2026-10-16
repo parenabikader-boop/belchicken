@@ -95,7 +95,7 @@ test('ouvert, avec la clé : livreur à appeler, code, montant à payer au livre
   assert.equal(done.tracking.reviewUrl, 'https://site/avis/abc');
   assert.equal(done.tracking.code, null);
   assert.equal(done.tracking.push, null);
-  // À emporter, prête : le code de retrait
+  // À récupérer, prête : le code de retrait
   const ready = toPublicOrder(order({ mode: 'A_EMPORTER', status: 'PRETE', courierName: null }), ctx, { open: true, key: KEY });
   assert.equal(ready.tracking.code, '0427');
   assert.equal(ready.tracking.courier, null);

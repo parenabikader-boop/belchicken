@@ -82,3 +82,15 @@ test('commande simplifiée : fermée sans ligne ; /api/site exactement comme ava
   assert.deepEqual(publicSite(settings), { anglais: true, menuBorne: false });
   assert.deepEqual(publicSite(settings, featureMap([{ key: SIMPLE_ORDER, enabled: true }])), { anglais: true, menuBorne: false, commandeSimple: true });
 });
+
+test('commande simplifiée : une livraison sans position est refusée (fermée : comme avant ; à récupérer et agent : jamais)', async () => {
+  const { positionRequiredError, POSITION_REQUIRED } = await import('../src/services/simple-order.js');
+  const at = { latitude: 12.37, longitude: -1.53 };
+  // Fermée : rien ne change
+  assert.equal(positionRequiredError({ mode: 'LIVRAISON', location: undefined, simpleOpen: false }), null);
+  // Ouverte
+  assert.equal(positionRequiredError({ mode: 'LIVRAISON', location: undefined, simpleOpen: true }), POSITION_REQUIRED);
+  assert.equal(positionRequiredError({ mode: 'LIVRAISON', location: at, simpleOpen: true }), null);
+  assert.equal(positionRequiredError({ mode: 'A_EMPORTER', location: undefined, simpleOpen: true }), null);
+  assert.equal(positionRequiredError({ mode: 'LIVRAISON', location: undefined, byAgent: true, simpleOpen: true }), null);
+});

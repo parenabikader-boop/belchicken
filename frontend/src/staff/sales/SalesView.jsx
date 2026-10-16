@@ -68,7 +68,7 @@ export default function SalesView({ s }) {
         </section>
 
         <section className="rl-sec">
-          <h3>Livraison ou à emporter</h3>
+          <h3>Livraison ou à récupérer</h3>
           <div className="rl-scroll">
             <table className="rl-table">
               <thead><tr><th>Mode</th><th className="n">Commandes</th><th className="n">Montant</th><th className="n">Part</th></tr></thead>

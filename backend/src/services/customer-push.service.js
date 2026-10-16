@@ -34,7 +34,7 @@ export async function subscribeCustomer(reference, { cle, subscription }) {
 }
 
 // Alerte de l'étape au client, si la commande est à l'une de ces étapes (statuses). N'échoue jamais.
-//   après un changement (afterChange) : « en route » (livraison), « prête » (à emporter) ;
+//   après un changement (afterChange) : « en route » (livraison), « prête » (à récupérer) ;
 //   après la remise (notifyDelivered) : « livrée, merci ».
 export function notifyCustomer(reference, statuses) {
   (async () => {

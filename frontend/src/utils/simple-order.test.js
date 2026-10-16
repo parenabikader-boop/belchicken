@@ -25,7 +25,7 @@ test('position : GPS, sinon un point sur la carte ; jamais de quartier', () => {
   assert.equal(locationPayload(null), undefined);
 });
 
-test('paiement visible seulement une fois le prix de livraison affiché (tout de suite à emporter)', () => {
+test('paiement visible seulement une fois le prix de livraison affiché (tout de suite à récupérer)', () => {
   const geo = { latitude: 1, longitude: 2 };
   const quote = { source: 'KM_ROUTE', fee: 1400, distanceKm: 4.2 };
   assert.equal(paymentVisible({ mode: 'A_EMPORTER' }), true);

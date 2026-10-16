@@ -60,9 +60,9 @@ test('nom lisible du téléphone', () => {
   assert.equal(deviceLabel(''), 'Appareil');
 });
 
-test('notifications à emporter : nouvelle commande et retrait au comptoir', () => {
+test('notifications à récupérer : nouvelle commande et retrait au comptoir', () => {
   const n = newOrderNotification({ reference: 'BC-E', mode: 'A_EMPORTER', paymentMethod: 'ORANGE_MONEY', itemsTotal: 5500, items: [{ quantity: 1 }] });
-  assert.equal(n.body, '1 article · à emporter · Orange Money à vérifier');
+  assert.equal(n.body, '1 article · à récupérer · Orange Money à vérifier');
   const d = deliveredNotification({ reference: 'BC-E', mode: 'A_EMPORTER' }, { courierName: null, at: '2026-10-06T14:32:00Z' });
   assert.equal(d.title, 'Commande BC-E retirée au comptoir à 14 h 32');
 });

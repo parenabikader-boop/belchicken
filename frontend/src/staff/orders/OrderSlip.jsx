@@ -93,7 +93,7 @@ function Slip({ o }) {
         <span>Paiement vérifié par : {o.paymentVerified ? `${o.paymentVerified.by || '—'} à ${formatTime(o.paymentVerified.at)}` : 'pas encore vérifié'}</span>
       </header>
 
-      <p className={`slip-mode${pickup ? ' slip-emp' : ''}`}>{pickup ? 'À EMPORTER' : 'LIVRAISON'}</p>
+      <p className={`slip-mode${pickup ? ' slip-emp' : ''}`}>{pickup ? 'À RÉCUPÉRER' : 'LIVRAISON'}</p>
       {o.status === 'ANNULEE' && <p className="slip-alert">COMMANDE ANNULÉE : NE PAS PRÉPARER</p>}
       {o.status === 'PAIEMENT_A_VERIFIER' && <p className="slip-alert">PAIEMENT PAS ENCORE VÉRIFIÉ</p>}
 

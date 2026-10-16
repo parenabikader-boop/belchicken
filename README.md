@@ -221,7 +221,7 @@ l'historique (`MESSAGE_ENVOYE` ou `CLIENT_APPELE`, avec qui et quand). Règles :
 
 Codes marchands : `ORANGE_MONEY_CODE`, `MOOV_MONEY_CODE`, `TELECEL_MONEY_CODE` et `MERCHANT_NAME` (voir `GET /api/payment`),
 les mêmes sur le site et dans les messages. Adresse, téléphone, WhatsApp, horaires et position du restaurant :
-`frontend/src/restaurant.js`. Message « commande prête » (à emporter) : `RESTAURANT_ADDRESS` (adresse seule,
+`frontend/src/restaurant.js`. Message « commande prête » (à récupérer) : `RESTAURANT_ADDRESS` (adresse seule,
 vide = « Kamsonghin, en face de Sonia Hôtel ») et `RESTAURANT_MAPS_URL` (lien Itinéraire, vide = Google Maps vers le
 Plus Code 9F2J+V8).
 
@@ -278,7 +278,7 @@ Suivez votre commande ici : {{9}}
 Belchicken Burkina
 
 emporter_paiement_confirme
-Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande à emporter {{2}}. Merci !
+Bonjour {{1}}, nous avons bien reçu votre paiement de {{3}} pour la commande à récupérer {{2}}. Merci !
 
 Nous vous écrivons dès qu’elle est prête à retirer au restaurant.
 
@@ -287,7 +287,7 @@ Suivez votre commande ici : {{4}}
 Belchicken Burkina
 
 emporter_en_preparation
-Bonjour {{1}}, votre commande à emporter {{2}} est en préparation. Nous vous écrivons dès qu’elle est prête.
+Bonjour {{1}}, votre commande à récupérer {{2}} est en préparation. Nous vous écrivons dès qu’elle est prête.
 
 Suivez votre commande ici : {{3}}
 
@@ -332,7 +332,7 @@ Donnez votre avis en 1 minute : {{3}}
 Exemple de valeur pour `{{3}}` : `https://belchicken-six.vercel.app/avis/uDLx54qsyE3mxuaNfZj_Lg`. Meta peut classer un
 modèle qui demande un avis en « Marketing » plutôt qu'en « Utilité » : s'il est refusé ou reclassé, le remerciement
 sans lien continue de fonctionner (fermer `AVIS` ou éteindre le réglage du Patron).
-Les 4 modèles `emporter_…` servent aux commandes à emporter (voir « À emporter » plus bas).
+Les 4 modèles `emporter_…` servent aux commandes à récupérer (voir « À récupérer » plus bas).
 
 2. Une fois les 5 modèles approuvés, mettez `WHATSAPP_CUSTOMER_AUTO=1` sur Render.
 
@@ -634,7 +634,7 @@ table `DeliveryCompany`, une ligne ; pas de ligne = mode Restaurant). Règles : 
 - **Prestataire** = notre équipe : frais sur nos codes marchands, avec notre nom affiché. Refusé tant que la société, le
   nom affiché et les 3 codes ne sont pas remplis et valides (mode incomplet = Restaurant). Codes jamais vidés tant que
   des commandes Prestataire attendent leurs frais.
-- Mode figé sur chaque commande à sa création (`Order.deliveryOperator`) ; à emporter = toujours Restaurant.
+- Mode figé sur chaque commande à sa création (`Order.deliveryOperator`) ; à récupérer = toujours Restaurant.
 - Commande Prestataire : nos codes dans les messages (mêmes modèles Meta), sur le suivi (« c'est bien le compte de notre
   partenaire de livraison ») et sur le détail (badge « Livraison Prestataire »). Le paiement des plats reste toujours ECOFOOD.
 - Journal de sécurité : `MOT_DE_PASSE` (mot de passe du Prestataire changé dans l'application) et `LIVRAISON` (mode,
@@ -654,7 +654,7 @@ Prestataire (`backend/test/livreurs-independants.test.js`). Migration `202610141
 `INDEPENDANT` de `DeliveryOperator`, aucune donnée).
 
 - **Mode** : troisième choix « Livreurs indépendants » du « Mode de livraison » (page Prestataire), sans société ni codes.
-  Figé sur chaque commande (`Order.deliveryOperator = INDEPENDANT`) ; à emporter = toujours Restaurant.
+  Figé sur chaque commande (`Order.deliveryOperator = INDEPENDANT`) ; à récupérer = toujours Restaurant.
 - **Comptes** : le Patron crée un Livreur « Indépendant » (page Équipe, `POST /api/staff/team` avec `independent: true`,
   refusé interrupteur fermé), équipe `StaffUser.courierTeam = INDEPENDANT`. Seuls ces livreurs partent avec ces commandes.
 - **Aucun montant de livraison** : pas de grille ni de supplément de nuit (`GET /api/delivery/grid` renvoie
@@ -767,7 +767,7 @@ Ventes de Belchicken par période, pour le Patron et le Prestataire. Règles : `
   vérifier comptés à part, jamais dans le chiffre d'affaires. Frais de livraison du restaurant affichés à part
   (« hors ventes ») ; ceux de notre partenaire (mode Prestataire) n'apparaissent jamais ici.
 - **Contenu** : commandes, chiffre d'affaires, panier moyen, Orange / Moov / Telecel (ligne « Espèces (anciennes
-  commandes) » seulement s'il y en a), livraison / à emporter ; par provenance (Site = provenance vide, puis les
+  commandes) » seulement s'il y en a), livraison / à récupérer ; par provenance (Site = provenance vide, puis les
   provenances du Patron, une provenance désactivée seulement si elle a servi) ; par agent, deux tableaux :
   commandes saisies (`Order.createdByName`) et paiements vérifiés (premier passage à « Payée » dans l'historique,
   parcours court compris), avec le délai moyen de vérification (toutes les commandes, celles du site seules) et le
@@ -795,7 +795,7 @@ Le client note sa commande livrée ou retirée depuis un lien du message de reme
 - **Message** : modèles `commande_livree_avis` et `emporter_commande_retiree_avis` (voir « Messages WhatsApp au
   client ») ; même étape `LIVREE` / `RETIREE`, la règle « à remercier » ne change pas.
 - **Page publique** (`/avis/<clé>`, faite pour le téléphone, sans télécharger le menu) : étoiles de 1 à 5 pour le
-  call center, le restaurant et la livraison (pas de livraison pour une commande à emporter), commentaire facultatif
+  call center, le restaurant et la livraison (pas de livraison pour une commande à récupérer), commentaire facultatif
   (500 caractères). Seulement le prénom et la référence : jamais le téléphone ni les montants. Un seul avis par
   commande (`OrderReview.orderId` unique).
 - **Base** : table `OrderReview`, notes de 1 à 5 et `lowRating` vérifiés aussi par la base. La base refuse toute
@@ -904,10 +904,10 @@ le Patron l'avait éteinte (son choix revient à la réouverture) ; le Patron ne
   Prix des lignes, total des plats, « PAYÉ – opérateur » et numéro qui a payé, frais de livraison à part. Jamais le code de
   remise ni le code de retrait.
 
-## À emporter
+## À récupérer
 
-Le client choisit « Livraison » ou « À emporter » sur la page Vos informations (`Order.mode` : `LIVRAISON` par défaut,
-`A_EMPORTER`). À emporter : il paie le total des plats par code marchand (Orange Money, Moov Money ou Telecel Money),
+Le client choisit « Livraison » ou « À récupérer » sur la page Vos informations (`Order.mode` : `LIVRAISON` par défaut,
+`A_EMPORTER`). À récupérer : il paie le total des plats par code marchand (Orange Money, Moov Money ou Telecel Money),
 comme pour la livraison ; ni position, ni frais de livraison, ni livreur.
 
 Étapes : `PAIEMENT_A_VERIFIER` → `PAYEE` → `EN_PREPARATION` → `PRETE` (« Prête à retirer ») → `LIVREE` (affichée
@@ -922,7 +922,7 @@ comme pour la livraison ; ni position, ni frais de livraison, ni livreur.
 
 La page Commandes a une étape « À retirer » (colonne sur ordinateur). Une commande retirée passe dans
 « Livrées · à remercier » jusqu'à la confirmation du remerciement, comme une livraison. Alertes : « Nouvelle commande …
-· à emporter », « Commande … retirée au comptoir à … ». Page de suivi : frise « Prête à retirer », « Retirée », adresse
+· à récupérer », « Commande … retirée au comptoir à … ». Page de suivi : frise « Prête à retirer », « Retirée », adresse
 et bouton Itinéraire quand la commande est prête. Migration `20261006150000_a_emporter` (enum `FulfillmentMode`,
 colonne `Order.mode`, statut `PRETE`).
 
@@ -1033,12 +1033,12 @@ Ouvert :
   `POST /api/orders`, `trackingKey`). Le site la garde sur le téléphone et l'ajoute au lien : `/suivi/BC-…?cle=…`. La
   page l'envoie dans l'en-tête `X-Suivi-Cle` (jamais dans l'adresse demandée au serveur).
 - **Avec la clé** (`tracking` dans `GET /api/orders/:reference`) : en route, le nom du livreur et « Appeler le livreur »
-  (son numéro à lui) ; le code de livraison (ou de retrait, à emporter) ; le montant à payer au livreur (comme avant) ;
+  (son numéro à lui) ; le code de livraison (ou de retrait, à récupérer) ; le montant à payer au livreur (comme avant) ;
   livrée, « Merci » et « Donner mon avis » (lien du lot 7 s'il est actif). Page relue toutes les 10 s.
 - **Sans la clé** (`trackingLocked`) : ni code, ni montant, ni livreur ; les étapes et les plats restent visibles.
 - **Alertes gratuites (Web Push, clés VAPID existantes)** : bouton « Recevoir une alerte sur ce téléphone »,
   `POST /api/orders/:reference/alertes { cle, subscription }` (5 téléphones par commande, 20 demandes / 10 min).
-  Alertes « en route » (ou « prête » à emporter) et « livrée, merci », en français ou en anglais, jamais le code ni le
+  Alertes « en route » (ou « prête » à récupérer) et « livrée, merci », en français ou en anglais, jamais le code ni le
   montant sur l'écran verrouillé ; un appui ouvre la page de suivi (`public/sw.js`). iPhone hors écran d'accueil,
   alertes refusées ou impossibles : une phrase claire, et la page qui se met à jour toute seule sert de repli.
 - **Retrouver sa commande** : bandeau « Votre commande en cours » sur le site (24 h au plus, jusqu'à la fin de la
@@ -1144,10 +1144,14 @@ d'avant (`GET /api/site` sans rien de plus, `test/menu-borne-commandes.test.js` 
   L'ancienne adresse `/commande` mène à la page de commande.
 - **Une seule page de commande** `/valider` (`pages/CommandeSimple.jsx`, fichier à part), dans l'ordre : récapitulatif
   replié sur une ligne (« 3 articles · 7 500 F », « Modifier » : plats, + et −, retirer ; panier vide : retour au menu) ; Livraison
-  ou À emporter ; « 📍 Utiliser ma position » puis « Livraison : X F (Y km) » (prix calculé par le serveur avec la
+  ou À récupérer ; « 📍 Ma position » puis « Livraison · X F » (km en petit) (prix calculé par le serveur avec la
   grille active : par km du plan 3, sinon tranches de distance) et un repère facultatif ; nom et téléphone ; le
   paiement (opérateur, « Payer maintenant » / « Copier le code », numéro qui a payé, rappel « Repas : X F maintenant.
-  Livraison : Y F au livreur. ») **seulement une fois le prix affiché** (tout de suite à emporter).
+  Livraison : Y F au livreur. ») **seulement une fois le prix affiché** (tout de suite à récupérer).
+- **Position obligatoire** pour toute livraison : sans position (GPS, ou point sur la carte), ni paiement ni
+  « Envoyer ma commande » ; le serveur refuse aussi une livraison passée sur le site sans position quand l'interrupteur
+  est ouvert (`POSITION_OBLIGATOIRE`, `backend/src/services/simple-order.js`), jamais pour une commande à récupérer
+  ni pour une commande saisie par un agent. Le prix s'affiche dans le bouton : « Livraison · 1 400 F », km en petit.
 - **Plus aucun quartier.** Position refusée, impossible ou moins précise que 1 km : petite carte OpenStreetMap
   (`components/MapPicker.jsx`, Leaflet 1.9.4, téléchargée seulement à l'ouverture) où le client pose son point ; le
   prix se calcule de la même façon. Le site envoie le montant affiché (`expectedFee`), comparé par le serveur.

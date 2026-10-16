@@ -28,7 +28,7 @@ export function buildNewOrderParams(order) {
 
   const payment = `${PAYMENT_LABELS[order.paymentMethod]} depuis ${order.paymentPayerPhone}`;
 
-  const place = order.mode === 'A_EMPORTER' ? 'À emporter : le client vient la retirer au restaurant' : [
+  const place = order.mode === 'A_EMPORTER' ? 'À récupérer : le client vient la retirer au restaurant' : [
     order.latitude != null ? `https://maps.google.com/?q=${order.latitude},${order.longitude}` : null,
     order.addressNote,
   ]

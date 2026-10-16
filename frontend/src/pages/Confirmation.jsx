@@ -18,7 +18,7 @@ const REFRESH_MS = 20000;
 const REFRESH_DIRECT_MS = 10000;
 const FINAL = ['LIVREE', 'ANNULEE'];
 
-// Frise : les étapes vues par le client (livraison, ou à emporter avec « Prête » et « Retirée »).
+// Frise : les étapes vues par le client (livraison, ou à récupérer avec « Prête » et « Retirée »).
 // Libellés : i18n, tracking.steps (key)
 const DELIVERY_STEPS = [
   { status: 'PAIEMENT_A_VERIFIER', key: 'PAIEMENT_A_VERIFIER' },
@@ -257,7 +257,7 @@ function FeeToPay({ fee, nightFee, feePayment, children }) {
   );
 }
 
-// À emporter : pas de frais, l'adresse du restaurant quand la commande est prête
+// À récupérer : pas de frais, l'adresse du restaurant quand la commande est prête
 function PickupNow({ order }) {
   const t = useT();
   const T = order.tracking ? { ...t.tracking, ...t.tracking.direct } : t.tracking; // plan 4 : sans WhatsApp

@@ -701,7 +701,7 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .db-cash.has{border:2px solid #e0a100;background:#fff4d6}
 .lv-success p.lv-success-fee b{display:inline;font-size:inherit}
 
-/* À emporter : badge, statut « prête », colonne « À retirer » */
+/* À récupérer : badge, statut « prête », colonne « À retirer » */
 .st-pills{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .st-pill.p-PRETE{background:#e3f1e4;color:#2b6e2f}
 .st-pill.p-EMPORTER{background:#f6cf76;color:#5c3900}
@@ -712,7 +712,7 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .od-col.s-PRETE.has .od-count{background:#2b6e2f}
 .od-col.s-PRETE .od-hint,.od-stage.s-PRETE .od-hint{border-left-color:#2b6e2f}
 
-/* À emporter : code de retrait tapé au comptoir */
+/* À récupérer : code de retrait tapé au comptoir */
 .st-action .st-code-input{display:block;width:9.5em;margin:8px 0 4px;font-size:26px;font-weight:700;letter-spacing:.35em;text-align:center;padding:8px 10px}
 
 /* Boissons choisies dans une formule : bien visibles pour la préparation */

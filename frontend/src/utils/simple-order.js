@@ -25,7 +25,7 @@ export function deliveryPrice(quote) {
   return { fee: quote.fee ?? null, km: quote.distanceKm ?? null, estimate: Boolean(quote.estimate) };
 }
 
-// Le paiement s'affiche seulement une fois le prix de livraison affiché (tout de suite pour « À emporter »).
+// Le paiement s'affiche seulement une fois le prix de livraison affiché (tout de suite pour « À récupérer »).
 // gridOn : grille des frais active (sinon, pas de prix à calculer : la position suffit, l'équipe donne le prix).
 export function paymentVisible({ mode, geo, quote, gridOn }) {
   if (mode === 'A_EMPORTER') return true;
