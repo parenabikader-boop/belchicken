@@ -864,6 +864,17 @@ automatiquement (plan 2) ».
 - [ ] Ouverture de l'interrupteur, seulement après les vrais formats de SMS.
 - [ ] Ligdicash : contrat, identifiants, bouton « Payer en ligne » pour le client.
 
+### Commande simplifiée côté client (16 octobre 2026, pas encore en ligne)
+
+Interrupteur `COMMANDE_SIMPLIFIEE` (Prestataire), fermé sans ligne, aucune migration. Détails : README « Commande
+simplifiée (site client) ».
+
+- [x] Panneau « Ma commande » sur le menu (classique et borne), page de commande unique dans l'ordre demandé, carte
+  OpenStreetMap si la position est refusée ou imprécise, plus aucun quartier, très peu de texte.
+- [x] Tests (`frontend/src/utils/simple-order.test.js`, `backend/test/menu-borne-commandes.test.js`), construction.
+- [ ] Essai par le client sur téléphone (de préférence avec la grille par km du plan 3 allumée).
+- [ ] Envoi sur GitHub avec l'accord écrit du client.
+
 ## Démonstration commerciale (base dev)
 
 Pour la présentation commerciale à Belchicken : un mois d'activité fictive sur la base **dev** seulement (tableau de

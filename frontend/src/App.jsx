@@ -3,8 +3,8 @@ import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import SiteFrame from './components/SiteFrame.jsx';
 import Home from './pages/Home.jsx';
 import MenuChoice from './pages/MenuChoice.jsx';
-import Commande from './pages/Commande.jsx';
-import Valider from './pages/Valider.jsx';
+// Lot « Commande simplifiée » : page actuelle (Commande, Valider) ou parcours court, selon l'interrupteur
+import { CartPage, CheckoutPage } from './pages/SimpleChoice.jsx';
 import Confirmation from './pages/Confirmation.jsx';
 import Infos from './pages/Infos.jsx';
 import { LanguageProvider } from './i18n/index.jsx';
@@ -31,8 +31,8 @@ export default function App() {
       <Route element={<LanguageProvider><SiteFrame /></LanguageProvider>}>
         <Route index element={<Home />} />
         <Route path="menu/:categorie?" element={<MenuChoice />} />
-        <Route path="commande" element={<Commande />} />
-        <Route path="valider" element={<Valider />} />
+        <Route path="commande" element={<CartPage />} />
+        <Route path="valider" element={<CheckoutPage />} />
         <Route path="confirmation/:reference" element={<Confirmation />} />
         {/* Même page, adresse courte envoyée au client sur WhatsApp */}
         <Route path="suivi/:reference" element={<Confirmation />} />

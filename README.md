@@ -1127,6 +1127,28 @@ fermée), `SMS_PAIEMENT_FORMATS` (facultatif, formats en JSON ; vide = le fichie
 Ligdicash, qui n'est **jamais** cru : référence → token gardé → `confirm` → seul `completed`, code `00` et montant exact
 valident, avec la même validation que les SMS. Pas encore proposé au client (bouton « Payer en ligne » à ajouter).
 
+## Commande simplifiée (site client)
+
+Interrupteur `COMMANDE_SIMPLIFIEE` (page Prestataire), **fermé sans ligne** : fermé, le site est exactement celui
+d'avant (`GET /api/site` sans rien de plus, `test/menu-borne-commandes.test.js` ; règles du site :
+`frontend/src/utils/simple-order.js`, testées). Aucune migration. Ouvert, `GET /api/site` renvoie `commandeSimple: true`
+(lu par `useSimpleOrder()`, `utils/site.js`, dernière réponse gardée sur le téléphone) :
+
+- **Menu** (classique et façon borne) : barre fixe « Voir ma commande · X articles · Y F » ; au toucher, panneau
+  « Ma commande » par-dessus le menu (`components/CartSheet.jsx`) : plats, + et −, retirer, total, « Commander ».
+  L'ancienne adresse `/commande` ouvre ce panneau (`/menu?panier=1`).
+- **Une seule page de commande** `/valider` (`pages/CommandeSimple.jsx`, fichier à part), dans l'ordre : Livraison
+  ou À emporter ; « 📍 Utiliser ma position » puis « Livraison : X F (Y km) » (prix calculé par le serveur avec la
+  grille active : par km du plan 3, sinon tranches de distance) et un repère facultatif ; nom et téléphone ; le
+  paiement (opérateur, « Payer maintenant » / « Copier le code », numéro qui a payé, rappel « Repas : X F maintenant.
+  Livraison : Y F au livreur. ») **seulement une fois le prix affiché** (tout de suite à emporter).
+- **Plus aucun quartier.** Position refusée, impossible ou moins précise que 1 km : petite carte OpenStreetMap
+  (`components/MapPicker.jsx`, Leaflet 1.9.4, téléchargée seulement à l'ouverture) où le client pose son point ; le
+  prix se calcule de la même façon. Le site envoie le montant affiché (`expectedFee`), comparé par le serveur.
+- Sans grille active : la position suffit, les frais sont donnés par l'équipe comme avant.
+- Tuiles d'OpenStreetMap (`tile.openstreetmap.org`) : gratuites pour un usage modéré, avec la mention
+  « © OpenStreetMap » ; un usage intensif demanderait un fournisseur de tuiles.
+
 ## Démonstration commerciale (base dev seulement)
 
 Un mois d'activité fictive mais réaliste sur la base **dev**, pour présenter le tableau de bord, les ventes,

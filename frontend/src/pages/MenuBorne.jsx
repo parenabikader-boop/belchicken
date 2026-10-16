@@ -10,6 +10,8 @@ import { menuSections } from '../utils/borne.js';
 import { searchProducts } from '../utils/product.js';
 import { useT } from '../i18n/index.jsx';
 import '../borne.css';
+import CartSheet from '../components/CartSheet.jsx';
+import { useSimpleOrder } from '../utils/site.js';
 
 // Lot 11 : menu façon borne de commande (façon A), affiché sur /menu quand le Patron allume « Menu façon borne »
 // (pages/MenuChoice.jsx). Écran libre comme sur une borne : barre fine en haut (logo, loupe, « Ma commande »), pas
@@ -25,6 +27,7 @@ export default function MenuBorne() {
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
   const [openId, setOpenId] = useState(null);
+  const simpleOrder = useSimpleOrder();
   const closeDialog = useCallback(() => setOpenId(null), []);
   const closeSearch = () => {
     setQuery('');
@@ -45,7 +48,8 @@ export default function MenuBorne() {
       <BorneTopBar searching={searching} onSearch={() => (searching ? closeSearch() : setSearching(true))} />
       <Content menu={menu} t={t} categorie={categorie} searching={searching} query={query} setQuery={setQuery}
         closeSearch={closeSearch} onOpen={(p) => setOpenId(p.id)} />
-      <BorneOrderBar />
+      {/* Lot « Commande simplifiée » : panneau « Ma commande » par-dessus le menu */}
+      {simpleOrder ? <CartSheet /> : <BorneOrderBar />}
       {openId && menu.products.get(openId) && <BorneDialog key={openId} product={menu.products.get(openId)} onClose={closeDialog} />}
     </div>
   );

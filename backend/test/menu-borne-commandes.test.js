@@ -70,3 +70,15 @@ test('GET /api/site : seulement anglais et menuBorne, jamais les réglages de l�
   assert.deepEqual(publicSite(await getAppSettings(fakeDb({ app }))), { anglais: true, menuBorne: true });
   assert.deepEqual(publicSite(await getAppSettings(fakeDb({ app, closed: ['MENU_BORNE'] }))), { anglais: true, menuBorne: false });
 });
+
+// Lot « Commande simplifiée » : /api/site ne dit rien de plus tant que l'interrupteur est fermé
+test('commande simplifiée : fermée sans ligne ; /api/site exactement comme avant tant qu’elle est fermée', async () => {
+  const { publicSite } = await import('../src/routes/site.routes.js');
+  const { featureMap, SIMPLE_ORDER } = await import('../src/services/features.js');
+  assert.equal(SIMPLE_ORDER, 'COMMANDE_SIMPLIFIEE');
+  assert.equal(featureMap([])[SIMPLE_ORDER], false);
+  const settings = { englishSite: true, kioskMenu: false };
+  assert.deepEqual(publicSite(settings, featureMap([])), { anglais: true, menuBorne: false });
+  assert.deepEqual(publicSite(settings), { anglais: true, menuBorne: false });
+  assert.deepEqual(publicSite(settings, featureMap([{ key: SIMPLE_ORDER, enabled: true }])), { anglais: true, menuBorne: false, commandeSimple: true });
+});

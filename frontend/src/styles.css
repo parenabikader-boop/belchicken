@@ -931,3 +931,47 @@ header.top .wrap:has(.lang-sw){gap:12px}
 .km-note,.km-wait{margin:0;font-size:14px;color:var(--muted)}
 .km-ok{margin:0;font-weight:700;color:var(--ok)}
 .km-ok .lnk{margin-left:8px;font-weight:400}
+
+/* Lot « Commande simplifiée » : barre « Voir ma commande », panneau par-dessus le menu, page de commande unique */
+.cs-bar{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 70%,transparent)}
+.cs-bar-btn{display:block;width:100%;max-width:560px;margin:0 auto;padding:16px;font-size:17px;border-radius:999px;box-shadow:0 6px 20px rgba(42,20,14,.25)}
+.cs-overlay{position:fixed;inset:0;z-index:70;background:rgba(42,20,14,.45);display:flex;align-items:flex-end;justify-content:center}
+.cs-sheet{width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;background:var(--panel);border-radius:18px 18px 0 0;padding:6px 16px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(0,0,0,.2)}
+.cs-head{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+.cs-head h2{margin:0;font-size:20px}
+.cs-x{border:0;background:var(--panel-2);width:40px;height:40px;border-radius:50%;font-size:24px;line-height:1;cursor:pointer;color:var(--ink)}
+.cs-empty{padding:24px 0;text-align:center;color:var(--muted)}
+.cs-lines{list-style:none;margin:0;padding:0;overflow-y:auto;display:grid;gap:10px}
+.cs-lines li{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;gap:6px 12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.cs-l{grid-column:1/3;display:grid;gap:2px}
+.cs-l small{color:var(--muted);font-size:13px}
+.cs-bad{color:var(--bad)!important;font-weight:600}
+.cs-rm{justify-self:start;border:0;background:none;padding:0;color:var(--brand-ink);font-size:14px;text-decoration:underline;cursor:pointer}
+.cs-qty button{width:40px;height:40px;font-size:20px}
+.cs-pr{justify-self:end;font-size:16px}
+.cs-foot{padding-top:12px;display:grid;gap:10px}
+.cs-tot{display:flex;justify-content:space-between;font-size:18px}
+.cs-go,.cs-big{padding:16px;font-size:17px;border-radius:14px}
+.cs-page{max-width:560px;padding-bottom:40px}
+.cs-title{font-size:24px;margin:8px 0 14px}
+.cs-block{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;margin:0 0 12px;display:grid;gap:10px}
+.cs-h{margin:0;font-size:18px}
+.cs-modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cs-mode{padding:18px 10px;font:inherit;font-size:17px;font-weight:700;border:2px solid var(--line-2);border-radius:14px;background:var(--panel);color:var(--ink);cursor:pointer}
+.cs-mode.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-ink)}
+.cs-ok{margin:0;color:var(--ok);font-weight:700}
+.cs-muted{margin:0;color:var(--muted);font-size:14px}
+.cs-link{justify-self:start;font-size:15px}
+.cs-price{margin:0;padding:12px 14px;border-radius:12px;background:var(--gold-soft);display:grid;gap:2px}
+.cs-price b{font-size:22px}
+.cs-price small{color:var(--muted)}
+.cs-price.bad{background:var(--bad-soft)}
+.cs-price.bad b{font-size:16px;color:var(--bad)}
+.cs-label{font-weight:700;font-size:15px;margin-top:2px}
+.cs-input{width:100%;box-sizing:border-box;font:inherit;font-size:17px;padding:13px 12px;border:1.5px solid var(--line-2);border-radius:12px;background:#fff;color:var(--ink)}
+.cs-ops{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cs-op{display:grid;justify-items:center;gap:6px;padding:12px 6px;font:inherit;font-size:13px;border:2px solid var(--line-2);border-radius:14px;background:var(--panel);color:var(--ink);cursor:pointer}
+.cs-op.on{border-color:var(--brand);background:var(--brand-soft)}
+.cs-recap{margin:0;font-weight:700;font-size:15px}
+.cs-map-wrap{display:grid;gap:6px}
+.cs-map{height:260px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}

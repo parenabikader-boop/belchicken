@@ -9,9 +9,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "langues": "node scripts/check-langues.mjs",
-    "test": "node --test src/utils/borne.test.js src/utils/site-choice.test.js src/staff/orders2/waiting.test.js src/staff/nav-pages.test.js src/staff/session.test.js src/staff/dashboard/compare.test.js src/staff/dashboard/now.test.js src/staff/nv/visual.test.js src/staff/orders/print-slip.test.js src/utils/tracking.test.js src/utils/km-fee.test.js"
+    "test": "node --test src/utils/borne.test.js src/utils/site-choice.test.js src/staff/orders2/waiting.test.js src/staff/nav-pages.test.js src/staff/session.test.js src/staff/dashboard/compare.test.js src/staff/dashboard/now.test.js src/staff/nv/visual.test.js src/staff/orders/print-slip.test.js src/utils/tracking.test.js src/utils/km-fee.test.js src/utils/simple-order.test.js"
   },
   "dependencies": {
+    "leaflet": "1.9.4",
     "lucide-react": "1.48.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

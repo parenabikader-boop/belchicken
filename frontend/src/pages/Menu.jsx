@@ -4,6 +4,8 @@ import { useMenu } from '../context/MenuContext.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import ProductDialog from '../components/ProductDialog.jsx';
 import OrderBar from '../components/OrderBar.jsx';
+import CartSheet from '../components/CartSheet.jsx';
+import { useSimpleOrder } from '../utils/site.js';
 import { searchProducts } from '../utils/product.js';
 import { cardLayout, categoryBanner, sizedPhoto } from '../utils/visuals.js';
 import { useT } from '../i18n/index.jsx';
@@ -16,6 +18,7 @@ const SearchIcon = ({ size }) => (
 
 export default function Menu() {
   const { categorie } = useParams();
+  const simpleOrder = useSimpleOrder(); // lot « Commande simplifiée »
   const menu = useMenu();
   const t = useT();
   const [query, setQuery] = useState('');
@@ -55,7 +58,8 @@ export default function Menu() {
           {q ? <SearchResults categories={categories} query={q} onOpen={openProduct} /> : <Category categories={categories} current={current} onOpen={openProduct} />}
         </div>
       </div>
-      <OrderBar />
+      {/* Lot « Commande simplifiée » : panneau « Ma commande » par-dessus le menu */}
+      {simpleOrder ? <CartSheet /> : <OrderBar />}
       {opened && <ProductDialog key={opened.id} product={opened} onClose={closeDialog} />}
     </div>
   );

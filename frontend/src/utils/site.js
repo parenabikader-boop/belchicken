@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api/client.js';
 import { kioskMenuState } from './site-choice.js';
+import { simpleOrderState } from './simple-order.js';
 
 let siteRequest = null;
 
@@ -41,4 +42,24 @@ export function useKioskMenu() {
     };
   }, []);
   return kioskMenuState(readStored(KIOSK_KEY), state.answer, state.done);
+}
+
+const SIMPLE_KEY = 'belchicken.commandeSimple'; // '1' | '0' : dernière réponse de /api/site
+
+// Lot « Commande simplifiée » : true = parcours court (panneau sur le menu, une seule page de commande), false = le
+// site actuel. Réponse inconnue (première visite, serveur injoignable) : la dernière gardée, sinon le site actuel.
+export function useSimpleOrder() {
+  const [state, setState] = useState({ answer: null, done: false });
+  useEffect(() => {
+    let alive = true;
+    loadSite().then((site) => {
+      if (!alive) return;
+      if (site) writeStored(SIMPLE_KEY, site.commandeSimple === true ? '1' : '0');
+      setState({ answer: site, done: true });
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return simpleOrderState(readStored(SIMPLE_KEY), state.answer, state.done);
 }
