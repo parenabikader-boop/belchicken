@@ -194,6 +194,8 @@ test('adresse des SMS : clé secrète d’au moins 24 caractères, comparée exa
   assert.deepEqual(smsBodySchema.parse({ from: 'OrangeMoney', text: 'abc', sentStamp: 1 }), { sender: 'OrangeMoney', text: 'abc' });
   assert.deepEqual(smsBodySchema.parse({ sender: 'MoovMoney', message: 'abc' }), { sender: 'MoovMoney', text: 'abc' });
   assert.equal(smsBodySchema.safeParse({ from: 'OrangeMoney' }).success, false);
+  // « Transitaire SMS » : {"from":"{in-number}","text":"{msg}"}, sans heure (heure = arrivée sur le serveur)
+  assert.deepEqual(smsBodySchema.parse({ from: 'OrangeMoney', text: 'Vous avez reçu 7 000 FCFA' }), { sender: 'OrangeMoney', text: 'Vous avez reçu 7 000 FCFA' });
 });
 
 test('Ligdicash (préparé) : facture du montant des plats, référence de la commande, adresse de retour', () => {

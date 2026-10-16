@@ -20,8 +20,12 @@ const limiter = rateLimit({
 // ne sait pas ajouter d'en-tête. Variable Render SMS_PAIEMENT_CLE (au moins 24 caractères) ; vide = adresse fermée.
 const smsKey = (req) => req.get('x-cle-sms') || (req.get('authorization') || '').replace(/^Bearer\s+/i, '') || String(req.query.cle || '');
 
-// SMS reçu par le téléphone marchand ECOFOOD, transmis par l'application Android
-paymentAutoRouter.post('/sms', limiter, async (req, res, next) => {
+// Corps JSON lu même si l'application l'annonce comme texte (Content-Type text/plain ou absent) ;
+// déjà lu par express.json() quand il est annoncé en JSON. Heure de réception = arrivée sur le serveur.
+const smsJson = express.json({ limit: '100kb', type: () => true });
+
+// SMS reçu par le téléphone marchand ECOFOOD, transmis par l'application Android (« Transitaire SMS »)
+paymentAutoRouter.post('/sms', limiter, smsJson, async (req, res, next) => {
   try {
     if (!smsKeyMatches(smsKey(req), env.autoPayment.smsKey)) {
       return res.status(401).json({ error: { code: 'CLE_INVALIDE', message: 'Clé invalide.' } });

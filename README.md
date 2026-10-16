@@ -1118,10 +1118,12 @@ fermée), `SMS_PAIEMENT_FORMATS` (facultatif, formats en JSON ; vide = le fichie
 
 ### Solution B : SMS du téléphone marchand ECOFOOD
 
-- **Application Android** « SMS to URL Forwarder » (gratuite, open source, Google Play et F-Droid, auteur
-  bogkonstantin) sur le téléphone marchand : filtre d'expéditeurs (les expéditeurs officiels), adresse
-  `https://belchicken-api.onrender.com/api/paiements/sms`, en-tête `{"X-Cle-Sms":"<SMS_PAIEMENT_CLE>"}`, modèle
-  `{"from":"%from%","text":"%text%","receivedStamp":%receivedStamp%}`. L'application qui ne sait pas ajouter
+- **Application Android** « Transitaire SMS » (choisie par le client le 16 octobre 2026, à la place de « SMS to URL
+  Forwarder ») sur le téléphone marchand : envoi en POST à l'adresse
+  `https://belchicken-api.onrender.com/api/paiements/sms`, en-tête `X-Cle-Sms: <SMS_PAIEMENT_CLE>`, corps
+  `{"from":"{in-number}","text":"{msg}"}`, sans heure : l'heure de réception est celle de l'arrivée sur le serveur.
+  Le corps est lu en JSON même s'il est annoncé comme texte. Noms acceptés aussi : `sender`, `message`, `body` ;
+  tout autre champ est ignoré. L'application qui ne sait pas ajouter
   d'en-tête peut mettre `?cle=…` dans l'adresse (moins discret). Le téléphone doit rester allumé, chargé et connecté.
 - **Seuls les expéditeurs officiels** des formats sont lus ; tout autre SMS est ignoré sans rien garder. Un SMS
   d'envoi, de retrait ou d'échec est écarté.

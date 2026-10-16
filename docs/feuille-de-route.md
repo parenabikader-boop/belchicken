@@ -864,7 +864,7 @@ automatiquement (plan 2) ».
 - [ ] Essai réel avec le téléphone personnel du client (README, plan 2), puis fermer « Formats SMS d'essai ».
 - [ ] Le client fournit un vrai SMS de paiement reçu par opérateur (Orange Money, Moov Money, Telecel Money) ; formats
   corrigés et marqués vérifiés (`supposed: false`).
-- [ ] Le client crée `SMS_PAIEMENT_CLE` sur Render et installe « SMS to URL Forwarder » sur le téléphone marchand.
+- [ ] Le client crée `SMS_PAIEMENT_CLE` sur Render et installe « Transitaire SMS » sur le téléphone marchand (corps `{"from":"{in-number}","text":"{msg}"}`, accepté, vérifié le 16 octobre 2026).
 - [ ] Accord écrit de Belchicken pour transmettre les SMS du téléphone marchand.
 - [x] 16 octobre 2026 : même sauvegarde, migration déplacée, envoi avec l'accord écrit du client (dev **non migrée**).
 - [ ] Ouverture de l'interrupteur, seulement après les vrais formats de SMS.
