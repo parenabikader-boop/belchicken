@@ -40,6 +40,10 @@ export default function StatementView({ s }) {
         <Tile label="Frais encaissés" value={money(s.summary.feesTotal)} note={`${money(s.summary.cash)} en espèces · ${money(s.summary.mobile)} par mobile money`} />
         <Tile label="Du paiement à la livraison" value={minutes(total?.minutes)} note="en moyenne" />
         <Tile label="Commandes annulées" value={s.summary.cancellations} note={s.summary.cancellations ? 'détail plus bas' : 'aucune'} />
+        {/* Plan 1 (call center allégé) : livraisons validées sans le code du client, comptées à part */}
+        {s.summary.withoutCode != null && (
+          <Tile bad={s.summary.withoutCode > 0} label="Livrées sans le code" value={s.summary.withoutCode} note={s.summary.withoutCode ? 'motifs plus bas' : 'toutes avec le code du client'} />
+        )}
         {withContract && (
           <Tile
             strong
@@ -101,6 +105,7 @@ export default function StatementView({ s }) {
                     <td>
                       <b>{c.name}</b>
                       {c.pickedUpWithoutCourier > 0 && <small className="rl-note">{plural(c.pickedUpWithoutCourier, 'récupération')} confirmée{c.pickedUpWithoutCourier > 1 ? 's' : ''} à sa place</small>}
+                      {c.withoutCode > 0 && <small className="rl-note rl-bad">{plural(c.withoutCode, 'livraison')} sans le code du client</small>}
                     </td>
                     <td className="n">{c.deliveries}{c.offered > 0 && <small className="rl-note">dont {c.offered} offerte{c.offered > 1 ? 's' : ''}</small>}</td>
                     <td className="n">{money(c.cash)}</td>
@@ -158,6 +163,29 @@ export default function StatementView({ s }) {
         )}
       </section>
 
+      {s.summary.withoutCode > 0 && (
+        <section className="rl-sec">
+          <h3 className="rl-bad">Livrées sans le code du client</h3>
+          <p className="rl-intro">Validées avec un motif, par le livreur ou par l’équipe à sa place. Elles comptent aussi dans les livraisons faites.</p>
+          <div className="rl-scroll">
+            <table className="rl-table">
+              <thead><tr><th>Commande</th><th>Livrée le</th><th>Livreur</th><th>Validée par</th><th>Motif</th></tr></thead>
+              <tbody>
+                {s.deliveries.filter((d) => d.withoutCode).map((d) => (
+                  <tr key={d.reference}>
+                    <td><b>{d.reference}</b>{d.zone && <small className="rl-note">{d.zone}</small>}</td>
+                    <td>{when(d.deliveredAt)}</td>
+                    <td>{d.courierName}</td>
+                    <td>{d.withoutCodeBy || '—'}</td>
+                    <td>{d.withoutCodeReason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <section className="rl-sec rl-detail">
         <h3>Détail des livraisons</h3>
         {s.deliveries.length === 0 ? <p className="rl-empty">Aucune livraison sur la période.</p> : (
@@ -194,9 +222,9 @@ export default function StatementView({ s }) {
   );
 }
 
-function Tile({ label, value, note, strong }) {
+function Tile({ label, value, note, strong, bad }) {
   return (
-    <div className={`rl-tile${strong ? ' strong' : ''}`}>
+    <div className={`rl-tile${strong ? ' strong' : ''}${bad ? ' bad' : ''}`}>
       <span className="rl-tile-label">{label}</span>
       <b className="rl-tile-value">{value}</b>
       {note && <small>{note}</small>}

@@ -994,6 +994,29 @@ change. Aucune migration : l'interrupteur est une simple ligne `FeatureSwitch` (
 - Tests : `frontend/src/staff/nv/visual.test.js` (onglets selon le rôle, interrupteur), `backend/test/prestataire.test.js`
   (fermé sans ligne).
 
+## Call center allégé (plan 1)
+
+Interrupteur `CALL_CENTER_ALLEGE` (page Prestataire), **fermé sans ligne** : fermé, tout est exactement comme avant
+(prouvé par `backend/test/call-center-allege.test.js`). Aucune migration. Ouvert :
+
+- **Plus aucune étape n'attend un message au client** : `noticeState(o, { light: true })` rend le message `skippable`
+  (non bloquant) au lieu de `required`. Le bouton d'étape ouvre toujours WhatsApp avec le message, qui reste proposé
+  « (facultatif) ». Exceptions : le **remerciement** (`LIVREE`, `RETIREE`) reste demandé comme avant, et des **frais
+  manquants** (`missing`) bloquent toujours. Vaut pour l'API (`changeStatus`, tournées du restaurant), le détail
+  (`notice.skippable`) et la liste (`noticePending`).
+- **« Paiement vérifié » imprime le bon** dans le même geste : après l'enregistrement, le bon 80 mm s'imprime depuis un
+  cadre invisible (`frontend/src/staff/orders/print-slip.js`, page du bon avec `?imprimer=1`), sans nouvel onglet.
+- **Le livreur peut valider sans le code du client**, avec un motif obligatoire (3 caractères au moins) et le mode de
+  paiement des frais : bouton « Le client n'a pas son code » (directement proposé après 5 codes faux ou sans code),
+  `POST /api/staff/courses/:reference/sans-code` (Livreur seulement, 403 interrupteur fermé), règle `courierNoCodeError()`
+  dans `courier.js`. Même trace que la validation par l'agent : motif dans l'historique, événement `LIVRAISON_SANS_CODE`.
+  `GET /api/staff/courses` renvoie `noCodeAllowed: true`.
+- **Signalée en rouge au Responsable livraison** : alerte sur téléphone (« Livrée SANS CODE », livreur et motif, jamais le
+  client) et liste rouge en haut de la page Livraison (`withoutCode` dans `GET /api/staff/livraison`, `noCodeDeliveries()`),
+  avec qui a validé (le livreur ou l'équipe à sa place).
+- **Comptée à part dans le relevé** : case « Livrées sans le code », nombre par livreur, tableau des motifs, ligne et
+  remarque dans l'Excel (`summary.withoutCode`, `deliveries[].withoutCode*`). Les frais et les délais ne changent pas.
+
 ## Démonstration commerciale (base dev seulement)
 
 Un mois d'activité fictive mais réaliste sur la base **dev**, pour présenter le tableau de bord, les ventes,

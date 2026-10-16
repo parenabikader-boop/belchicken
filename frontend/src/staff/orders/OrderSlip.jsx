@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
+import { autoPrintAsked } from './print-slip.js';
 import { drinksLabel } from '../../utils/drinks.js';
 import { formatPrice } from '../../utils/format.js';
 import { nightLine } from '../../utils/deliveryFee.js';
@@ -26,6 +27,20 @@ export default function OrderSlip() {
   useEffect(() => {
     staffApi.order(reference).then(setOrder, setError);
   }, [reference]);
+
+  // Plan 1 (call center allégé) : ouvert avec ?imprimer=1 par « Paiement vérifié », le bon s'imprime tout seul,
+  // une seule fois, dès qu'il est chargé
+  const autoPrint = autoPrintAsked(search);
+  const printed = useRef(false);
+  useEffect(() => {
+    if (!autoPrint || !order || printed.current) return;
+    // Laisse le temps d'afficher le bon et sa taille de page
+    const t = setTimeout(() => {
+      printed.current = true;
+      window.print();
+    }, 300);
+    return () => clearTimeout(t);
+  }, [autoPrint, order]);
 
   // Taille de page pour l'impression (une seule règle @page à la fois)
   useEffect(() => {

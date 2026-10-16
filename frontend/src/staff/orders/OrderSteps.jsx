@@ -4,6 +4,7 @@ import { formatPrice } from '../../utils/format.js';
 import { hourLabel, nightLine } from '../../utils/deliveryFee.js';
 import { useStaff } from '../StaffContext.jsx';
 import { useAppSettings } from '../settings/useAppSettings.js';
+import { isCallCenterLight, printSlip } from './print-slip.js';
 import { ACTIVE, canEditFee, deliveryBlock, feeOrigin, feeText, FEE_METHODS, formatPhone, formatTime, INDEPENDENT_NOTE, isIndependent, isPartner, isPickup, METHOD_LABEL, nextAction, proofLines } from './labels.js';
 
 // « 1 500 » -> 1500 ; champ vide -> NaN (jamais 0 par erreur : 0 F = livraison offerte)
@@ -51,7 +52,8 @@ async function withWhatsApp(action, auto) {
   try {
     const next = await action();
     const n = next.notice;
-    const open = Boolean(win && n?.url && n.required);
+    // Plan 1 (call center allégé) : le message ne bloque plus (skippable) mais WhatsApp s'ouvre comme avant
+    const open = Boolean(win && n?.url && (n.required || n.skippable));
     if (open) {
       win.location.href = n.url;
       staffApi.logMessage(next.reference, n.key).catch(() => {});
@@ -136,9 +138,9 @@ export function Notice({ order: o, steps, onChange }) {
     return <p className="nt nt-done">Message « {n.label} » envoyé automatiquement au client sur WhatsApp.</p>;
   }
 
-  // Message facultatif pas encore envoyé (« commande à payer » d'une commande saisie par un agent) :
-  // proposé avec son bouton, sans bloquer l'étape suivante
-  if (n.optional && !n.confirmed) {
+  // Message facultatif pas encore envoyé (« commande à payer » d'une commande saisie par un agent ; plan 1, call
+  // center allégé : tous les messages sauf le remerciement) : proposé avec son bouton, sans bloquer l'étape suivante
+  if ((n.optional || n.skippable) && !n.confirmed) {
     return (
       <section className="nt nt-todo nt-optional" aria-live="polite">
         <h2>Envoyer au client (facultatif) : {n.label}</h2>
@@ -150,7 +152,11 @@ export function Notice({ order: o, steps, onChange }) {
           </a>
           <button type="button" className="btn btn-s" disabled={sending} onClick={() => confirm('WHATSAPP')}>C’est envoyé</button>
         </div>
-        <p className="st-muted">Pas obligatoire : au téléphone, vous pouvez aussi donner le code marchand de vive voix.</p>
+        <p className="st-muted">
+          {n.skippable
+            ? 'Pas obligatoire : l’étape suivante n’attend pas ce message.'
+            : 'Pas obligatoire : au téléphone, vous pouvez aussi donner le code marchand de vive voix.'}
+        </p>
         {error && <p className="st-err">{error}</p>}
       </section>
     );
@@ -215,6 +221,8 @@ export function Notice({ order: o, steps, onChange }) {
 // Bouton de l'étape suivante (avec confirmation pour le paiement et les frais) et annulation
 export function Actions({ order: o, steps }) {
   const { shortFlow, loaded } = useAppSettings();
+  const { features } = useStaff();
+  const light = isCallCenterLight(features); // plan 1 : « Paiement vérifié » imprime aussi le bon
   const next = nextAction(o, { shortFlow });
   const pickup = isPickup(o);
   const partner = isPartner(o); // lot 5c : livrée par notre partenaire
@@ -253,7 +261,14 @@ export function Actions({ order: o, steps }) {
 
   if (mode === 'confirm' && o.status === 'PAIEMENT_A_VERIFIER') {
     return (
-      <form className="st-action confirm" onSubmit={(e) => { e.preventDefault(); go(() => staffApi.setStatus(o.reference, { from: o.status, to: next.to, ...(noFee ? {} : { deliveryFee: amount, ...(changed ? { feeReason } : {}), ...(typed ? { nightFee } : {}) }) })); }}>
+      <form
+        className="st-action confirm"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const done = await go(() => staffApi.setStatus(o.reference, { from: o.status, to: next.to, ...(noFee ? {} : { deliveryFee: amount, ...(changed ? { feeReason } : {}), ...(typed ? { nightFee } : {}) }) }));
+          if (done && light) printSlip(o.reference);
+        }}
+      >
         <b>Avez-vous vérifié le paiement sur le téléphone marchand ?</b>
         <p>
           <strong>{formatPrice(o.itemsTotal)}</strong> reçus par {METHOD_LABEL[o.paymentMethod]}
@@ -288,7 +303,13 @@ export function Actions({ order: o, steps }) {
         {steps.error && <p className="st-err">{steps.error}</p>}
         {fromHint}
         <div className="st-action-row">
-          <button type="submit" className="btn btn-p" disabled={steps.busy || !feeOk}>{steps.busy ? 'Enregistrement…' : next.to === 'EN_PREPARATION' ? 'Oui, paiement reçu : lancer la préparation et prévenir le client' : 'Oui, paiement reçu : prévenir le client'}</button>
+          <button type="submit" className="btn btn-p" disabled={steps.busy || !feeOk}>
+            {steps.busy
+              ? 'Enregistrement…'
+              : light
+                ? next.to === 'EN_PREPARATION' ? 'Oui, paiement reçu : lancer la préparation et imprimer le bon' : 'Oui, paiement reçu : imprimer le bon'
+                : next.to === 'EN_PREPARATION' ? 'Oui, paiement reçu : lancer la préparation et prévenir le client' : 'Oui, paiement reçu : prévenir le client'}
+          </button>
           <button type="button" className="st-text-btn" onClick={() => setMode(null)}>Retour</button>
         </div>
       </form>

@@ -89,6 +89,25 @@ export function deliveryActionError(actor, target, action) {
 // Ce que le Responsable livraison voit d'une course de notre équipe : référence, quartier, livreur, frais
 // de livraison, et les heures de chaque étape (lot 5c). Jamais les plats, le total, le paiement des plats
 // ni le code de remise.
+// Plan 1 (call center allégé) : livraisons validées SANS le code du client (motif noté au passage LIVREE),
+// signalées en rouge au Responsable livraison. orders : livrées, avec courierId et statusChanges (toStatus,
+// createdAt, staffUserId, staffName, reason) triés par date. Validée par le livreur lui-même, ou l'équipe à sa place.
+export function noCodeDeliveries(orders) {
+  return orders.flatMap((o) => {
+    const done = (o.statusChanges || []).findLast((c) => c.toStatus === 'LIVREE');
+    if (o.status !== 'LIVREE' || !done?.reason) return [];
+    return [{
+      reference: o.reference,
+      courierName: o.courierName ?? null,
+      deliveryZoneName: o.deliveryZoneName ?? null,
+      reason: done.reason,
+      by: done.staffName ?? null,
+      byCourier: Boolean(done.staffUserId && done.staffUserId === o.courierId),
+      at: done.createdAt,
+    }];
+  });
+}
+
 export function toPartnerCourse(o) {
   return {
     proofs: o.statusChanges ? deliveryProofs(o) : null,

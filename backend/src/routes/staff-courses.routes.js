@@ -2,7 +2,9 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { requireStaff } from '../middlewares/staff-auth.js';
-import { deliverWithCode, listCourses } from '../services/courier.service.js';
+import { deliverWithCode, deliverWithoutCode, listCourses } from '../services/courier.service.js';
+import { isFeatureOpen } from '../services/features.service.js';
+import { CALL_CENTER_LIGHT } from '../services/features.js';
 import { myAvailability, setAvailability } from '../services/courier-team.service.js';
 import { pickUp } from '../services/dispatch.service.js';
 import { AVAILABILITIES } from '../services/courier-team.js';
@@ -13,7 +15,9 @@ staffCoursesRouter.use(requireStaff('LIVREUR'));
 
 staffCoursesRouter.get('/', async (req, res, next) => {
   try {
-    res.json({ courses: await listCourses(req.staff), availability: await myAvailability(req.staff), serverTime: new Date() });
+    // Plan 1 : noCodeAllowed seulement quand le call center est allégé (sinon la réponse est celle d'avant)
+    const light = await isFeatureOpen(CALL_CENTER_LIGHT);
+    res.json({ courses: await listCourses(req.staff), availability: await myAvailability(req.staff), serverTime: new Date(), ...(light && { noCodeAllowed: true }) });
   } catch (e) {
     next(e);
   }
@@ -63,6 +67,21 @@ staffCoursesRouter.post('/:reference/deliver', codeLimiter, async (req, res, nex
       })
       .parse(req.body);
     res.json({ course: await deliverWithCode(String(req.params.reference).toUpperCase(), code, feeMethod, req.staff) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Plan 1 (interrupteur CALL_CENTER_ALLEGE ouvert, sinon 403) : client sans son code, le livreur valide avec un motif
+staffCoursesRouter.post('/:reference/sans-code', codeLimiter, async (req, res, next) => {
+  try {
+    const { reason, feeMethod } = z
+      .object({
+        reason: z.string({ required_error: 'Indiquez pourquoi la livraison est validée sans code.' }).max(300, 'Motif trop long (300 caractères au plus).'),
+        feeMethod: z.string().max(20).optional(),
+      })
+      .parse(req.body);
+    res.json({ course: await deliverWithoutCode(String(req.params.reference).toUpperCase(), reason, feeMethod, req.staff) });
   } catch (e) {
     next(e);
   }

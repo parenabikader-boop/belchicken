@@ -5,8 +5,11 @@ import { getAppSettings } from './app-settings.service.js';
 import { logSecurity } from './security-log.service.js';
 import { createMember, deactivate, reactivate, resetPassword } from './team.service.js';
 import {
-  availabilityActive, availabilityError, courierState, deliveryActionError, deliveryCreateError, STATE_LABEL, teamOf, toPartnerCourse,
+  availabilityActive, availabilityError, courierState, deliveryActionError, deliveryCreateError, noCodeDeliveries, STATE_LABEL, teamOf,
+  toPartnerCourse,
 } from './courier-team.js';
+import { isFeatureOpen } from './features.service.js';
+import { CALL_CENTER_LIGHT } from './features.js';
 
 // Réglage du Patron « Tournées et disponibilité » (déjà éteint si le Prestataire l'a fermé)
 export const restaurantDispatch = async (db = prisma) => (await getAppSettings(db)).restaurantDispatch;
@@ -88,14 +91,14 @@ export async function myAvailability(courier) {
 const PARTNER_SELECT = {
   reference: true, status: true, deliveryZoneName: true, courierId: true, courierName: true, courierAssignedAt: true,
   deliveryFee: true, deliveryNightFee: true, deliveryRunId: true,
-  statusChanges: { select: { toStatus: true, createdAt: true, staffName: true, reason: true }, orderBy: { createdAt: 'asc' } },
+  statusChanges: { select: { toStatus: true, createdAt: true, staffUserId: true, staffName: true, reason: true }, orderBy: { createdAt: 'asc' } },
   events: { where: { type: 'LIVREUR_ASSIGNE' }, select: { type: true, createdAt: true }, orderBy: { createdAt: 'asc' } },
 };
 
 export async function getDeliveryOverview(now = new Date()) {
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const partner = { deliveryOperator: 'PRESTATAIRE', mode: 'LIVRAISON' };
-  const [couriers, waiting, courses, delivered] = await Promise.all([
+  const [couriers, waiting, courses, delivered, light] = await Promise.all([
     couriersOf('PRESTATAIRE', true),
     prisma.order.findMany({ where: { ...partner, status: { in: ['EN_PREPARATION', 'PRETE_LIVRAISON'] } }, orderBy: { createdAt: 'asc' }, select: PARTNER_SELECT }),
     prisma.order.findMany({ where: { ...partner, status: 'EN_LIVRAISON' }, orderBy: { courierAssignedAt: 'asc' }, select: PARTNER_SELECT }),
@@ -105,6 +108,7 @@ export async function getDeliveryOverview(now = new Date()) {
       take: 50,
       select: PARTNER_SELECT,
     }),
+    isFeatureOpen(CALL_CENTER_LIGHT),
   ]);
   return {
     couriers,
@@ -112,6 +116,8 @@ export async function getDeliveryOverview(now = new Date()) {
     toPickUp: waiting.filter((o) => o.courierId).map(toPartnerCourse),
     courses: courses.map(toPartnerCourse),
     delivered: delivered.map(toPartnerCourse),
+    // Plan 1 (call center allégé) : livrées aujourd'hui sans le code du client, en rouge sur la page
+    ...(light && { withoutCode: noCodeDeliveries(delivered) }),
     serverTime: now,
   };
 }

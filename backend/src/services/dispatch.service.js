@@ -5,6 +5,8 @@ import { customerAutoEnabled } from '../config/env.js';
 import { deliveryError } from './order-status.js';
 import { noticeError, noticeState } from './customer-messages.js';
 import { generateDeliveryCode } from './courier.js';
+import { isFeatureOpen } from './features.service.js';
+import { CALL_CENTER_LIGHT } from './features.js';
 import { restaurantDispatch } from './courier-team.service.js';
 import { courseRemovedNotification } from './push.message.js';
 import { pushCourier } from './push.service.js';
@@ -109,10 +111,11 @@ export async function restaurantTour(actor, courierId, items) {
     const orders = await readOrders(tx, references);
     const dispatch = await restaurantDispatch(tx);
     let error = restaurantTourError({ dispatch, orders, seen, references });
+    const light = await isFeatureOpen(CALL_CENTER_LIGHT, tx); // plan 1 : le départ n'attend plus le message
     for (const o of orders) {
       if (error) break;
       const feeError = deliveryError(o);
-      const notice = noticeError(noticeState(o, { auto: customerAutoEnabled() }));
+      const notice = noticeError(noticeState(o, { auto: customerAutoEnabled(), light }));
       if (feeError || notice) error = `Commande ${o.reference} : ${(feeError || notice).charAt(0).toLowerCase()}${(feeError || notice).slice(1)}`;
     }
     if (error) throw new AppError(400, error, 'TOURNEE_IMPOSSIBLE');

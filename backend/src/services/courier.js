@@ -7,7 +7,8 @@
 //   marchand) et note comment ils ont été payés en validant la remise.
 // - Le livreur tape le code donné par le client pour passer la commande à LIVREE. Il ne reçoit
 //   jamais le code : l'API le vérifie. Après 5 codes faux, la saisie est bloquée sur cette commande.
-// - Client sans son code : l'agent valide à sa place, avec un motif noté dans l'historique.
+// - Client sans son code : l'agent valide à sa place, avec un motif noté dans l'historique. Plan 1 (interrupteur
+//   CALL_CENTER_ALLEGE ouvert) : le livreur peut aussi valider lui-même sans code, avec un motif (courierNoCodeError).
 // - À emporter : même code (mêmes colonnes deliveryCode / deliveryCodeAttempts), créé au passage PRETE
 //   et envoyé dans le message « commande prête ». L'agent le tape au comptoir (checkPickupCode).
 import { randomInt, timingSafeEqual } from 'node:crypto';
@@ -87,6 +88,17 @@ export function checkPickupCode(order, code) {
 export function handoverReasonError(reason, pickup = false) {
   if (!reason || reason.trim().length < 3) return `Indiquez pourquoi ${pickup ? 'la remise au comptoir' : 'la livraison'} est validée sans code.`;
   return null;
+}
+
+// Plan 1 (interrupteur CALL_CENTER_ALLEGE ouvert) : le livreur valide lui-même la livraison sans le code du client,
+// avec un motif obligatoire (même après 5 codes faux, ou commande sans code). null si permis, sinon le message.
+export function courierNoCodeError(order, courierId, reason) {
+  if (!order || order.courierId !== courierId) return 'Cette course ne vous est pas assignée.';
+  if (order.status === 'LIVREE') return 'Cette commande est déjà livrée.';
+  if (order.status === 'ANNULEE') return 'Cette commande a été annulée : ne la livrez pas. Appelez l’équipe.';
+  if (order.status !== 'EN_LIVRAISON') return 'Cette commande n’est pas en livraison.';
+  if (order.mode === 'A_EMPORTER') return 'Commande à emporter : elle se remet au comptoir.';
+  return handoverReasonError(reason);
 }
 
 // Début du jour (minuit, heure du Burkina = UTC)

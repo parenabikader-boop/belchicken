@@ -260,7 +260,9 @@ const STAGE_LABEL = {
 // orders : commandes Prestataire à domicile, avec statusChanges et events (statement.service.js).
 // runs : tournées Prestataire créées dans la période, avec leurs commandes.
 // versions : conditions du contrat (vides et ignorées si withContract est faux).
-export function buildStatement({ period, orders, runs = [], versions = [], company = null, withContract, now = new Date() }) {
+// light (plan 1, call center allégé) : livraisons validées sans le code du client comptées à part (motif, par
+// qui) ; sans lui, le relevé est exactement celui d'avant.
+export function buildStatement({ period, orders, runs = [], versions = [], company = null, withContract, light = false, now = new Date() }) {
   const inPeriod = (t) => t && new Date(t) >= period.from && new Date(t) < period.end;
 
   const deliveries = [];
@@ -287,6 +289,12 @@ export function buildStatement({ period, orders, runs = [], versions = [], compa
         pickedUpAt: tl.pickedUpAt,
         pickedUpWithoutCourier: tl.pickedUpWithoutCourier,
       };
+      if (light) {
+        const done = lastAt(o.statusChanges || [], (c) => c.toStatus === 'LIVREE');
+        row.withoutCode = Boolean(done?.reason);
+        row.withoutCodeReason = done?.reason || null;
+        row.withoutCodeBy = done?.reason ? done.staffName || null : null;
+      }
       for (const d of DELAYS) row[`${d.key}Minutes`] = minutesBetween(tl[d.from], tl[d.to]);
       deliveries.push(row);
     } else if (o.status === 'ANNULEE' && tl.cancelled && inPeriod(tl.cancelled.createdAt)) {
@@ -342,6 +350,7 @@ export function buildStatement({ period, orders, runs = [], versions = [], compa
     waitMinutes: average(list.map((d) => d.waitMinutes)).minutes,
     pickedUpWithoutCourier: list.filter((d) => d.pickedUpWithoutCourier).length,
     runs: new Set(list.map((d) => d.runId).filter(Boolean)).size,
+    ...(light && { withoutCode: list.filter((d) => d.withoutCode).length }),
   })).sort((a, b) => b.deliveries - a.deliveries || a.name.localeCompare(b.name, 'fr'));
 
   // Par tournée : de la première récupération à la dernière livraison
@@ -389,6 +398,7 @@ export function buildStatement({ period, orders, runs = [], versions = [], compa
       mobile: fees.mobile.amount,
       couriers: couriers.length,
       tours: tours.length,
+      ...(light && { withoutCode: deliveries.filter((d) => d.withoutCode).length }),
     },
     fees,
     delays,

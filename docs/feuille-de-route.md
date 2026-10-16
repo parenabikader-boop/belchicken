@@ -797,6 +797,25 @@ fermé sans ligne. Aucune migration. Détails : README « Nouveau visuel de l'es
   Prestataire de production ; fermé = rien ne change pour Belchicken).
 - [ ] Envoi sur GitHub avec l'accord écrit du client, après sa sauvegarde Neon de production.
 
+### Décisions du 16 octobre 2026 : les cinq plans
+
+Ordre choisi par le client : **plan 1** (call center allégé), puis **4** (suivi du client sans messages payants),
+**3** (frais par la position avant le paiement), **2** (paiement du repas validé automatiquement), **5** (livraison
+séparée de Belchicken). Plan 4, décision du client : sur la page de suivi, le client appellera **le livreur directement**.
+
+### Plan 1 : call center allégé (16 octobre 2026, pas encore en ligne)
+
+Interrupteur `CALL_CENTER_ALLEGE` (Prestataire), fermé sans ligne, aucune migration. Détails : README « Call center
+allégé (plan 1) ».
+
+- [x] Aucune étape n'attend plus un message (sauf le remerciement ; frais manquants toujours bloquants).
+- [x] « Paiement vérifié » imprime le bon dans le même geste.
+- [x] Le livreur valide sans code avec un motif obligatoire ; signalé en rouge au Responsable livraison (alerte et
+  liste) ; compté à part dans le relevé (page, PDF, Excel).
+- [x] Tests (`backend/test/call-center-allege.test.js`, `frontend/src/staff/orders/print-slip.test.js`), construction.
+- [ ] Essai par le client (interrupteur ouvert sur dev ou en production avec son accord).
+- [ ] Envoi sur GitHub avec l'accord écrit du client.
+
 ## Démonstration commerciale (base dev)
 
 Pour la présentation commerciale à Belchicken : un mois d'activité fictive sur la base **dev** seulement (tableau de

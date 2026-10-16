@@ -68,6 +68,9 @@ export async function statementWorkbook(s) {
   section('En bref');
   line('Livraisons faites', s.summary.deliveries);
   line('dont livraisons offertes', s.summary.offered, 'Le client n’a rien payé au livreur.');
+  if (s.summary.withoutCode != null) {
+    line('dont livrées SANS le code du client', s.summary.withoutCode, 'Validées avec un motif (call center allégé) : détail dans la feuille « Livraisons ».');
+  }
   line('Commandes annulées', s.summary.cancellations);
   line('Frais de livraison encaissés', s.fees.total, s.fees.nightTotal ? `dont ${s.fees.nightTotal.toLocaleString('fr-FR')} F de supplément de nuit` : null, MONEY);
   line('en espèces', s.fees.cash.amount, `${s.fees.cash.count} livraisons · remises : ${s.fees.cash.remitted.toLocaleString('fr-FR')} F · encore chez les livreurs : ${s.fees.cash.held.toLocaleString('fr-FR')} F`, MONEY);
@@ -129,7 +132,7 @@ export async function statementWorkbook(s) {
     pickedUpAt: asDate(d.pickedUpAt),
     method: d.offered ? 'Offerte' : METHOD[d.method] || 'Non précisé',
     nightFee: d.nightFee || null,
-    remark: [d.pickedUpWithoutCourier && 'Récupérée confirmée à la place du livreur', d.method === 'ESPECES' && !d.cashRemitted && 'Espèces encore chez le livreur', d.method === 'MOBILE_MONEY' && !d.mobileVerified && 'Mobile money à vérifier'].filter(Boolean).join(' · ') || null,
+    remark: [d.withoutCode && `SANS CODE (${d.withoutCodeBy || '?'}) : ${d.withoutCodeReason}`, d.pickedUpWithoutCourier && 'Récupérée confirmée à la place du livreur', d.method === 'ESPECES' && !d.cashRemitted && 'Espèces encore chez le livreur', d.method === 'MOBILE_MONEY' && !d.mobileVerified && 'Mobile money à vérifier'].filter(Boolean).join(' · ') || null,
   })), 'Heures du Burkina. Seulement les frais de livraison : aucun montant des plats.');
 
   table(wb, 'Par jour', [

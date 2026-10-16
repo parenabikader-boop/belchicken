@@ -1,10 +1,14 @@
 // Espace livreur : ses courses du jour et la remise avec le code (règles dans courier.js)
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
-import { checkHandover, startOfToday, toCourse } from './courier.js';
+import { checkHandover, courierNoCodeError, startOfToday, toCourse } from './courier.js';
 import { feeMethodError, feeToCollect } from './order-status.js';
 import { notifyDelivered, statusChange } from './staff-orders.service.js';
 import { reviewTokenData } from './review.service.js';
+import { featureClosedError, isFeatureOpen } from './features.service.js';
+import { CALL_CENTER_LIGHT } from './features.js';
+import { noCodeNotification } from './push.message.js';
+import { pushDeliveryManagers } from './push.service.js';
 
 // Courses à récupérer (lot 5c, notre équipe : confiées dès la préparation), en cours, plus celles livrées
 // ou annulées aujourd'hui
@@ -70,5 +74,35 @@ export async function deliverWithCode(reference, code, feeMethod, courier) {
     await tx.orderStatusChange.create({ data: statusChange(order, 'LIVREE', courier) });
   });
   notifyDelivered(reference);
+  return (await listCourses(courier)).find((c) => c.reference === reference);
+}
+
+// Plan 1 (interrupteur CALL_CENTER_ALLEGE ouvert) : client sans son code, le livreur valide lui-même avec un motif
+// obligatoire, et le mode de paiement des frais comme avec le code. Même trace que la validation par l'agent
+// (motif dans l'historique, événement LIVRAISON_SANS_CODE) ; le Responsable livraison est alerté (commande Prestataire).
+export async function deliverWithoutCode(reference, reason, feeMethod, courier) {
+  if (!(await isFeatureOpen(CALL_CENTER_LIGHT))) throw featureClosedError();
+  const order = await prisma.order.findUnique({
+    where: { reference },
+    select: { id: true, reference: true, status: true, mode: true, courierId: true, courierName: true, deliveryFee: true, deliveryFeeMethod: true, deliveryOperator: true },
+  });
+  if (!order || order.courierId !== courier.id) throw new AppError(404, 'Course introuvable.', 'COURSE_INTROUVABLE');
+  const error = courierNoCodeError(order, courier.id, reason) || feeMethodError(order, feeMethod);
+  if (error) throw new AppError(400, error, 'REMISE_IMPOSSIBLE');
+  const who = { staffUserId: courier.id, staffName: courier.name };
+
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.order.updateMany({
+      where: { id: order.id, status: 'EN_LIVRAISON', courierId: courier.id },
+      data: { status: 'LIVREE', ...(feeToCollect(order) ? { deliveryFeeMethod: feeMethod } : {}), ...(await reviewTokenData(tx)) },
+    });
+    if (updated.count !== 1) throw new AppError(409, 'Cette course vient de changer. La page est mise à jour.', 'COURSE_CHANGEE');
+    await tx.orderStatusChange.create({ data: statusChange(order, 'LIVREE', courier, reason.trim()) });
+    await tx.orderEvent.create({ data: { orderId: order.id, type: 'LIVRAISON_SANS_CODE', ...who } });
+  });
+  notifyDelivered(reference);
+  if (order.deliveryOperator === 'PRESTATAIRE') {
+    pushDeliveryManagers(order, noCodeNotification(order, reason)).catch((e) => console.error('[push] sans code', e));
+  }
   return (await listCourses(courier)).find((c) => c.reference === reference);
 }

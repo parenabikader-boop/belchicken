@@ -3,6 +3,8 @@
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
 import { logSecurity } from './security-log.service.js';
+import { isFeatureOpen } from './features.service.js';
+import { CALL_CENTER_LIGHT } from './features.js';
 import {
   buildStatement, canDeleteTerms, checkTerms, parsePeriod, seesContract, termsPage, termsText,
 } from './statement.js';
@@ -43,7 +45,7 @@ export async function getStatement(staff, { du, au }, now = new Date()) {
   const period = periodOrError(du, au, now);
   const withContract = seesContract(staff.role);
   const range = { gte: period.from, lt: period.end };
-  const [orders, runs, versions, company] = await Promise.all([
+  const [orders, runs, versions, company, light] = await Promise.all([
     prisma.order.findMany({
       where: {
         deliveryOperator: 'PRESTATAIRE',
@@ -59,8 +61,9 @@ export async function getStatement(staff, { du, au }, now = new Date()) {
     }),
     withContract ? listVersions() : Promise.resolve([]),
     prisma.deliveryCompany.findUnique({ where: { id: 1 }, select: { companyName: true } }),
+    isFeatureOpen(CALL_CENTER_LIGHT), // plan 1 : livraisons sans code comptées à part
   ]);
-  return buildStatement({ period, orders, runs, versions, company, withContract, now });
+  return buildStatement({ period, orders, runs, versions, company, withContract, light, now });
 }
 
 // ─── Conditions du contrat (Prestataire ; Patron en lecture si RELEVE est ouvert) ───

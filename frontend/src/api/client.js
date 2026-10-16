@@ -205,6 +205,9 @@ export const staffApi = {
   // feeMethod : comment le client a payé les frais (ESPECES ou MOBILE_MONEY)
   deliver: (reference, code, feeMethod) =>
     staffRequest(`/courses/${encodeURIComponent(reference)}/deliver`, { method: 'POST', body: JSON.stringify({ code, feeMethod }) }).then((d) => d.course),
+  // Plan 1 (call center allégé) : client sans son code, le livreur valide avec un motif obligatoire
+  deliverWithoutCode: (reference, reason, feeMethod) =>
+    staffRequest(`/courses/${encodeURIComponent(reference)}/sans-code`, { method: 'POST', body: JSON.stringify({ reason, feeMethod }) }).then((d) => d.course),
 
   // Menu : disponibilité pour toute l'équipe, le reste pour le Patron (vérifié par l'API)
   menu: () => staffRequest('/menu'),

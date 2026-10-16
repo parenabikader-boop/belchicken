@@ -385,18 +385,23 @@ export function stepStart(o, key) {
 //   required = l'étape suivante est bloquée tant que l'envoi n'est pas confirmé (jamais pour un message
 //   optional : « commande à payer » d'une commande saisie par un agent).
 // `o` : la commande avec statusChanges et events (createdAt).
-export function noticeState(o, { auto = false } = {}) {
+// Plan 1, call center allégé (light : interrupteur CALL_CENTER_ALLEGE ouvert) : plus aucune étape n'attend le
+// message, qui reste proposé (skippable) ; seul le remerciement (THANKS_KEYS) reste demandé, comme avant. Ce qui
+// manque pour le message (missing : les frais de livraison) bloque toujours : ce n'est pas un message.
+export function noticeState(o, { auto = false, light = false } = {}) {
   const current = currentMessageKey(o);
   if (!current) return null;
   const since = stepStart(o, current.key);
   const confirmed =
     (o.events || []).findLast((e) => CONFIRM_TYPES.includes(e.type) && sameMessage(e.messageKey, current.key) && time(e.createdAt) >= since) || null;
-  return { ...current, confirmed, required: !auto && !confirmed && !current.optional };
+  const needed = !auto && !confirmed && !current.optional;
+  const skippable = needed && light && !current.missing && !THANKS_KEYS.includes(current.key);
+  return { ...current, confirmed, required: needed && !skippable, ...(skippable && { skippable: true }) };
 }
 
 // Lot 12 (page Commandes) : l'étape suivante attend que l'agent prévienne le client (ou ce qu'il faut pour le
-// message, ex. les frais). Faux pour un message facultatif, ou quand l'envoi est automatique.
-export const noticePending = (o, { auto = false } = {}) => Boolean(noticeState(o, { auto })?.required);
+// message, ex. les frais). Faux pour un message facultatif, quand l'envoi est automatique, ou call center allégé.
+export const noticePending = (o, { auto = false, light = false } = {}) => Boolean(noticeState(o, { auto, light })?.required);
 
 // Lot 12 : début de l'étape où en est la commande (dernier passage à son statut), pour le temps d'attente.
 // `o` : la commande avec statusChanges triés par date.

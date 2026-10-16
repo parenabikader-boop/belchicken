@@ -4,7 +4,7 @@ import { staffApi } from '../../api/client.js';
 import { useStaff } from '../StaffContext.jsx';
 import { CashBoard } from '../cash/CashPage.jsx';
 import { TeamManager } from '../team/TeamPage.jsx';
-import { formatPhone, timeAgo } from '../orders/labels.js';
+import { formatPhone, formatTime, timeAgo } from '../orders/labels.js';
 import { plural } from '../../utils/format.js';
 import DispatchBoard from './DispatchBoard.jsx';
 import StatementPage from '../statement/StatementPage.jsx';
@@ -155,6 +155,9 @@ function Couriers() {
         </ul>
       )}
 
+      {/* Plan 1 (call center allégé) : livrées aujourd'hui sans le code du client, en rouge */}
+      {data.withoutCode?.length > 0 && <NoCodeList list={data.withoutCode} />}
+
       {/* Lot 5c : à attribuer, à récupérer, en cours, livrées aujourd'hui */}
       <DispatchBoard data={data} onData={setData} />
     </>
@@ -162,3 +165,29 @@ function Couriers() {
 }
 
 const STATE_LABEL = { DISPONIBLE: 'Disponible', EN_PAUSE: 'En pause', EN_COURSE: 'En course' };
+
+// Plan 1 : chaque livraison validée sans le code du client aujourd'hui, avec le livreur, le motif et qui a validé
+function NoCodeList({ list }) {
+  return (
+    <section className="dl-nocode" role="alert" aria-label="Livrées sans code">
+      <h2>{plural(list.length, 'livraison')} validée{list.length > 1 ? 's' : ''} SANS le code du client aujourd’hui</h2>
+      <p className="st-muted">Vérifiez avec le livreur que la commande a bien été remise au bon client.</p>
+      <ul className="dl-list">
+        {list.map((x) => (
+          <li key={x.reference} className="dl-row">
+            <div className="dl-main">
+              <b>{x.reference} · {x.courierName || 'Livreur inconnu'}</b>
+              <small>
+                {formatTime(x.at)}
+                {x.deliveryZoneName && ` · ${x.deliveryZoneName}`}
+                {' · '}
+                {x.byCourier ? 'validée par le livreur' : `validée par ${x.by || 'l’équipe'} à sa place`}
+              </small>
+              <span className="dl-reason">Motif : {x.reason}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}

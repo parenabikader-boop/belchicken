@@ -2,8 +2,8 @@
 // testé dans test/prestataire.test.js). Les accès à la base sont dans features.service.js.
 //
 // Pas de ligne FeatureSwitch = ouvert : sans Prestataire, tout fonctionne comme avant (sauf RELEVE, lot 5d,
-// fermé sans ligne : le Patron ne voit le relevé que si le Prestataire l'ouvre ; de même LIVREURS_INDEPENDANTS
-// et NOUVEAU_VISUEL, fermés sans ligne).
+// fermé sans ligne : le Patron ne voit le relevé que si le Prestataire l'ouvre ; de même LIVREURS_INDEPENDANTS,
+// NOUVEAU_VISUEL et CALL_CENTER_ALLEGE, fermés sans ligne).
 // Fermer bloque l'accès, ne supprime aucune donnée, et bloque aussi le Prestataire (il doit rouvrir).
 // Deux niveaux pour les réglages : le Prestataire décide si une fonction est incluse, le Patron l'allume
 // ou l'éteint à l'intérieur. Une fonction n'est active que si elle est incluse et allumée.
@@ -38,13 +38,20 @@ export const FEATURES = [
   // Nouveau visuel de l'espace équipe (style application) : fermé sans ligne, réglé par le Prestataire seulement.
   // Apparence seulement : aucune règle, aucun droit, aucun calcul ne change.
   { key: 'NOUVEAU_VISUEL', label: 'Nouveau visuel de l’espace équipe', help: 'Ouvert : espace équipe au style « application » (cartes, gros boutons, barre d’onglets en bas sur téléphone). Apparence seulement : rien d’autre ne change. Fermé : l’espace équipe actuel.', defaultOpen: false },
+  // Plan 1, call center allégé : fermé sans ligne. Ouvert, aucune étape n'attend plus un message au client (sauf
+  // le remerciement), « Paiement vérifié » imprime le bon, et le livreur peut valider sans code avec un motif.
+  { key: 'CALL_CENTER_ALLEGE', label: 'Call center allégé', help: 'Ouvert : aucune étape n’attend plus la confirmation d’un message au client (le message reste proposé, sauf le remerciement qui reste demandé) ; « Paiement vérifié » imprime aussi le bon ; le livreur peut valider une livraison sans le code du client, avec un motif obligatoire (signalée en rouge au Responsable livraison et comptée à part dans le relevé). Fermé : comme avant.', defaultOpen: false },
 ];
 
 export const FEATURE_KEYS = FEATURES.map((f) => f.key);
 
+// Plan 1 : clé de l'interrupteur « Call center allégé »
+export const CALL_CENTER_LIGHT = 'CALL_CENTER_ALLEGE';
+
 export const FEATURE_CLOSED = 'Fonction non incluse dans votre formule, contactez votre prestataire.';
 
-// Ouverte ou fermée quand elle n'a pas de ligne : ouverte, sauf RELEVE (lot 5d), LIVREURS_INDEPENDANTS et NOUVEAU_VISUEL
+// Ouverte ou fermée quand elle n'a pas de ligne : ouverte, sauf RELEVE (lot 5d), LIVREURS_INDEPENDANTS, NOUVEAU_VISUEL
+// et CALL_CENTER_ALLEGE
 export const featureDefault = (key) => FEATURES.find((f) => f.key === key)?.defaultOpen ?? true;
 
 // Lignes FeatureSwitch -> { HISTORIQUE: true, … } : une fonction sans ligne garde sa valeur par défaut

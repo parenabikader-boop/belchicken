@@ -9,8 +9,8 @@ import { courseReadyNotification, partnerNotification } from './push.message.js'
 import { feeCorrectionError, feeEditRight, isNightTime, minutesToHHMM, nightFeeAfter } from './delivery-fees.js';
 import { loadGrid } from './delivery-fees.service.js';
 import { getAppSettings } from './app-settings.service.js';
-import { featureClosedError, getFeatures } from './features.service.js';
-import { historyCutoff } from './features.js';
+import { featureClosedError, getFeatures, isFeatureOpen } from './features.service.js';
+import { CALL_CENTER_LIGHT, historyCutoff } from './features.js';
 import { CONFIRM_TYPES, customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticePending, noticeState, stageSince, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
 import { messageContextFor } from './delivery-mode.service.js';
@@ -64,7 +64,9 @@ export function visibleWhere(historyOpen, { auto = false, now = new Date() } = {
 
 export async function listOrders({ status, q }) {
   const auto = customerAutoEnabled();
-  const historyOpen = (await getFeatures()).HISTORIQUE;
+  const features = await getFeatures();
+  const historyOpen = features.HISTORIQUE;
+  const light = features[CALL_CENTER_LIGHT]; // plan 1 : aucune étape n'attend plus un message
   const visible = visibleWhere(historyOpen, { auto });
   const where = { AND: [statusWhere(status, { auto }), searchWhere(q), visible] };
   const thanks = thanksWhere({ auto });
@@ -117,7 +119,7 @@ export async function listOrders({ status, q }) {
       toThank: needsThanks(o, { auto }),
       // Lot 12 : début de l'étape (temps d'attente) et message au client à confirmer avant l'étape suivante
       stageSince: stageSince(o),
-      noticePending: noticePending(o, { auto }),
+      noticePending: noticePending(o, { auto, light }),
     })),
     counts,
     historyOpen, // lot 4 : false = historique limité aux 24 dernières heures
@@ -135,13 +137,17 @@ const DETAIL_INCLUDE = {
 // Motif de la dernière annulation (pour le message au client)
 const withCancelReason = (o) => ({ ...o, cancelReason: o.statusChanges.findLast((h) => h.toStatus === 'ANNULEE')?.reason || null });
 
-const notice = (o) => noticeState(o, { auto: customerAutoEnabled() });
+const notice = (o, light = false) => noticeState(o, { auto: customerAutoEnabled(), light });
+
+// Plan 1 : interrupteur « Call center allégé » (fermé sans ligne)
+const lightOn = (db = prisma) => isFeatureOpen(CALL_CENTER_LIGHT, db);
 
 // night : heures de nuit réglées (null = réglage éteint), pour le rappel « commande passée de nuit »
 // ctx : contexte des messages (lot 5 : avec nos codes pour une commande en mode Prestataire, messageContextFor)
-export function toStaffOrder(order, night = null, ctx = messageContext()) {
+// light : call center allégé (plan 1), le message de l'étape est proposé sans bloquer (skippable)
+export function toStaffOrder(order, night = null, ctx = messageContext(), { light = false } = {}) {
   const o = withCancelReason(order);
-  const state = notice(o);
+  const state = notice(o, light);
   const from = sendFrom(o);
   const verified = paymentVerification(o);
   return {
@@ -231,6 +237,7 @@ export function toStaffOrder(order, night = null, ctx = messageContext()) {
       ...customerMessage(o, ctx),
       sendFrom: from,
       required: state.required,
+      ...(state.skippable && { skippable: true }),
       confirmed: state.confirmed && { type: state.confirmed.type, by: state.confirmed.staffName, at: state.confirmed.createdAt },
       auto: customerAutoEnabled(),
     },
@@ -241,7 +248,7 @@ export function toStaffOrder(order, night = null, ctx = messageContext()) {
 export async function afterChange(reference) {
   const order = await prisma.order.findUnique({ where: { reference }, include: DETAIL_INCLUDE });
   autoNotifyCustomer(withCancelReason(order)).catch((e) => console.error('[whatsapp]', e));
-  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order));
+  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order), { light: await lightOn() });
 }
 
 export const event = (orderId, type, staff, extra = {}) => ({ orderId, type, staffUserId: staff.id, staffName: staff.name, ...extra });
@@ -261,7 +268,7 @@ export async function getOrder(reference, { checkHistory = false } = {}) {
     const visible = await prisma.order.count({ where: { id: order.id, ...visibleWhere(false, { auto: customerAutoEnabled() }) } });
     if (!visible) throw featureClosedError();
   }
-  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order));
+  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order), { light: await lightOn() });
 }
 
 // Commande lue dans une transaction, avec ce qu'il faut pour les règles (statuts et événements)
@@ -353,7 +360,7 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, n
       transitionError(order.status, shortcut ? 'PAYEE' : to, reason, order.mode, order.deliveryOperator) ||
       // Lot 5c : une commande Prestataire part avec « Commande récupérée », jamais par ce bouton
       (to === 'EN_LIVRAISON' && partner ? PARTNER_ONLY : null) ||
-      (to !== 'ANNULEE' ? noticeError(notice(order)) : null) ||
+      (to !== 'ANNULEE' ? noticeError(notice(order, await lightOn(tx))) : null) ||
       (paying ? paymentConfirmError(fee, order.mode, order.deliveryFee, order.deliveryOperator) : null) ||
       night?.error ||
       // Frais de la grille changés par l'agent en confirmant le paiement : c'est une correction, avec un motif

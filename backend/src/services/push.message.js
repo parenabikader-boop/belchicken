@@ -88,6 +88,18 @@ export function partnerNotification(order, kind) {
   };
 }
 
+// Plan 1 : livraison validée par le livreur SANS le code du client (motif obligatoire), au Responsable livraison.
+// Ni nom ni téléphone du client : le motif et le livreur seulement.
+export function noCodeNotification(order, reason) {
+  const text = String(reason || '').trim();
+  return {
+    title: `Livrée SANS CODE : ${order.reference}`,
+    body: `${order.courierName || 'Le livreur'} a validé sans le code du client. Motif : ${text.length > 120 ? `${text.slice(0, 119)}…` : text}`,
+    url: '/equipe/livraison',
+    tag: `sans-code-${order.reference}`,
+  };
+}
+
 // Lot 7 : mauvais avis (une note de 2 ou moins). Ni nom ni téléphone du client sur l'écran verrouillé :
 // tout est dans la page Avis. Patron et Prestataire : les notes qui sont mauvaises ; Responsable livraison
 // (forPartner) : seulement la note de livraison de notre équipe, jamais les autres.

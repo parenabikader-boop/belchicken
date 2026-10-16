@@ -27,11 +27,13 @@ export default function CoursesPage() {
   const known = useRef(null); // références déjà vues : une nouvelle course sonne
   const [success, setSuccess] = useState(null); // course qui vient d'être remise
   const [availability, setAvailability] = useState(null); // lot 5b : Disponible / En pause (si active pour son équipe)
+  const [noCodeAllowed, setNoCodeAllowed] = useState(false); // plan 1 : valider sans code, avec un motif
 
   const load = useCallback(async () => {
     try {
-      const { courses: list, availability: mine } = await staffApi.courses();
+      const { courses: list, availability: mine, noCodeAllowed: allowed } = await staffApi.courses();
       setAvailability(mine || null);
+      setNoCodeAllowed(allowed === true);
       // Un son pour chaque nouvelle course, et quand une course à récupérer est prête (lot 5c)
       const open = list.filter((c) => c.status === 'EN_LIVRAISON' || UPCOMING.includes(c.status));
       const ready = open.filter((c) => c.status === 'PRETE_LIVRAISON').map((c) => c.reference);
@@ -117,7 +119,7 @@ export default function CoursesPage() {
       ) : (
         <>
           <p className="lv-count">{active.length} course{active.length > 1 ? 's' : ''} à livrer</p>
-          {active.map((c) => <Course key={c.reference} course={c} onDelivered={delivered} onRefresh={load} />)}
+          {active.map((c) => <Course key={c.reference} course={c} onDelivered={delivered} onRefresh={load} noCodeAllowed={noCodeAllowed} />)}
         </>
       )}
 
@@ -145,7 +147,7 @@ export default function CoursesPage() {
   );
 }
 
-function Course({ course: c, onDelivered, onPickedUp, onRefresh }) {
+function Course({ course: c, onDelivered, onPickedUp, onRefresh, noCodeAllowed = false }) {
   const upcoming = UPCOMING.includes(c.status);
   return (
     <article className={`lv-card${upcoming ? ' lv-upcoming' : ''}`}>
@@ -221,7 +223,7 @@ function Course({ course: c, onDelivered, onPickedUp, onRefresh }) {
         </ul>
       </section>
 
-      {!upcoming && <Handover course={c} onDelivered={onDelivered} onRefresh={onRefresh} />}
+      {!upcoming && <Handover course={c} onDelivered={onDelivered} onRefresh={onRefresh} noCodeAllowed={noCodeAllowed} />}
     </article>
   );
 }
@@ -262,12 +264,26 @@ function PickUp({ course: c, onPickedUp, onRefresh }) {
 
 // Remise : le livreur tape le code que le client lui donne, et indique comment les frais ont été payés
 // (les deux sont obligatoires ; l'API vérifie aussi)
-function Handover({ course: c, onDelivered, onRefresh }) {
+// Plan 1 (noCodeAllowed : call center allégé) : le client n'a pas son code, le livreur valide lui-même avec un motif.
+function Handover({ course: c, onDelivered, onRefresh, noCodeAllowed = false }) {
   const [code, setCode] = useState('');
   const [feeMethod, setFeeMethod] = useState('');
   const needMethod = !c.independent && !c.feePaidBefore && c.deliveryFee !== 0; // livraison offerte ou livreur indépendant : rien à noter
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [noCode, setNoCode] = useState(false);
+
+  if (noCodeAllowed && (noCode || c.locked || !c.hasCode)) {
+    return (
+      <NoCodeHandover
+        course={c}
+        needMethod={needMethod}
+        onDelivered={onDelivered}
+        onRefresh={onRefresh}
+        onBack={c.locked || !c.hasCode ? null : () => setNoCode(false)}
+      />
+    );
+  }
 
   if (c.locked || !c.hasCode) {
     return (
@@ -311,6 +327,47 @@ function Handover({ course: c, onDelivered, onRefresh }) {
         <button type="submit" className="btn btn-p" disabled={busy || code.length !== 4 || (needMethod && !feeMethod)}>{busy ? 'Vérification…' : 'Valider la livraison'}</button>
       </div>
       {error && <p className="st-err" role="alert">{error}</p>}
+      {noCodeAllowed && (
+        <button type="button" className="st-text-btn lv-nocode-link" onClick={() => setNoCode(true)}>Le client n’a pas son code</button>
+      )}
+    </form>
+  );
+}
+
+// Plan 1 : livraison validée par le livreur sans le code du client. Motif obligatoire (3 caractères au moins) et,
+// comme avec le code, le mode de paiement des frais. Le Responsable livraison est prévenu, avec le motif.
+function NoCodeHandover({ course: c, needMethod, onDelivered, onRefresh, onBack }) {
+  const [reason, setReason] = useState('');
+  const [feeMethod, setFeeMethod] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const id = `nocode-${c.reference}`;
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      onDelivered(await staffApi.deliverWithoutCode(c.reference, reason.trim(), needMethod ? feeMethod : undefined));
+    } catch (err) {
+      setError(err.message);
+      onRefresh(); // course annulée ou déjà livrée entre-temps
+    }
+    setBusy(false);
+  };
+
+  return (
+    <form className="lv-code lv-nocode" onSubmit={submit}>
+      <b>{c.locked ? 'Trop de codes faux : validez sans code' : 'Valider la livraison sans le code'}</b>
+      <p className="st-muted">À faire seulement si vous avez bien remis la commande au client. Le motif est envoyé au responsable livraison.</p>
+      {needMethod && <FeeMethodPicker fee={c.deliveryFee} value={feeMethod} onChange={setFeeMethod} big />}
+      <label htmlFor={id}><b>Pourquoi sans le code ?</b></label>
+      <textarea id={id} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder="Ex. : le client a effacé le message, j’ai vérifié son nom et son numéro…" />
+      <button type="submit" className="btn btn-p btn-block" disabled={busy || reason.trim().length < 3 || (needMethod && !feeMethod)}>
+        {busy ? 'Enregistrement…' : 'Valider la livraison sans code'}
+      </button>
+      {error && <p className="st-err" role="alert">{error}</p>}
+      {onBack && <button type="button" className="st-text-btn" onClick={onBack}>Retour : taper le code</button>}
     </form>
   );
 }
