@@ -1022,7 +1022,7 @@ Interrupteur `CALL_CENTER_ALLEGE` (page Prestataire), **fermé sans ligne** : fe
 Interrupteur `SUIVI_SANS_WHATSAPP` (page Prestataire), **fermé sans ligne** : fermé, ou commande passée avant (sans
 clé), tout est exactement comme avant (`backend/test/suivi-sans-whatsapp.test.js`). Règles : `backend/src/services/tracking.js`.
 
-**Migration `20261016180000_suivi_sans_whatsapp`, NON APPLIQUÉE**, rangée dans `backend/prisma/migrations-en-attente/` :
+**Migration `20261016180000_suivi_sans_whatsapp`** (dans `backend/prisma/migrations/` depuis le 16 octobre 2026, appliquée par Render à la mise en ligne) :
 colonne `Order.trackingKey` (vide) et table `CustomerPushSubscription` (vide). **Le code de ce plan ne peut pas partir
 en ligne sans elle** : le schéma Prisma a la colonne, la base non, et toute lecture d'une commande échouerait. Mise en
 ligne = sauvegarde Neon, dossier déplacé dans `backend/prisma/migrations/` (Render l'applique au déploiement), accord écrit.

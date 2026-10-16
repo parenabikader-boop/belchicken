@@ -826,7 +826,9 @@ Interrupteur `SUIVI_SANS_WHATSAPP` (Prestataire), fermé sans ligne. Détails : 
 - [x] Tests (`backend/test/suivi-sans-whatsapp.test.js`, `frontend/src/utils/tracking.test.js`), construction.
 - [x] Migration `20261016180000_suivi_sans_whatsapp` écrite sans base, **non appliquée**, dans
   `backend/prisma/migrations-en-attente/`.
-- [ ] **Ne pas envoyer sur GitHub sans la migration** (le code lit la colonne `trackingKey`). Avec l'accord écrit du
+- [x] 16 octobre 2026 : sauvegarde de production « sauvegarde-prod-avant-suivi » par le client, dossier déplacé dans
+  `backend/prisma/migrations/`, envoi avec l'accord écrit du client (dev **non migrée** : la migrer avant tout essai local).
+- [ ] (rappel) **Ne pas envoyer sur GitHub sans la migration** (le code lit la colonne `trackingKey`). Avec l'accord écrit du
   client : sauvegarde Neon de dev, migration sur dev, essais ; puis sauvegarde de production, dossier déplacé dans
   `backend/prisma/migrations/`, envoi (Render applique la migration).
 
