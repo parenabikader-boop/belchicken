@@ -131,31 +131,34 @@ self.addEventListener('push', (event) => {
   } catch {
     data = { title: event.data?.text() };
   }
-  const title = data.title || 'Belchicken Équipe';
+  // Plan 4 : alerte d'un CLIENT sur sa commande (« en route », « livrée, merci »), qui ouvre sa page de suivi
+  const client = data.client === true && String(data.url || '').startsWith('/suivi/');
+  const title = data.title || (client ? 'Belchicken' : 'Belchicken Équipe');
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || '',
-      icon: '/icons/equipe-192.png',
+      icon: client ? '/icons/client-192.png' : '/icons/equipe-192.png',
       tag: data.tag || undefined,
       renotify: Boolean(data.tag), // même étiquette : le téléphone sonne quand même
       requireInteraction: data.tag?.startsWith('commande-') || false, // reste affichée jusqu'à ce qu'on la touche
       vibrate: [200, 100, 200],
       data: { url: data.url || '/equipe/commandes' },
-      lang: 'fr',
+      lang: client && data.lang === 'en' ? 'en' : 'fr',
     }),
   );
 });
 
 // Un appui ouvre la commande : dans une fenêtre de l'espace équipe déjà ouverte si possible,
-// sinon dans l'application Belchicken Équipe
+// sinon dans l'application Belchicken Équipe. Plan 4 : l'alerte d'un client ouvre sa page de suivi.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const path = event.notification.data?.url || '/equipe/commandes';
-  const target = new URL(path.startsWith('/equipe') ? path : '/equipe/commandes', self.location.origin).href;
+  const client = path.startsWith('/suivi/');
+  const target = new URL(client || path.startsWith('/equipe') ? path : '/equipe/commandes', self.location.origin).href;
   event.waitUntil(
     (async () => {
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-      const open = windows.find((w) => new URL(w.url).pathname.startsWith('/equipe'));
+      const open = windows.find((w) => (client ? !new URL(w.url).pathname.startsWith('/equipe') : new URL(w.url).pathname.startsWith('/equipe')));
       if (open) {
         await open.focus().catch(() => {}); // refusé parfois par le téléphone : on ouvre la commande quand même
         return open.navigate(target).catch(() => self.clients.openWindow(target));

@@ -176,7 +176,7 @@ test('interrupteurs : pas de ligne = ouvert, fermer ne touche que la fonction fe
   assert.deepEqual(Object.keys(all), FEATURE_KEYS);
   // Exceptions, fermées sans ligne : RELEVE (lot 5d, relevé vu par le Patron), LIVREURS_INDEPENDANTS, NOUVEAU_VISUEL
   // et CALL_CENTER_ALLEGE (plan 1)
-  const closed = ['RELEVE', 'LIVREURS_INDEPENDANTS', 'NOUVEAU_VISUEL', 'CALL_CENTER_ALLEGE'];
+  const closed = ['RELEVE', 'LIVREURS_INDEPENDANTS', 'NOUVEAU_VISUEL', 'CALL_CENTER_ALLEGE', 'SUIVI_SANS_WHATSAPP'];
   assert.ok(Object.entries(all).every(([key, open]) => open === !closed.includes(key)));
   const map = featureMap([{ key: 'CAISSE', enabled: false }, { key: 'HISTORIQUE', enabled: true }, { key: 'INCONNUE', enabled: false }]);
   assert.equal(map.CAISSE, false);

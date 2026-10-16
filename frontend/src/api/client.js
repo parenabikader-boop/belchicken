@@ -37,7 +37,12 @@ export const api = {
   getMenu: () => request('/api/menu').then((d) => d.categories),
   getHomePhotos: () => request('/api/home').then((d) => d.photos),
   createOrder: (payload) => request('/api/orders', { method: 'POST', body: JSON.stringify(payload) }).then((d) => d.order),
-  getOrder: (reference) => request(`/api/orders/${encodeURIComponent(reference)}`).then((d) => d.order),
+  // Plan 4 : key = clé du lien de suivi (envoyée dans un en-tête, jamais dans l'adresse) ; sans clé : comme avant
+  getOrder: (reference, key = null) =>
+    request(`/api/orders/${encodeURIComponent(reference)}`, key ? { headers: { 'X-Suivi-Cle': key } } : {}).then((d) => d.order),
+  // Plan 4 : alertes de cette commande sur ce téléphone (subscription : PushSubscription.toJSON())
+  subscribeOrderAlerts: (reference, key, subscription) =>
+    request(`/api/orders/${encodeURIComponent(reference)}/alertes`, { method: 'POST', body: JSON.stringify({ cle: key, subscription }) }),
   // Codes marchands des 3 opérateurs, avec MONTANT à remplacer : { merchantName, operators: [{ method, label, code }] }
   getPayment: () => request('/api/payment'),
   // Grille des frais de livraison : { active, zones: [{ id, name, fee }], gps, allowOther }

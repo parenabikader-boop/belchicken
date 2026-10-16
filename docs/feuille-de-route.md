@@ -816,6 +816,20 @@ allégé (plan 1) ».
 - [ ] Essai par le client (interrupteur ouvert sur dev ou en production avec son accord).
 - [ ] Envoi sur GitHub avec l'accord écrit du client.
 
+### Plan 4 : suivi du client sans WhatsApp (16 octobre 2026, pas encore en ligne)
+
+Interrupteur `SUIVI_SANS_WHATSAPP` (Prestataire), fermé sans ligne. Détails : README « Suivi du client sans WhatsApp
+(plan 4) ».
+
+- [x] Page de suivi en direct (livreur à appeler, code, montant, merci et avis), lien avec clé secrète, alertes Web
+  Push avec repli iPhone, bandeau « Votre commande en cours », partager / copier le lien, call center sans message.
+- [x] Tests (`backend/test/suivi-sans-whatsapp.test.js`, `frontend/src/utils/tracking.test.js`), construction.
+- [x] Migration `20261016180000_suivi_sans_whatsapp` écrite sans base, **non appliquée**, dans
+  `backend/prisma/migrations-en-attente/`.
+- [ ] **Ne pas envoyer sur GitHub sans la migration** (le code lit la colonne `trackingKey`). Avec l'accord écrit du
+  client : sauvegarde Neon de dev, migration sur dev, essais ; puis sauvegarde de production, dossier déplacé dans
+  `backend/prisma/migrations/`, envoi (Render applique la migration).
+
 ## Démonstration commerciale (base dev)
 
 Pour la présentation commerciale à Belchicken : un mois d'activité fictive sur la base **dev** seulement (tableau de

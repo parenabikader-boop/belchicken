@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext.jsx';
 import InstallBanner from './InstallBanner.jsx';
+import CurrentOrder from './CurrentOrder.jsx';
 import { DIRECTIONS_URL, openState, RESTAURANT, telHref, whatsappHref } from '../restaurant.js';
 import { LangSwitch, useT } from '../i18n/index.jsx';
 
@@ -107,7 +108,11 @@ export default function Layout() {
       </header>
 
       {/* Hors du tunnel de commande, pour ne jamais gêner une commande en cours */}
-      <div className="wrap"><InstallBanner app="client" /></div>
+      <div className="wrap">
+        {/* Plan 4 : commande en cours gardée sur ce téléphone (suivi sans WhatsApp) */}
+        <CurrentOrder />
+        <InstallBanner app="client" />
+      </div>
 
       <main className={pageClass(pathname)}>
         <Outlet />

@@ -3,7 +3,7 @@
 //
 // Pas de ligne FeatureSwitch = ouvert : sans Prestataire, tout fonctionne comme avant (sauf RELEVE, lot 5d,
 // fermé sans ligne : le Patron ne voit le relevé que si le Prestataire l'ouvre ; de même LIVREURS_INDEPENDANTS,
-// NOUVEAU_VISUEL et CALL_CENTER_ALLEGE, fermés sans ligne).
+// NOUVEAU_VISUEL, CALL_CENTER_ALLEGE et SUIVI_SANS_WHATSAPP, fermés sans ligne).
 // Fermer bloque l'accès, ne supprime aucune donnée, et bloque aussi le Prestataire (il doit rouvrir).
 // Deux niveaux pour les réglages : le Prestataire décide si une fonction est incluse, le Patron l'allume
 // ou l'éteint à l'intérieur. Une fonction n'est active que si elle est incluse et allumée.
@@ -40,6 +40,9 @@ export const FEATURES = [
   { key: 'NOUVEAU_VISUEL', label: 'Nouveau visuel de l’espace équipe', help: 'Ouvert : espace équipe au style « application » (cartes, gros boutons, barre d’onglets en bas sur téléphone). Apparence seulement : rien d’autre ne change. Fermé : l’espace équipe actuel.', defaultOpen: false },
   // Plan 1, call center allégé : fermé sans ligne. Ouvert, aucune étape n'attend plus un message au client (sauf
   // le remerciement), « Paiement vérifié » imprime le bon, et le livreur peut valider sans code avec un motif.
+  // Plan 4, suivi sans WhatsApp : fermé sans ligne. Ouvert, le client suit sa commande sur sa page (lien avec clé
+  // secrète) et reçoit des alertes gratuites ; plus de message à confirmer ni de remerciement pour le call center.
+  { key: 'SUIVI_SANS_WHATSAPP', label: 'Suivi sans WhatsApp', help: 'Ouvert : le client suit sa commande en direct sur sa page de suivi (lien secret donné à la commande : livreur à appeler, code de livraison, montant à payer au livreur, avis) et reçoit des alertes gratuites sur son téléphone (« en route », « livrée, merci »). Le call center n’a plus de message à confirmer ni de client à remercier. Fermé : comme avant.', defaultOpen: false },
   { key: 'CALL_CENTER_ALLEGE', label: 'Call center allégé', help: 'Ouvert : aucune étape n’attend plus la confirmation d’un message au client (le message reste proposé, sauf le remerciement qui reste demandé) ; « Paiement vérifié » imprime aussi le bon ; le livreur peut valider une livraison sans le code du client, avec un motif obligatoire (signalée en rouge au Responsable livraison et comptée à part dans le relevé). Fermé : comme avant.', defaultOpen: false },
 ];
 
@@ -47,11 +50,13 @@ export const FEATURE_KEYS = FEATURES.map((f) => f.key);
 
 // Plan 1 : clé de l'interrupteur « Call center allégé »
 export const CALL_CENTER_LIGHT = 'CALL_CENTER_ALLEGE';
+// Plan 4 : clé de l'interrupteur « Suivi sans WhatsApp »
+export const CUSTOMER_TRACKING = 'SUIVI_SANS_WHATSAPP';
 
 export const FEATURE_CLOSED = 'Fonction non incluse dans votre formule, contactez votre prestataire.';
 
 // Ouverte ou fermée quand elle n'a pas de ligne : ouverte, sauf RELEVE (lot 5d), LIVREURS_INDEPENDANTS, NOUVEAU_VISUEL
-// et CALL_CENTER_ALLEGE
+// CALL_CENTER_ALLEGE et SUIVI_SANS_WHATSAPP
 export const featureDefault = (key) => FEATURES.find((f) => f.key === key)?.defaultOpen ?? true;
 
 // Lignes FeatureSwitch -> { HISTORIQUE: true, … } : une fonction sans ligne garde sa valeur par défaut

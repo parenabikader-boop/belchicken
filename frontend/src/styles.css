@@ -902,3 +902,23 @@ header.top .wrap:has(.lang-sw){gap:12px}
 /* Petit téléphone, pages de commande : le mot « Belchicken » se masque, le logo reste */
 @media (max-width:400px){header.tunnel .wrap:has(.lang-sw) .brand > span:last-child{display:none}}
 .rv-top .lang-sw{margin-left:auto}
+
+/* Plan 4, suivi sans WhatsApp : livreur à appeler, code de livraison, avis, alertes, lien à garder */
+.trk-direct{display:grid;gap:12px;margin:14px 0 0}
+.trk-courier{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:var(--r);background:var(--panel-2)}
+.trk-courier small{display:block;font-size:12.5px;color:var(--muted)}
+.trk-courier b{font-size:17px}
+.trk-code{padding:14px 16px;border-radius:var(--r);background:var(--brand-soft);border:2px dashed var(--brand-line);text-align:center}
+.trk-code small{display:block;font-weight:700;color:var(--brand-ink)}
+.trk-code b{display:block;font-size:40px;letter-spacing:.25em;line-height:1.2;color:var(--ink)}
+.trk-code p{margin:4px 0 0;font-size:14px}
+.trk-thanks{padding:14px 16px;border-radius:var(--r);background:var(--ok-soft);display:grid;gap:10px;justify-items:start}
+.trk-thanks p{margin:0;font-weight:700}
+.trk-alerts{display:grid;gap:6px;justify-items:start}
+.trk-alerts p{margin:0;font-size:14px;color:var(--muted)}
+.trk-share{display:grid;gap:8px}
+.trk-share p{margin:0;font-size:14px;color:var(--muted)}
+.trk-share-row{display:flex;gap:8px;flex-wrap:wrap}
+.trk-share input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:#fff;color:var(--ink)}
+.cur-order{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:10px 0 0;padding:10px 14px;border-radius:var(--r);background:var(--brand-soft);border:1px solid var(--brand-line);color:var(--ink);text-decoration:none}
+.cur-order b{color:var(--brand-ink)}

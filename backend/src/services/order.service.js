@@ -12,6 +12,10 @@ import { notifyTeamNewOrder } from './whatsapp.service.js';
 import { feePaymentOf } from './delivery-mode.js';
 import { getDeliveryMode, messageContextFor } from './delivery-mode.service.js';
 import { pushTeamNewOrder } from './push.service.js';
+import { pushEnabled } from '../config/env.js';
+import { isFeatureOpen } from './features.service.js';
+import { CUSTOMER_TRACKING } from './features.js';
+import { keyMatches, lockedView, newTrackingKey, trackingExtras } from './tracking.js';
 
 // Commande du site, ou saisie par un agent (lot 2) : `agent` = { source, staff } (provenance déjà vérifiée).
 // Même calcul des prix et des frais, même départ « paiement à vérifier », dans les deux cas.
@@ -63,12 +67,15 @@ export async function createOrder(input, agent = null) {
     }),
   };
 
+  // Plan 4 : clé secrète du lien de suivi, seulement quand le suivi sans WhatsApp est actif
+  const trackingOpen = await isFeatureOpen(CUSTOMER_TRACKING);
+
   // La référence est aléatoire : on réessaie en cas de collision (très improbable)
   let order;
   for (let attempt = 0; attempt < 5 && !order; attempt++) {
     try {
       order = await prisma.order.create({
-        data: { ...data, reference: newOrderReference() },
+        data: { ...data, reference: newOrderReference(), ...(trackingOpen && { trackingKey: newTrackingKey() }) },
         include: { items: { include: { drinks: true } } },
       });
     } catch (err) {
@@ -88,13 +95,20 @@ export async function createOrder(input, agent = null) {
 }
 
 // Récapitulatif public (page de confirmation). Aucune donnée de paiement ni position.
-export async function getOrderSummary(reference) {
+// key (plan 4) : clé du lien de suivi donnée par la page ; ne sert que si le suivi sans WhatsApp est actif.
+export async function getOrderSummary(reference, { key = null } = {}) {
+  const open = await isFeatureOpen(CUSTOMER_TRACKING);
   const order = await prisma.order.findUnique({
     where: { reference },
-    include: { items: { include: { drinks: true } }, statusChanges: { orderBy: { createdAt: 'asc' } } },
+    include: {
+      items: { include: { drinks: true } },
+      statusChanges: { orderBy: { createdAt: 'asc' } },
+      // Plan 4 : numéro du livreur, pour le bouton « Appeler le livreur » (montré seulement avec la clé)
+      ...(open && { courier: { select: { phone: true } } }),
+    },
   });
   if (!order) throw new AppError(404, 'Commande introuvable.', 'COMMANDE_INTROUVABLE');
-  return toPublicOrder(order, await messageContextFor(order));
+  return toPublicOrder(order, await messageContextFor(order), { open, key });
 }
 
 // Page de suivi : étapes datées, frais de livraison, motif d'annulation. Jamais de nom, numéro,
@@ -103,7 +117,19 @@ export async function getOrderSummary(reference) {
 // Lot 5c : « Prête pour livraison » est une étape interne (sac prêt, en attente de notre livreur) : le client
 // voit toujours « En préparation », jusqu'à « En route ».
 const PUBLIC_STATUS = { PRETE_LIVRAISON: 'EN_PREPARATION' };
-export function toPublicOrder(order, ctx = { payment: env.payment }) {
+// Plan 4, tracking = { open, key, fresh } : suivi sans WhatsApp actif (open), clé donnée par la page (key), ou
+// réponse à la commande qui vient d'être passée (fresh : la clé est donnée au client, une seule fois).
+// Suivi éteint, ou commande sans clé (passée avant) : exactement la page d'avant.
+export function toPublicOrder(order, ctx = { payment: env.payment }, tracking = null) {
+  const base = publicOrder(order, ctx);
+  if (!tracking?.open || !order.trackingKey) return base;
+  const key = tracking.fresh ? order.trackingKey : tracking.key;
+  if (!keyMatches(order, key)) return lockedView(base);
+  const extras = trackingExtras(order, { reviewLink: ctx.reviewLink || null, pushKey: pushEnabled() ? env.push.publicKey : null });
+  return { ...base, ...(tracking.fresh && { trackingKey: order.trackingKey }), tracking: extras };
+}
+
+function publicOrder(order, ctx) {
   const changes = (order.statusChanges || []).filter((h) => !PUBLIC_STATUS[h.toStatus]);
   return {
     reference: order.reference,

@@ -1017,6 +1017,36 @@ Interrupteur `CALL_CENTER_ALLEGE` (page Prestataire), **fermé sans ligne** : fe
 - **Comptée à part dans le relevé** : case « Livrées sans le code », nombre par livreur, tableau des motifs, ligne et
   remarque dans l'Excel (`summary.withoutCode`, `deliveries[].withoutCode*`). Les frais et les délais ne changent pas.
 
+## Suivi du client sans WhatsApp (plan 4)
+
+Interrupteur `SUIVI_SANS_WHATSAPP` (page Prestataire), **fermé sans ligne** : fermé, ou commande passée avant (sans
+clé), tout est exactement comme avant (`backend/test/suivi-sans-whatsapp.test.js`). Règles : `backend/src/services/tracking.js`.
+
+**Migration `20261016180000_suivi_sans_whatsapp`, NON APPLIQUÉE**, rangée dans `backend/prisma/migrations-en-attente/` :
+colonne `Order.trackingKey` (vide) et table `CustomerPushSubscription` (vide). **Le code de ce plan ne peut pas partir
+en ligne sans elle** : le schéma Prisma a la colonne, la base non, et toute lecture d'une commande échouerait. Mise en
+ligne = sauvegarde Neon, dossier déplacé dans `backend/prisma/migrations/` (Render l'applique au déploiement), accord écrit.
+
+Ouvert :
+
+- **Clé secrète du lien de suivi** (24 caractères au hasard) créée à la commande et donnée une seule fois (réponse de
+  `POST /api/orders`, `trackingKey`). Le site la garde sur le téléphone et l'ajoute au lien : `/suivi/BC-…?cle=…`. La
+  page l'envoie dans l'en-tête `X-Suivi-Cle` (jamais dans l'adresse demandée au serveur).
+- **Avec la clé** (`tracking` dans `GET /api/orders/:reference`) : en route, le nom du livreur et « Appeler le livreur »
+  (son numéro à lui) ; le code de livraison (ou de retrait, à emporter) ; le montant à payer au livreur (comme avant) ;
+  livrée, « Merci » et « Donner mon avis » (lien du lot 7 s'il est actif). Page relue toutes les 10 s.
+- **Sans la clé** (`trackingLocked`) : ni code, ni montant, ni livreur ; les étapes et les plats restent visibles.
+- **Alertes gratuites (Web Push, clés VAPID existantes)** : bouton « Recevoir une alerte sur ce téléphone »,
+  `POST /api/orders/:reference/alertes { cle, subscription }` (5 téléphones par commande, 20 demandes / 10 min).
+  Alertes « en route » (ou « prête » à emporter) et « livrée, merci », en français ou en anglais, jamais le code ni le
+  montant sur l'écran verrouillé ; un appui ouvre la page de suivi (`public/sw.js`). iPhone hors écran d'accueil,
+  alertes refusées ou impossibles : une phrase claire, et la page qui se met à jour toute seule sert de repli.
+- **Retrouver sa commande** : bandeau « Votre commande en cours » sur le site (24 h au plus, jusqu'à la fin de la
+  commande, `components/CurrentOrder.jsx`), boutons « Partager le lien » et « Copier le lien ».
+- **Call center** : plus de message à confirmer ni de client à remercier (comme avec l'envoi automatique,
+  `quietMode()`) ; WhatsApp ne s'ouvre plus aux étapes. Le détail de la commande affiche le lien de suivi du client,
+  à copier (`trackingUrl`), par exemple pour une commande prise au téléphone.
+
 ## Démonstration commerciale (base dev seulement)
 
 Un mois d'activité fictive mais réaliste sur la base **dev**, pour présenter le tableau de bord, les ventes,

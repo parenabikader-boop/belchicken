@@ -72,7 +72,8 @@ export function useSteps(order, onChange, onConflict) {
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const auto = Boolean(order.notice?.auto);
+  // Envoi automatique, ou plan 4 (suivi sans WhatsApp) : WhatsApp ne s'ouvre pas, rien à confirmer
+  const auto = Boolean(order.notice?.auto || order.notice?.tracking);
 
   // Nouvelle étape (par nous ou un collègue) : la question ne vaut que pour le message en cours
   const key = order.notice?.key;
@@ -137,6 +138,9 @@ export function Notice({ order: o, steps, onChange }) {
   if (n.auto) {
     return <p className="nt nt-done">Message « {n.label} » envoyé automatiquement au client sur WhatsApp.</p>;
   }
+
+  // Plan 4, suivi sans WhatsApp : le client suit sa commande sur sa page (et reçoit ses alertes), rien à envoyer
+  if (n.tracking) return <TrackingNote order={o} />;
 
   // Message facultatif pas encore envoyé (« commande à payer » d'une commande saisie par un agent ; plan 1, call
   // center allégé : tous les messages sauf le remerciement) : proposé avec son bouton, sans bloquer l'étape suivante
@@ -214,6 +218,31 @@ export function Notice({ order: o, steps, onChange }) {
         Client sans WhatsApp : prévenu par appel
       </button>
       {error && <p className="st-err">{error}</p>}
+    </section>
+  );
+}
+
+// Plan 4 : rien à envoyer au client. Son lien de suivi, à lui donner s'il le demande (commande prise au téléphone…)
+function TrackingNote({ order: o }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(o.trackingUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      /* copie refusée : le lien reste affiché */
+    }
+  };
+  return (
+    <section className="nt nt-done nt-tracking">
+      <span>Le client suit sa commande sur sa page de suivi (et reçoit une alerte sur son téléphone) : rien à lui envoyer.</span>
+      {o.trackingUrl && (
+        <span className="nt-row">
+          <input type="text" readOnly value={o.trackingUrl} aria-label="Lien de suivi du client" onFocus={(e) => e.target.select()} />
+          <button type="button" className="btn btn-s btn-sm" onClick={copy}>{copied ? 'Lien copié' : 'Copier le lien de suivi'}</button>
+        </span>
+      )}
     </section>
   );
 }

@@ -1105,3 +1105,6 @@ a.st-name:hover small,a.st-name.active small{text-decoration:underline}
 .od-review{margin-bottom:14px;display:flex;flex-direction:column;gap:6px}
 .od-review.low{border-color:var(--bad)}
 .od-review-none{margin:0 0 12px}
+/* Plan 4 : suivi sans WhatsApp, lien de suivi du client */
+.nt-tracking{display:grid;gap:8px}
+.nt-tracking input{flex:1;min-width:0;font:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--line);border-radius:var(--r);background:#fff}

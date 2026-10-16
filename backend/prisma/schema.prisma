@@ -192,7 +192,7 @@ model AppSettings {
   // Lot 12 : « Nouvelle page Commandes » (/equipe/commandes). Éteint = page actuelle (OrdersList.jsx).
   // Inclus ou non par le Prestataire (interrupteur NOUVELLE_PAGE_COMMANDES).
   newOrdersPage      Boolean  @default(false)
-  updatedByName     String? // dernier à avoir changé un réglage (copie figée)
+  updatedByName      String? // dernier à avoir changé un réglage (copie figée)
   updatedAt          DateTime @updatedAt
 }
 
@@ -359,23 +359,28 @@ model Order {
   // Livreur assigné au passage EN_LIVRAISON (remplaçable tant que la commande n'est pas livrée).
   // courierName est une copie figée, comme staffName dans l'historique.
   courierId            String?
-  courier              StaffUser?   @relation("Courses", fields: [courierId], references: [id], onDelete: SetNull)
+  courier              StaffUser?                 @relation("Courses", fields: [courierId], references: [id], onDelete: SetNull)
   courierName          String?
   courierAssignedAt    DateTime?
   // Lot 5c : tournée dans laquelle la commande a été confiée au livreur (vide = confiée seule, ou avant 5c)
   deliveryRunId        String?
-  deliveryRun          DeliveryRun? @relation(fields: [deliveryRunId], references: [id], onDelete: SetNull)
+  deliveryRun          DeliveryRun?               @relation(fields: [deliveryRunId], references: [id], onDelete: SetNull)
   // Code de remise à 4 chiffres, créé au passage EN_LIVRAISON et envoyé au client dans le message
   // « en route ». Jamais envoyé au livreur : il le tape, l'API vérifie. Bloqué après 5 codes faux.
   // À emporter : même code (code de retrait), créé au passage PRETE et envoyé dans le message « prête » ;
   // l'agent le tape au comptoir. Jamais sur la page de suivi publique.
   deliveryCode         String?
-  deliveryCodeAttempts Int          @default(0)
+  deliveryCodeAttempts Int                        @default(0)
   // Lot 7 : clé du lien de l'avis (128 bits au hasard, 22 caractères, src/services/review.js), créée au
   // passage LIVREE quand les avis sont actifs. Vide = pas de lien (commande d'avant le lot 7, ou avis
   // éteints à la livraison). Jamais sur la page de suivi publique.
-  reviewToken          String?      @unique
+  reviewToken          String?                    @unique
   review               OrderReview?
+  // Plan 4, suivi sans WhatsApp (interrupteur SUIVI_SANS_WHATSAPP) : clé secrète du lien de suivi (144 bits au
+  // hasard, 24 caractères, src/services/tracking.js), créée à la commande quand le suivi est actif. Sans elle, la
+  // page de suivi ne montre ni le code, ni le montant, ni le livreur. Vide = commande d'avant, ou suivi éteint.
+  trackingKey          String?                    @unique
+  customerPushes       CustomerPushSubscription[]
 
   items         OrderItem[]
   notifications NotificationLog[]
@@ -778,4 +783,21 @@ model PushSubscription {
   updatedAt     DateTime  @updatedAt
 
   @@index([staffUserId])
+}
+
+// Plan 4, suivi sans WhatsApp : alertes gratuites (Web Push) sur le téléphone du CLIENT, pour UNE commande
+// (« en route », « livrée, merci »). Demandées par le client sur sa page de suivi, avec la clé du lien.
+// Supprimées avec la commande ; retirées après un refus du service de notification (404, 410) ou trop d'échecs.
+// Jamais de nom ni de numéro du client ici.
+model CustomerPushSubscription {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  endpoint  String // adresse d'envoi donnée par le téléphone (Google, Apple, Mozilla…)
+  p256dh    String // clé de chiffrement du téléphone
+  auth      String // secret du téléphone
+  failures  Int      @default(0) // échecs d'envoi d'affilée
+  createdAt DateTime @default(now())
+
+  @@unique([orderId, endpoint])
 }

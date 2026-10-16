@@ -9,6 +9,7 @@ import { useMenu } from '../context/MenuContext.jsx';
 import { formatPrice } from '../utils/format.js';
 import { fillCode, MOBILE_MONEY, usePaymentCodes } from '../utils/payment.js';
 import { normalize } from '../utils/deliveryFee.js';
+import { saveCurrent } from '../utils/tracking.js';
 import { Rich, useLang } from '../i18n/index.jsx';
 
 const DRAFT_KEY = 'belchicken.infos.v1';
@@ -411,7 +412,11 @@ export default function Valider() {
       // Le panier est vidé par la page de confirmation : le vider ici ferait d'abord revenir
       // cette page, panier vide, sur Ma commande
       clearDraft();
-      navigate(`/confirmation/${order.reference}`, { replace: true, state: { order, recap } });
+      // Plan 4, suivi sans WhatsApp : la clé du lien de suivi, donnée une seule fois, est gardée sur ce téléphone et
+      // mise dans l'adresse (le client peut garder ou partager le lien). Suivi éteint : pas de clé, comme avant.
+      if (order.trackingKey) saveCurrent({ reference: order.reference, key: order.trackingKey, status: order.status });
+      const query = order.trackingKey ? `?cle=${encodeURIComponent(order.trackingKey)}` : '';
+      navigate(`/confirmation/${order.reference}${query}`, { replace: true, state: { order, recap } });
     } catch (err) {
       setSending(false);
       const fieldErrors = {};

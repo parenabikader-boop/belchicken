@@ -25,6 +25,22 @@ export function shouldRemove(statusCode, failuresBefore) {
   return failuresBefore + 1 >= MAX_FAILURES;
 }
 
+// Plan 4 : envoi brut à un téléphone (alertes du client, table à part). Renvoie { ok } ou { ok: false, statusCode }.
+// Ne lève jamais d'erreur.
+export async function webPush(sub, payload) {
+  setup();
+  try {
+    await webpush.sendNotification(
+      { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+      JSON.stringify(payload),
+      { TTL: 60 * 60, urgency: 'high', timeout: 10000 },
+    );
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, statusCode: err.statusCode || null };
+  }
+}
+
 // Envoie à un téléphone. Renvoie { ok: true } ou { ok: false, removed, error }. Ne lève jamais d'erreur.
 async function sendTo(sub, payload) {
   setup();

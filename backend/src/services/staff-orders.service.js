@@ -10,7 +10,9 @@ import { feeCorrectionError, feeEditRight, isNightTime, minutesToHHMM, nightFeeA
 import { loadGrid } from './delivery-fees.service.js';
 import { getAppSettings } from './app-settings.service.js';
 import { featureClosedError, getFeatures, isFeatureOpen } from './features.service.js';
-import { CALL_CENTER_LIGHT, historyCutoff } from './features.js';
+import { CALL_CENTER_LIGHT, CUSTOMER_TRACKING, historyCutoff } from './features.js';
+import { quietMode, trackingPath } from './tracking.js';
+import { notifyCustomer } from './customer-push.service.js';
 import { CONFIRM_TYPES, customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticePending, noticeState, stageSince, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
 import { messageContextFor } from './delivery-mode.service.js';
@@ -63,8 +65,9 @@ export function visibleWhere(historyOpen, { auto = false, now = new Date() } = {
 }
 
 export async function listOrders({ status, q }) {
-  const auto = customerAutoEnabled();
   const features = await getFeatures();
+  // Plan 4 : avec le suivi sans WhatsApp, comme avec l'envoi automatique, rien à confirmer ni à remercier
+  const auto = quietMode({ auto: customerAutoEnabled(), trackingOpen: features[CUSTOMER_TRACKING] });
   const historyOpen = features.HISTORIQUE;
   const light = features[CALL_CENTER_LIGHT]; // plan 1 : aucune étape n'attend plus un message
   const visible = visibleWhere(historyOpen, { auto });
@@ -137,17 +140,22 @@ const DETAIL_INCLUDE = {
 // Motif de la dernière annulation (pour le message au client)
 const withCancelReason = (o) => ({ ...o, cancelReason: o.statusChanges.findLast((h) => h.toStatus === 'ANNULEE')?.reason || null });
 
-const notice = (o, light = false) => noticeState(o, { auto: customerAutoEnabled(), light });
+// light : call center allégé (plan 1) ; quiet : suivi sans WhatsApp (plan 4), rien à confirmer, comme l'envoi automatique
+const notice = (o, { light = false, quiet = false } = {}) => noticeState(o, { auto: quietMode({ auto: customerAutoEnabled(), trackingOpen: quiet }), light });
 
-// Plan 1 : interrupteur « Call center allégé » (fermé sans ligne)
-const lightOn = (db = prisma) => isFeatureOpen(CALL_CENTER_LIGHT, db);
+// Plan 1 : « Call center allégé » ; plan 4 : « Suivi sans WhatsApp » (interrupteurs fermés sans ligne)
+const staffModes = async (db = prisma) => {
+  const features = await getFeatures(db);
+  return { light: features[CALL_CENTER_LIGHT], quiet: features[CUSTOMER_TRACKING] };
+};
 
 // night : heures de nuit réglées (null = réglage éteint), pour le rappel « commande passée de nuit »
 // ctx : contexte des messages (lot 5 : avec nos codes pour une commande en mode Prestataire, messageContextFor)
 // light : call center allégé (plan 1), le message de l'étape est proposé sans bloquer (skippable)
-export function toStaffOrder(order, night = null, ctx = messageContext(), { light = false } = {}) {
+// quiet : suivi sans WhatsApp (plan 4), aucun message à envoyer (notice.tracking) ; lien de suivi du client
+export function toStaffOrder(order, night = null, ctx = messageContext(), { light = false, quiet = false } = {}) {
   const o = withCancelReason(order);
-  const state = notice(o, light);
+  const state = notice(o, { light, quiet });
   const from = sendFrom(o);
   const verified = paymentVerification(o);
   return {
@@ -240,15 +248,21 @@ export function toStaffOrder(order, night = null, ctx = messageContext(), { ligh
       ...(state.skippable && { skippable: true }),
       confirmed: state.confirmed && { type: state.confirmed.type, by: state.confirmed.staffName, at: state.confirmed.createdAt },
       auto: customerAutoEnabled(),
+      // Plan 4 : le client suit sa commande sur sa page, rien à lui envoyer
+      ...(quiet && !customerAutoEnabled() && { tracking: true }),
     },
+    // Plan 4 : lien de suivi du client (à lui donner s'il le demande, par exemple une commande prise au téléphone)
+    ...(quiet && o.trackingKey && { trackingUrl: `${String(ctx.siteUrl || '').replace(/\/+$/, '')}${trackingPath(o.reference, o.trackingKey)}` }),
   };
 }
 
-// Après chaque changement : message automatique au client, s'il est activé (voir whatsapp.service.js)
+// Après chaque changement : message automatique au client, s'il est activé (voir whatsapp.service.js) ;
+// plan 4, alerte sur le téléphone du client (« en route », « prête »), si le suivi sans WhatsApp est actif
 export async function afterChange(reference) {
   const order = await prisma.order.findUnique({ where: { reference }, include: DETAIL_INCLUDE });
   autoNotifyCustomer(withCancelReason(order)).catch((e) => console.error('[whatsapp]', e));
-  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order), { light: await lightOn() });
+  notifyCustomer(reference, ['EN_LIVRAISON', 'PRETE']);
+  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order), await staffModes());
 }
 
 export const event = (orderId, type, staff, extra = {}) => ({ orderId, type, staffUserId: staff.id, staffName: staff.name, ...extra });
@@ -264,11 +278,13 @@ const feeEvent = (order, amount, staff, reason) =>
 export async function getOrder(reference, { checkHistory = false } = {}) {
   const order = await prisma.order.findUnique({ where: { reference }, include: DETAIL_INCLUDE });
   if (!order) throw new AppError(404, 'Commande introuvable.', 'COMMANDE_INTROUVABLE');
+  const modes = await staffModes();
   if (checkHistory && !(await getFeatures()).HISTORIQUE) {
-    const visible = await prisma.order.count({ where: { id: order.id, ...visibleWhere(false, { auto: customerAutoEnabled() }) } });
+    const auto = quietMode({ auto: customerAutoEnabled(), trackingOpen: modes.quiet });
+    const visible = await prisma.order.count({ where: { id: order.id, ...visibleWhere(false, { auto }) } });
     if (!visible) throw featureClosedError();
   }
-  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order), { light: await lightOn() });
+  return toStaffOrder(order, (await loadGrid()).night, await messageContextFor(order), modes);
 }
 
 // Commande lue dans une transaction, avec ce qu'il faut pour les règles (statuts et événements)
@@ -360,7 +376,7 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, n
       transitionError(order.status, shortcut ? 'PAYEE' : to, reason, order.mode, order.deliveryOperator) ||
       // Lot 5c : une commande Prestataire part avec « Commande récupérée », jamais par ce bouton
       (to === 'EN_LIVRAISON' && partner ? PARTNER_ONLY : null) ||
-      (to !== 'ANNULEE' ? noticeError(notice(order, await lightOn(tx))) : null) ||
+      (to !== 'ANNULEE' ? noticeError(notice(order, await staffModes(tx))) : null) ||
       (paying ? paymentConfirmError(fee, order.mode, order.deliveryFee, order.deliveryOperator) : null) ||
       night?.error ||
       // Frais de la grille changés par l'agent en confirmant le paiement : c'est une correction, avec un motif
@@ -461,13 +477,16 @@ export function notifyDelivered(reference, byAgent = null) {
       where: { reference },
       select: { id: true, reference: true, mode: true, courierName: true, statusChanges: { where: { toStatus: 'LIVREE' }, select: { createdAt: true } } },
     })
-    .then((order) => order && pushTeamDelivered(order, {
+    .then(async (order) => order && pushTeamDelivered(order, {
       courierName: order.courierName,
       at: order.statusChanges.at(-1)?.createdAt || new Date(),
       byAgent: byAgent?.name || null,
-      auto: customerAutoEnabled(),
+      // Plan 4 : avec le suivi sans WhatsApp, pas de « remerciez le client » (le client reçoit son alerte)
+      auto: quietMode({ auto: customerAutoEnabled(), trackingOpen: await isFeatureOpen(CUSTOMER_TRACKING) }),
     }))
     .catch((e) => console.error('[push] livrée', e));
+  // Plan 4 : « livrée, merci » sur le téléphone du client
+  notifyCustomer(reference, ['LIVREE']);
 }
 
 // Notification au livreur : nouvelle course, ou course annulée (n'échoue jamais)
