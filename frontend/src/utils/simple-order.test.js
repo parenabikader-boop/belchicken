@@ -93,3 +93,14 @@ test('message après la position : distance et prix, « environ » si estimée, 
   assert.match(fr({ km: 2, approx: false, fee: 0 }), /la livraison est offerte\.$/);
   assert.match(fr({ km: null, approx: false, fee: null }), /reçue\. Le prix de la livraison sera confirmé par notre équipe\.$/);
 });
+
+test('trop loin : le message du serveur, en anglais d’après son code ; paiement caché', async () => {
+  const en = (await import('../i18n/en.js')).default;
+  const fr = (await import('../i18n/fr.js')).default;
+  const tooFar = { code: 'TROP_LOIN', message: 'Désolé, vous êtes trop loin pour être livré (330 km). Posez un point sur la carte, ou choisissez À récupérer.', details: { km: 330, path: 'delivery' } };
+  assert.equal(fr.error(tooFar), tooFar.message);
+  assert.equal(en.error(tooFar), 'Sorry, you are too far away to be delivered (330 km). Place a point on the map, or choose Pickup.');
+  assert.equal(en.error({ code: 'POSITION_IMPRECISE', message: 'x', details: { km: null } }), 'Your location is not precise enough: place a point on the map.');
+  const { paymentVisible } = await import('./simple-order.js');
+  assert.equal(paymentVisible({ mode: 'LIVRAISON', geo: { latitude: 11.18, longitude: -4.29 }, gridOn: true, quote: { error: fr.error(tooFar) } }), false);
+});

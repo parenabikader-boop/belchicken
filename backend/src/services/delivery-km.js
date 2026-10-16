@@ -73,7 +73,7 @@ export function kmChoiceError({ zoneId, other, location } = {}, maxAccuracy) {
 // Devis par km, une fois la distance connue (road : { meters, estimated })
 export function kmQuote(grid, road) {
   const result = kmFee(grid, road.meters);
-  if (result.error) return { error: result.error };
+  if (result.error) return { error: result.error, tooFar: true, distanceM: road.meters }; // au-delà de la distance maximale
   return { source: road.estimated ? 'KM_ESTIMATION' : 'KM_ROUTE', fee: result.fee, zoneId: null, zoneName: null, distanceM: road.meters, km: true };
 }
 

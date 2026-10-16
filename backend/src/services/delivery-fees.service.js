@@ -11,7 +11,8 @@ import {
 } from './delivery-fees.js';
 import { getDeliveryMode } from './delivery-mode.service.js';
 import { MAX_ACCURACY_METERS } from './delivery-fees.js';
-import { FEES_BY_KM } from './features.js';
+import { FEES_BY_KM, SIMPLE_ORDER } from './features.js';
+import { simpleQuoteCheck } from './simple-order.js';
 import { kmActive, NEED_ACCEPT, publicGridWith, quoteWith, staffKm } from './delivery-km.js';
 import { roadDistance } from './route-distance.service.js';
 
@@ -54,11 +55,17 @@ export async function getPublicGrid() {
 // now : heure de la commande, qui décide du supplément de nuit
 // Plan 3, grille par km active : quartier choisi = prix du quartier ; sinon distance par la route depuis le restaurant.
 export async function quoteFor(choice, location, { legacy = false, now = new Date() } = {}) {
-  const [grid, km] = await Promise.all([loadGrid(), legacy ? null : kmGrid()]);
+  const features = await getFeatures();
+  const [grid, km] = await Promise.all([loadGrid(), legacy ? null : kmGrid(prisma, features)]);
   const quote = await quoteWith(
     { grid, km, choice, location, legacy, restaurant: env.restaurantPosition, now, maxAccuracy: MAX_ACCURACY_METERS },
     (from, to) => roadDistance(from, to),
   );
+  // Commande simplifiée (position seule, sans quartier) : un prix calculé, ou « trop loin » / « position imprécise »
+  if (features[SIMPLE_ORDER] && !legacy && !choice.zoneId && !choice.other && location) {
+    const bad = simpleQuoteCheck(quote, { location, maxKm: km?.maxKm ?? null, maxAccuracy: MAX_ACCURACY_METERS });
+    if (bad) throw new AppError(400, bad.error, bad.code, { km: bad.km, path: 'delivery' });
+  }
   if (quote.error) throw new AppError(400, quote.error, 'FRAIS_LIVRAISON', [{ path: 'delivery', message: quote.error }]);
   return quote;
 }

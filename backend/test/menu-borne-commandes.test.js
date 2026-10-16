@@ -94,3 +94,29 @@ test('commande simplifiée : une livraison sans position est refusée (fermée :
   assert.equal(positionRequiredError({ mode: 'A_EMPORTER', location: undefined, simpleOpen: true }), null);
   assert.equal(positionRequiredError({ mode: 'LIVRAISON', location: undefined, byAgent: true, simpleOpen: true }), null);
 });
+
+test('commande simplifiée : un prix calculé, ou « trop loin » / « position imprécise », jamais « prix à confirmer »', async () => {
+  const { simpleQuoteCheck, tooFarMessage, DEFAULT_MAX_KM, IMPRECISE_SIMPLE } = await import('../src/services/simple-order.js');
+  const opts = { location: { latitude: 11.18, longitude: -4.29, accuracy: 20 }, maxAccuracy: 1000 };
+  // Prix calculé dans la zone : accepté
+  assert.equal(simpleQuoteCheck({ source: 'DISTANCE', fee: 1250, distanceM: 6000 }, opts), null);
+  assert.equal(simpleQuoteCheck({ source: 'KM_ROUTE', fee: 1400, distanceM: 4200 }, opts), null);
+  // Bobo-Dioulasso (330 km) avec les tranches : avant « à confirmer », maintenant « trop loin »
+  const bobo = simpleQuoteCheck({ source: 'A_CONFIRMER', fee: null, distanceM: 330000 }, opts);
+  assert.equal(bobo.code, 'TROP_LOIN');
+  assert.equal(bobo.km, 330);
+  assert.equal(bobo.error.replace(/[  ]/g, ' '), 'Désolé, vous êtes trop loin pour être livré (330 km). Posez un point sur la carte, ou choisissez À récupérer.');
+  // Au-delà de 30 km par défaut, même avec un prix ; distance maximale du Patron (grille par km)
+  assert.equal(DEFAULT_MAX_KM, 30);
+  assert.equal(simpleQuoteCheck({ fee: 2000, distanceM: 31000 }, opts).code, 'TROP_LOIN');
+  assert.equal(simpleQuoteCheck({ fee: 2000, distanceM: 29000 }, opts), null);
+  assert.equal(simpleQuoteCheck({ fee: 2000, distanceM: 31000 }, { ...opts, maxKm: 40 }), null);
+  assert.equal(simpleQuoteCheck({ error: 'Trop loin…', tooFar: true, distanceM: 16000 }, { ...opts, maxKm: 15 }).km, 16);
+  // Hors des tranches, mais à moins de 30 km : pas de prix, donc trop loin (jamais « à confirmer »)
+  assert.equal(simpleQuoteCheck({ source: 'A_CONFIRMER', fee: null, distanceM: 12000 }, opts).code, 'TROP_LOIN');
+  // Position imprécise
+  assert.deepEqual(simpleQuoteCheck({ fee: null }, { ...opts, location: { latitude: 1, longitude: 2, accuracy: 2500 } }), { code: 'POSITION_IMPRECISE', error: IMPRECISE_SIMPLE, km: null });
+  // Autre erreur (quartier, etc.) : gardée telle quelle
+  assert.equal(simpleQuoteCheck({ error: 'Autre' }, opts), null);
+  assert.match(tooFarMessage(null), /^Désolé, vous êtes trop loin pour être livré\. /);
+});

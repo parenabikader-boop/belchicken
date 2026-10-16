@@ -1155,6 +1155,10 @@ d'avant (`GET /api/site` sans rien de plus, `test/menu-borne-commandes.test.js` 
   Sous « Ma position », une fois le prix calculé : « ✅ Merci, votre position est bien reçue. Vous êtes à X km de
   Belchicken : la livraison vous coûtera Y F. » (« environ X km » si la distance est estimée), mis à jour à chaque
   nouvelle position.
+- **Jamais « prix confirmé par notre équipe »** : soit un prix calculé, soit « Désolé, vous êtes trop loin pour être livré
+  (X km). Posez un point sur la carte, ou choisissez À récupérer. » (code `TROP_LOIN`), au-delà de la distance maximale
+  du Patron (grille par km) ou de 30 km si elle n'est pas réglée, ou hors de sa grille ; position trop imprécise :
+  `POSITION_IMPRECISE`. Paiement caché, et le serveur refuse la commande (`simpleQuoteCheck()`, `simple-order.js`).
 - **Plus aucun quartier.** Position refusée, impossible ou moins précise que 1 km : petite carte OpenStreetMap
   (`components/MapPicker.jsx`, Leaflet 1.9.4, téléchargée seulement à l'ouverture) où le client pose son point ; le
   prix se calcule de la même façon. Le site envoie le montant affiché (`expectedFee`), comparé par le serveur.

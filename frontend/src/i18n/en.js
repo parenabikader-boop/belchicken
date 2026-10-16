@@ -81,6 +81,11 @@ function error(err, ctx = {}) {
       return `${quoted(byId(d.productId))} is no longer available right now. Choose another drink.`;
     case 'FRAIS_LIVRAISON':
       return ZONE_ERRORS[err.message] || 'Choose your neighbourhood or share your location.';
+    // Commande simplifiée : trop loin (distance en km si connue), ou position trop imprécise
+    case 'TROP_LOIN':
+      return `Sorry, you are too far away to be delivered${d.km != null ? ` (${d.km} km)` : ''}. Place a point on the map, or choose Pickup.`;
+    case 'POSITION_IMPRECISE':
+      return 'Your location is not precise enough: place a point on the map.';
     case 'FRAIS_CHANGES': {
       const q = d.quote;
       if (!q || q.fee == null) return 'The delivery fee has changed: it will be confirmed by our team by phone. Check, then send again.';
