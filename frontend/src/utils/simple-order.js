@@ -62,8 +62,12 @@ export function missingFields(f, { gridOn, quote }) {
   return missing;
 }
 
-// Écrans larges (ordinateur, tablette) : panneau « Votre commande » fixe à droite du menu ; téléphone : barre en bas
+// Écrans larges (ordinateur, tablette) : panneau « Votre commande » à droite du menu ; téléphone : barre en bas
 export const WIDE_QUERY = '(min-width: 900px)';
+
+// Panneau de droite : seulement sur écran large ET avec au moins un plat (panier vide : le menu prend toute la largeur).
+// Il disparaît aussi au toucher de « Commander » (on quitte le menu pour la page de commande).
+export const sidePanelShown = (wide, count) => Boolean(wide) && count > 0;
 
 // Ligne qui vient d'être ajoutée (nouvelle, ou quantité augmentée), ou null : « + Finest · Menu » quelques secondes
 export function addedLine(before = [], after = []) {

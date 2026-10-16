@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MAX_QTY, useCart, useCartDetails } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils/format.js';
-import { addedLabel, addedLine, WIDE_QUERY } from '../utils/simple-order.js';
+import { addedLabel, addedLine, sidePanelShown, WIDE_QUERY } from '../utils/simple-order.js';
 import { useT } from '../i18n/index.jsx';
 
 // Lot « Commande simplifiée » (interrupteur COMMANDE_SIMPLIFIEE), sur le menu classique et le menu façon borne :
-//   - écran large (900 px et plus) : panneau « Votre commande » fixe à droite, toujours visible et mis à jour à chaque
-//     ajout (plats, + et −, retirer, total, « Commander ») ;
+//   - écran large (900 px et plus) : panneau « Votre commande » qui glisse depuis la droite au premier plat ajouté,
+//     reste tant qu'il y a des plats, mis à jour à chaque ajout (plats, + et −, retirer, total, « Commander »), et
+//     disparaît au toucher de « Commander » ou quand le panier redevient vide (le menu reprend toute la largeur) ;
 //   - téléphone : barre fixe en bas « Commander · X articles · Y F », avec quelques secondes « + dernier plat ajouté » ;
 //     au toucher, directement la page de commande (récapitulatif modifiable en haut).
 // Remplace la barre et la page « Ma commande » d'avant.
@@ -87,25 +88,23 @@ export default function CartSheet() {
     return () => clearTimeout(timer);
   }, [lines]);
 
-  // Écran large : le menu laisse la place au panneau de droite
+  // Écran large avec des plats : le menu laisse la place au panneau de droite (sinon toute la largeur)
+  const side = ready && sidePanelShown(wide, items.length ? count : 0);
   useEffect(() => {
-    if (!wide) return undefined;
+    if (!side) return undefined;
     document.body.classList.add('cs-has-side');
     return () => document.body.classList.remove('cs-has-side');
-  }, [wide]);
+  }, [side]);
 
   if (!ready) return null;
 
   if (wide) {
+    if (!side) return null;
     return (
       <aside className="cs-side" aria-label={S.sideTitle}>
         <h2 className="cs-side-h">{S.sideTitle}</h2>
-        {items.length === 0 ? <p className="cs-empty">{S.sideEmpty}</p> : (
-          <>
-            <Lines items={items} />
-            <Footer items={items} total={total} />
-          </>
-        )}
+        <Lines items={items} />
+        <Footer items={items} total={total} />
       </aside>
     );
   }

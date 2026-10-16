@@ -980,8 +980,9 @@ header.top .wrap:has(.lang-sw){gap:12px}
 .cs-added{font-size:13px;font-weight:600;opacity:.92}
 .cs-side{display:none}
 @media (min-width:900px){
+  body{transition:padding-right .3s ease}
   body.cs-has-side{padding-right:340px}
-  .cs-side{display:flex;flex-direction:column;position:fixed;top:0;right:0;bottom:0;width:340px;z-index:45;background:var(--panel);border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(42,20,14,.06);padding:18px 18px 16px;box-sizing:border-box}
+  .cs-side{display:flex;flex-direction:column;position:fixed;top:0;right:0;bottom:0;width:340px;z-index:45;background:var(--panel);border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(42,20,14,.06);padding:18px 18px 16px;box-sizing:border-box;animation:cs-slide-in .3s ease-out}
   .cs-side-h{margin:0 0 8px;font-family:var(--display);font-size:22px;color:var(--ink)}
   .cs-side .cs-lines{flex:1;min-height:0}
   .cs-side .cs-empty{flex:1;padding:24px 0;font-size:16px}
@@ -991,3 +992,6 @@ header.top .wrap:has(.lang-sw){gap:12px}
 /* Commande simplifiée : récapitulatif replié en haut de la page de commande */
 .cs-cart-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .cs-cart-row b{font-family:var(--display);font-size:18px}
+/* Commande simplifiée : le panneau de droite glisse depuis la droite (désactivé si le téléphone demande moins d'animations) */
+@keyframes cs-slide-in{from{transform:translateX(100%);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.cs-side{animation:none}body{transition:none}}

@@ -1135,9 +1135,10 @@ d'avant (`GET /api/site` sans rien de plus, `test/menu-borne-commandes.test.js` 
 (lu par `useSimpleOrder()`, `utils/site.js`, dernière réponse gardée sur le téléphone) :
 
 - **Menu** (classique et façon borne), `components/CartSheet.jsx` :
-  - **écran large** (900 px et plus) : panneau « Votre commande » fixe à droite, toujours visible et mis à jour à
-    chaque ajout (plats, + et −, retirer, total en grand, « Commander » vers la page de commande ; vide : « Choisissez
-    vos plats. ») ; le menu se décale pour lui laisser la place ;
+  - **écran large** (900 px et plus) : panier vide, pas de panneau (le menu prend toute la largeur) ; au premier plat
+    ajouté, le panneau « Votre commande » glisse depuis la droite (`sidePanelShown()`), reste tant qu'il y a des plats,
+    mis à jour à chaque ajout (plats, + et −, retirer, total en grand, « Commander » vers la page de commande), et
+    disparaît au toucher de « Commander » ou quand le panier redevient vide ;
   - **téléphone** : barre fixe « Commander · X articles · Y F », avec « + dernier plat ajouté » pendant 3,5 s
     (`addedLine()`) ; au toucher, **directement la page de commande** (plus de panneau qui s'ouvre).
   L'ancienne adresse `/commande` mène à la page de commande.

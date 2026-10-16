@@ -73,3 +73,11 @@ test('dernier plat ajouté : nouvelle ligne ou quantité augmentée, jamais un r
   assert.equal(addedLabel(undefined), null);
   assert.equal(WIDE_QUERY, '(min-width: 900px)');
 });
+
+test('écran large : le panneau seulement avec des plats ; panier vide, le menu prend toute la largeur', async () => {
+  const { sidePanelShown } = await import('./simple-order.js');
+  assert.equal(sidePanelShown(true, 0), false);
+  assert.equal(sidePanelShown(true, 1), true);
+  assert.equal(sidePanelShown(true, 12), true);
+  assert.equal(sidePanelShown(false, 3), false); // téléphone : la barre en bas
+});

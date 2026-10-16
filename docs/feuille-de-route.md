@@ -876,6 +876,8 @@ simplifiée (site client) ».
   téléphone (`cd5a12e` déjà en ligne, interrupteur fermé ; complément en commit local).
 - [x] Téléphone : la barre mène directement à la page de commande (plus de panneau), `/commande` aussi ; récapitulatif
   replié et modifiable en haut de la page de commande (commit local).
+- [x] Écran large : panneau seulement avec des plats, glisse depuis la droite, disparaît à « Commander » ou panier vide
+  (commit local).
 - [ ] Essai par le client sur téléphone et ordinateur (de préférence avec la grille par km du plan 3 allumée).
 - [ ] Envoi sur GitHub avec l'accord écrit du client.
 
