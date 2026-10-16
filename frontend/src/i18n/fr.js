@@ -158,7 +158,10 @@ export default {
   },
   // Lot « Commande simplifiée » : très peu de texte, une phrase courte au plus par bloc
   simple: {
-    bar: (n, total) => `Voir ma commande · ${n} article${n > 1 ? 's' : ''} · ${total}`,
+    bar: (n, total) => `Commander · ${n} article${n > 1 ? 's' : ''} · ${total}`,
+    added: (name) => `+ ${name}`,
+    sideTitle: 'Votre commande',
+    sideEmpty: 'Choisissez vos plats.',
     sheetTitle: 'Ma commande',
     close: 'Fermer',
     empty: 'Votre commande est vide.',

@@ -64,3 +64,16 @@ export function missingFields(f, { gridOn, quote }) {
   if (!isPhone(f.payer)) missing.push('payer');
   return missing;
 }
+
+// Écrans larges (ordinateur, tablette) : panneau « Votre commande » fixe à droite du menu ; téléphone : barre en bas
+export const WIDE_QUERY = '(min-width: 900px)';
+
+// Ligne qui vient d'être ajoutée (nouvelle, ou quantité augmentée), ou null : « + Finest · Menu » quelques secondes
+export function addedLine(before = [], after = []) {
+  const qty = new Map(before.map((l) => [l.key, l.quantity]));
+  const line = after.find((l) => l.quantity > (qty.get(l.key) ?? 0));
+  return line ? line.key : null;
+}
+
+// Nom court du plat ajouté : le plat, et sa formule s'il en a plusieurs
+export const addedLabel = (item) => (item ? `${item.product.name}${item.product.variants.length > 1 ? ` · ${item.variant.label}` : ''}` : null);

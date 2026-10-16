@@ -1134,8 +1134,13 @@ d'avant (`GET /api/site` sans rien de plus, `test/menu-borne-commandes.test.js` 
 `frontend/src/utils/simple-order.js`, testées). Aucune migration. Ouvert, `GET /api/site` renvoie `commandeSimple: true`
 (lu par `useSimpleOrder()`, `utils/site.js`, dernière réponse gardée sur le téléphone) :
 
-- **Menu** (classique et façon borne) : barre fixe « Voir ma commande · X articles · Y F » ; au toucher, panneau
-  « Ma commande » par-dessus le menu (`components/CartSheet.jsx`) : plats, + et −, retirer, total, « Commander ».
+- **Menu** (classique et façon borne), `components/CartSheet.jsx` :
+  - **écran large** (900 px et plus) : panneau « Votre commande » fixe à droite, toujours visible et mis à jour à
+    chaque ajout (plats, + et −, retirer, total en grand, « Commander » vers la page de commande ; vide : « Choisissez
+    vos plats. ») ; le menu se décale pour lui laisser la place ;
+  - **téléphone** : barre fixe « Commander · X articles · Y F », avec « + dernier plat ajouté » pendant 3,5 s
+    (`addedLine()`) ; au toucher, panneau « Ma commande » par-dessus le menu (plats, + et −, retirer, total,
+    « Commander »).
   L'ancienne adresse `/commande` ouvre ce panneau (`/menu?panier=1`).
 - **Une seule page de commande** `/valider` (`pages/CommandeSimple.jsx`, fichier à part), dans l'ordre : Livraison
   ou À emporter ; « 📍 Utiliser ma position » puis « Livraison : X F (Y km) » (prix calculé par le serveur avec la

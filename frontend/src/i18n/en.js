@@ -255,7 +255,10 @@ export default {
   },
   // "Simplified order": very little text, one short sentence at most per block
   simple: {
-    bar: (n, total) => `See my order · ${n} item${n > 1 ? 's' : ''} · ${total}`,
+    bar: (n, total) => `Order · ${n} item${n > 1 ? 's' : ''} · ${total}`,
+    added: (name) => `+ ${name}`,
+    sideTitle: 'Your order',
+    sideEmpty: 'Choose your dishes.',
     sheetTitle: 'My order',
     close: 'Close',
     empty: 'Your order is empty.',

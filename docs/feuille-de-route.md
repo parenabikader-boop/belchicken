@@ -872,7 +872,9 @@ simplifiée (site client) ».
 - [x] Panneau « Ma commande » sur le menu (classique et borne), page de commande unique dans l'ordre demandé, carte
   OpenStreetMap si la position est refusée ou imprécise, plus aucun quartier, très peu de texte.
 - [x] Tests (`frontend/src/utils/simple-order.test.js`, `backend/test/menu-borne-commandes.test.js`), construction.
-- [ ] Essai par le client sur téléphone (de préférence avec la grille par km du plan 3 allumée).
+- [x] Complément : panneau « Votre commande » à droite sur écran large, « + dernier plat ajouté » dans la barre du
+  téléphone (`cd5a12e` déjà en ligne, interrupteur fermé ; complément en commit local).
+- [ ] Essai par le client sur téléphone et ordinateur (de préférence avec la grille par km du plan 3 allumée).
 - [ ] Envoi sur GitHub avec l'accord écrit du client.
 
 ## Démonstration commerciale (base dev)

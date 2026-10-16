@@ -58,3 +58,20 @@ test('avant d’envoyer : position, prix, nom, téléphone, opérateur, numéro 
   assert.deepEqual(missingFields({ ...ok, mode: 'A_EMPORTER', geo: null }, { gridOn: true, quote: null }), []);
   assert.deepEqual(missingFields({ ...ok, name: 'A', phone: '123', method: null, payer: '' }, { gridOn: true, quote }), ['name', 'phone', 'method', 'payer']);
 });
+
+test('dernier plat ajouté : nouvelle ligne ou quantité augmentée, jamais un retrait', async () => {
+  const { addedLabel, addedLine, WIDE_QUERY } = await import('./simple-order.js');
+  const a = { key: 'a', quantity: 1 };
+  const b = { key: 'b', quantity: 2 };
+  assert.equal(addedLine([], [a]), 'a');
+  assert.equal(addedLine([a], [a, b]), 'b');
+  assert.equal(addedLine([a, b], [a, { ...b, quantity: 3 }]), 'b');
+  assert.equal(addedLine([a, b], [a, { ...b, quantity: 1 }]), null); // −
+  assert.equal(addedLine([a, b], [b]), null); // retiré
+  assert.equal(addedLine([a], [a]), null);
+  const finest = { product: { name: 'Finest', variants: [{}, {}] }, variant: { label: 'Menu' } };
+  assert.equal(addedLabel(finest), 'Finest · Menu');
+  assert.equal(addedLabel({ product: { name: 'Coca', variants: [{}] }, variant: { label: 'Seul' } }), 'Coca');
+  assert.equal(addedLabel(undefined), null);
+  assert.equal(WIDE_QUERY, '(min-width: 900px)');
+});

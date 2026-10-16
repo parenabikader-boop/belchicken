@@ -975,3 +975,16 @@ header.top .wrap:has(.lang-sw){gap:12px}
 .cs-recap{margin:0;font-weight:700;font-size:15px}
 .cs-map-wrap{display:grid;gap:6px}
 .cs-map{height:260px;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+/* Commande simplifiée, écran large : panneau « Votre commande » fixe à droite du menu (classique et borne) */
+.cs-bar-btn{display:grid;gap:2px;justify-items:center}
+.cs-added{font-size:13px;font-weight:600;opacity:.92}
+.cs-side{display:none}
+@media (min-width:900px){
+  body.cs-has-side{padding-right:340px}
+  .cs-side{display:flex;flex-direction:column;position:fixed;top:0;right:0;bottom:0;width:340px;z-index:45;background:var(--panel);border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(42,20,14,.06);padding:18px 18px 16px;box-sizing:border-box}
+  .cs-side-h{margin:0 0 8px;font-family:var(--display);font-size:22px;color:var(--ink)}
+  .cs-side .cs-lines{flex:1;min-height:0}
+  .cs-side .cs-empty{flex:1;padding:24px 0;font-size:16px}
+  .cs-side .cs-tot b{font-family:var(--display);font-size:26px;color:var(--brand-ink)}
+}
+.cs-head h2,.cs-title,.cs-tot b{font-family:var(--display)}
