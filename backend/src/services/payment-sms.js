@@ -1,5 +1,5 @@
-// Plan 2, solution B : paiement du repas validé grâce aux SMS du téléphone marchand ECOFOOD (interrupteur PAIEMENT_AUTO,
-// fermé sans ligne). Règles sans base de données, testées dans test/paiement-auto.test.js. Accès à la base :
+// Plan 2, solution B : paiement du repas validé grâce aux SMS du téléphone marchand ECOFOOD (interrupteur
+// PAIEMENT_AUTO_SMS, fermé sans ligne ; formats d'essai : interrupteur PAIEMENT_SMS_ESSAI). Règles sans base de données, testées dans test/paiement-auto.test.js. Accès à la base :
 // auto-payment.service.js. Formats des SMS (données) : payment-sms-formats.js ou la variable SMS_PAIEMENT_FORMATS.
 //
 // Rapprochement, sans rien demander de plus au client : numéro qui a payé (saisi à la commande) + montant exact des
@@ -22,6 +22,7 @@ const formatSchema = z.object({
   operator: z.enum(OPERATORS),
   label: z.string().min(1).max(40),
   supposed: z.boolean().optional(),
+  trial: z.boolean().optional(),
   senders: z.array(z.string().min(1).max(40)).min(1),
   must: z.string().min(1),
   reject: z.string().optional(),
@@ -56,8 +57,11 @@ export function loadFormats(json = '') {
 // « Orange Money », « ORANGE-MONEY », « orangemoney » -> « orangemoney »
 export const senderKey = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-// Format d'un expéditeur officiel, ou null (tout autre expéditeur est ignoré)
-export const formatForSender = (formats, sender) => formats.find((f) => f.senders.some((s) => senderKey(s) === senderKey(sender))) || null;
+// Formats d'un expéditeur officiel, dans l'ordre (vide : tout autre expéditeur est ignoré). Formats d'essai seulement
+// avec trial (interrupteur « Formats SMS d'essai » ouvert).
+export const formatsForSender = (formats, sender, { trial = false } = {}) =>
+  formats.filter((f) => (trial || !f.trial) && f.senders.some((s) => senderKey(s) === senderKey(sender)));
+export const formatForSender = (formats, sender, opts) => formatsForSender(formats, sender, opts)[0] || null;
 
 // « 7 000 », « 7.000 », « 7,000 », « 7000.00 », « 7 000,50 » -> 7000 (francs entiers ; null si illisible)
 export function parseAmount(text) {
@@ -73,12 +77,19 @@ const first = (source, text) => (source ? regex(source)?.exec(text)?.[1] ?? null
 // Lit un SMS. Renvoie :
 //   { ignored: true }                         expéditeur non officiel (rien n'est gardé) ;
 //   { operator, label, ok: false, reason }    expéditeur officiel, mais pas un paiement reçu lisible ;
-//   { operator, label, ok: true, amount, phone, txid, supposed }   paiement reçu.
-export function parseSms({ sender, text }, formats = DEFAULT_SMS_FORMATS) {
-  const format = formatForSender(formats, sender);
-  if (!format) return { ignored: true };
-  const base = { operator: format.operator, label: format.label, supposed: Boolean(format.supposed) };
+//   { operator, label, ok: true, amount, phone, txid, supposed, trial }   paiement reçu.
+// Plusieurs formats pour le même expéditeur : le premier qui y voit un paiement reçu (sinon, la raison du premier).
+// trial : formats d'essai acceptés (interrupteur « Formats SMS d'essai » ouvert).
+export function parseSms({ sender, text }, formats = DEFAULT_SMS_FORMATS, { trial = false } = {}) {
+  const list = formatsForSender(formats, sender, { trial });
+  if (!list.length) return { ignored: true };
   const body = String(text || '').replace(/\s+/g, ' ').trim();
+  const fits = (f) => !(f.reject && regex(f.reject)?.test(body)) && regex(f.must)?.test(body);
+  return readWith(list.find(fits) || list[0], body);
+}
+
+function readWith(format, body) {
+  const base = { operator: format.operator, label: format.label, supposed: Boolean(format.supposed), trial: Boolean(format.trial) };
   if (format.reject && regex(format.reject)?.test(body)) return { ...base, ok: false, reason: 'Pas un paiement reçu (envoi, retrait ou échec).' };
   if (!regex(format.must)?.test(body)) return { ...base, ok: false, reason: 'Pas un paiement reçu.' };
   const amount = parseAmount(first(format.amount, body));

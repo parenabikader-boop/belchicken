@@ -1091,13 +1091,26 @@ Ouvert, et grille allumée par le Patron :
 
 ## Paiement du repas validé automatiquement (plan 2)
 
-Interrupteur `PAIEMENT_AUTO` (page Prestataire), **fermé sans ligne** : fermé, tout est comme avant (`backend/test/paiement-auto.test.js`).
+**Deux interrupteurs indépendants** (page Prestataire), **fermés sans ligne**, depuis le 16 octobre 2026 (à la place de
+l'interrupteur unique `PAIEMENT_AUTO`, qui n'existe plus ; une vieille ligne à ce nom est sans effet) :
+
+- `PAIEMENT_AUTO_SMS`, « Paiement automatique par SMS » (solution B) ;
+- `PAIEMENT_LIGDICASH`, « Paiement en ligne Ligdicash » (solution A, à terminer après le contrat) ;
+- en plus, `PAIEMENT_SMS_ESSAI`, « Formats SMS d'essai » : les formats marqués `trial: true` ne comptent que s'il est
+  ouvert, avec les SMS (fermé = ignorés, comme absents du fichier).
+
+Belchicken choisit l'un ou l'autre : Ligdicash allumé, les SMS peuvent être éteints sans rien casser (et l'inverse).
+Les deux fermés : vérification à la main par le call center, exactement comme avant. Les deux ouverts : chaque
+commande n'a qu'un paiement rattaché (`AutoPayment.orderId` unique, pas de facture Ligdicash si un SMS est déjà
+rattaché, `invoiceError()`) et n'est validée qu'une fois (`validateOrder()` ne change qu'une commande encore « paiement à
+vérifier »). Règles des interrupteurs : `autoPaymentModes()` dans `features.js` (`backend/test/paiement-auto.test.js`).
 Règles : `payment-sms.js` (SMS), `payment-sms-formats.js` (formats, données seulement), `ligdicash.js` (préparé) ;
 base : `auto-payment.service.js` ; adresses : `routes/payment-auto.routes.js` (`/api/paiements`).
 
 **Migration `20261016220000_paiement_auto`** (dans `backend/prisma/migrations/` depuis le 16 octobre 2026, appliquée par Render à la mise en ligne) :
 table `AutoPayment` (journal des paiements reçus), vide. Aucune colonne ajoutée à une table existante, et la table
-n'est lue que l'interrupteur ouvert. **Ne pas ouvrir l'interrupteur avant de l'avoir appliquée.**
+n'est lue que l'un des interrupteurs ouvert. **Ne pas en ouvrir un avant de l'avoir appliquée.** Les deux interrupteurs
+n'ont demandé aucune migration (une ligne `FeatureSwitch` par clé).
 
 **Variables Render** : `SMS_PAIEMENT_CLE` (clé de l'application Android, 24 caractères au moins ; vide = adresse
 fermée), `SMS_PAIEMENT_FORMATS` (facultatif, formats en JSON ; vide = le fichier), `LIGDICASH_API_KEY` et
@@ -1121,8 +1134,14 @@ fermée), `SMS_PAIEMENT_FORMATS` (facultatif, formats en JSON ; vide = le fichie
 - **Un SMS ne compte qu'une fois** (n° de transaction, sinon empreinte du texte : `dedupeKey` unique) et **une
   commande n'a qu'un paiement** (`orderId` unique).
 - **Formats réglables** (expéditeurs, phrase « reçu », montant, numéro, n° de transaction) : le fichier, ou la variable
-  `SMS_PAIEMENT_FORMATS`. Les formats actuels sont **supposés** : ils ne valident **aucune** commande (statut
-  `FORMAT_A_VERIFIER`) tant que les vrais SMS n'ont pas été fournis et vérifiés (`supposed: false`).
+  `SMS_PAIEMENT_FORMATS`. Les formats du téléphone marchand sont **supposés** : ils ne valident **aucune** commande
+  (statut `FORMAT_A_VERIFIER`) tant que les vrais SMS n'ont pas été fournis et vérifiés (`supposed: false`). Plusieurs
+  formats pour un même expéditeur : le premier qui y voit un paiement reçu est utilisé.
+- **Format d'essai « Orange Money · transfert reçu (essai) »** (16 octobre 2026) : vérifié sur un vrai SMS Orange
+  Money Burkina reçu sur un téléphone personnel (« Vous avez recu 101.0 FCFA, … du 07516439,XXX … Trans ID: … »,
+  montants « 101.0 » ou « 15,000.00 », numéro sur 8 chiffres) ; le transfert envoyé (« vous avez transfere ») est
+  écarté. `trial: true` : il ne compte que l'interrupteur « Formats SMS d'essai » ouvert. Le format définitif (code
+  marchand ECOFOOD) viendra quand le client fournira ses SMS ; pour retirer l'essai pour de bon, supprimer son bloc.
 - **Page Prestataire**, section « Paiement du repas validé automatiquement » : état des réglages, formats, « Tester un
   SMS » (lit un SMS collé, sans rien enregistrer) et journal des 50 derniers paiements reçus.
 - **Call center** : la commande validée seule passe directement à l'étape suivante (historique « Paiement

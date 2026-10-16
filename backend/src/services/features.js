@@ -3,7 +3,7 @@
 //
 // Pas de ligne FeatureSwitch = ouvert : sans Prestataire, tout fonctionne comme avant (sauf RELEVE, lot 5d,
 // fermé sans ligne : le Patron ne voit le relevé que si le Prestataire l'ouvre ; de même LIVREURS_INDEPENDANTS,
-// NOUVEAU_VISUEL, CALL_CENTER_ALLEGE, SUIVI_SANS_WHATSAPP, FRAIS_PAR_KM, PAIEMENT_AUTO, COMMANDE_SIMPLIFIEE et
+// NOUVEAU_VISUEL, CALL_CENTER_ALLEGE, SUIVI_SANS_WHATSAPP, FRAIS_PAR_KM, PAIEMENT_AUTO_SMS, PAIEMENT_SMS_ESSAI, PAIEMENT_LIGDICASH, COMMANDE_SIMPLIFIEE et
 // TRANCHES_PAR_ROUTE, fermés sans ligne).
 // Fermer bloque l'accès, ne supprime aucune donnée, et bloque aussi le Prestataire (il doit rouvrir).
 // Deux niveaux pour les réglages : le Prestataire décide si une fonction est incluse, le Patron l'allume
@@ -46,13 +46,17 @@ export const FEATURES = [
   // Plan 3, frais par kilomètre avant le paiement : fermé sans ligne. Ouvert, le Patron règle sa grille par km
   // (page Frais de livraison) ; allumée, le client voit et accepte ses frais avant de payer son repas.
   // Plan 2, paiement du repas validé automatiquement : fermé sans ligne. Ouvert, un paiement reconnu (SMS du téléphone
-  // marchand, ou Ligdicash) valide seul la commande ; sinon, le call center vérifie comme avant.
+  // marchand, ou Ligdicash : deux interrupteurs) valide seul la commande ; sinon, le call center vérifie comme avant.
   // Lot « Commande simplifiée » : fermé sans ligne. Ouvert, le site client a un parcours court : panneau « Ma
   // commande » sur le menu, une seule page de commande (position ou point sur la carte, jamais de quartier).
   // Tranches de distance mesurées par la route (OpenRouteService, sinon vol d'oiseau × 1,3) : fermé sans ligne.
   { key: 'TRANCHES_PAR_ROUTE', label: 'Tranches de distance par la route', help: 'Ouvert : les tranches de distance de la page Frais de livraison se mesurent par la route depuis le restaurant (comme la distance annoncée au client), au lieu de la ligne droite. Sans service de distance : ligne droite × 1,3, notée « estimation ». Fermé : à vol d’oiseau, comme avant.', defaultOpen: false },
   { key: 'COMMANDE_SIMPLIFIEE', label: 'Commande simplifiée (site client)', help: 'Ouvert : sur le menu, la barre « Voir ma commande » ouvre un panneau par-dessus le menu ; une seule page de commande, dans l’ordre : livraison ou à récupérer, position (ou point sur une carte) et prix de livraison, nom et téléphone, puis le paiement. Plus aucun quartier à choisir. Très peu de texte. Fermé : le site actuel.', defaultOpen: false },
-  { key: 'PAIEMENT_AUTO', label: 'Paiement du repas validé automatiquement', help: 'Ouvert : quand le téléphone marchand reçoit le SMS d’un paiement (numéro qui a payé et montant exact d’une seule commande en attente), la commande est validée toute seule. Rien ne correspond, ou deux commandes possibles : la commande reste « à vérifier » par le call center, comme avant. Fermé : comme avant.', defaultOpen: false },
+  // Plan 2 : deux interrupteurs indépendants (Belchicken choisit l'un ou l'autre ; les deux fermés = vérification à la
+  // main, comme avant ; les deux ouverts = chaque commande validée une seule fois, AutoPayment.orderId unique)
+  { key: 'PAIEMENT_AUTO_SMS', label: 'Paiement automatique par SMS', help: 'Ouvert : quand le téléphone marchand reçoit le SMS d’un paiement (numéro qui a payé et montant exact d’une seule commande en attente), la commande est validée toute seule. Rien ne correspond, ou deux commandes possibles : la commande reste « à vérifier » par le call center, comme avant. Fermé : les SMS ne sont plus lus (Ligdicash n’est pas concerné).', defaultOpen: false },
+  { key: 'PAIEMENT_SMS_ESSAI', label: 'Formats SMS d’essai', help: 'Ouvert : les formats marqués « essai » (Orange Money, transfert reçu sur un téléphone personnel) valident aussi les commandes, avec le paiement automatique par SMS. Fermé : ces formats sont ignorés ; seuls les formats définitifs (code marchand) comptent.', defaultOpen: false },
+  { key: 'PAIEMENT_LIGDICASH', label: 'Paiement en ligne Ligdicash', help: 'Ouvert (après le contrat et les identifiants Ligdicash) : le paiement en ligne confirmé par Ligdicash valide seul la commande. Fermé : Ligdicash n’est plus utilisé (les SMS ne sont pas concernés).', defaultOpen: false },
   { key: 'FRAIS_PAR_KM', label: 'Frais par kilomètre avant le paiement', help: 'Ouvert : le Patron règle une grille par kilomètre (prix de départ, prix par km, arrondi, minimum, maximum) ; une fois allumée, le site calcule les frais avec la distance par la route, le client les voit (« Livraison : X F (Y km), à payer au livreur ») et les accepte avant de payer son repas. Sans position, il choisit son quartier ; « Autre quartier » n’est plus proposé ; le call center ne corrige plus les frais (le Patron, toujours avec un motif). Fermé : comme avant.', defaultOpen: false },
   { key: 'SUIVI_SANS_WHATSAPP', label: 'Suivi sans WhatsApp', help: 'Ouvert : le client suit sa commande en direct sur sa page de suivi (lien secret donné à la commande : livreur à appeler, code de livraison, montant à payer au livreur, avis) et reçoit des alertes gratuites sur son téléphone (« en route », « livrée, merci »). Le call center n’a plus de message à confirmer ni de client à remercier. Fermé : comme avant.', defaultOpen: false },
   { key: 'CALL_CENTER_ALLEGE', label: 'Call center allégé', help: 'Ouvert : aucune étape n’attend plus la confirmation d’un message au client (le message reste proposé, sauf le remerciement qui reste demandé) ; « Paiement vérifié » imprime aussi le bon ; le livreur peut valider une livraison sans le code du client, avec un motif obligatoire (signalée en rouge au Responsable livraison et comptée à part dans le relevé). Fermé : comme avant.', defaultOpen: false },
@@ -66,8 +70,10 @@ export const CALL_CENTER_LIGHT = 'CALL_CENTER_ALLEGE';
 export const CUSTOMER_TRACKING = 'SUIVI_SANS_WHATSAPP';
 // Plan 3 : clé de l'interrupteur « Frais par kilomètre avant le paiement »
 export const FEES_BY_KM = 'FRAIS_PAR_KM';
-// Plan 2 : clé de l'interrupteur « Paiement du repas validé automatiquement »
-export const AUTO_PAYMENT = 'PAIEMENT_AUTO';
+// Plan 2 : clés des interrupteurs « Paiement automatique par SMS », « Formats SMS d'essai » et « Paiement en ligne Ligdicash »
+export const AUTO_PAYMENT_SMS = 'PAIEMENT_AUTO_SMS';
+export const SMS_TRIAL_FORMATS = 'PAIEMENT_SMS_ESSAI';
+export const AUTO_PAYMENT_LIGDICASH = 'PAIEMENT_LIGDICASH';
 // Lot « Commande simplifiée » (site client)
 export const SIMPLE_ORDER = 'COMMANDE_SIMPLIFIEE';
 // Tranches de distance mesurées par la route
@@ -76,7 +82,7 @@ export const ROAD_BANDS = 'TRANCHES_PAR_ROUTE';
 export const FEATURE_CLOSED = 'Fonction non incluse dans votre formule, contactez votre prestataire.';
 
 // Ouverte ou fermée quand elle n'a pas de ligne : ouverte, sauf RELEVE (lot 5d), LIVREURS_INDEPENDANTS, NOUVEAU_VISUEL
-// CALL_CENTER_ALLEGE, SUIVI_SANS_WHATSAPP, FRAIS_PAR_KM, PAIEMENT_AUTO, COMMANDE_SIMPLIFIEE et TRANCHES_PAR_ROUTE
+// CALL_CENTER_ALLEGE, SUIVI_SANS_WHATSAPP, FRAIS_PAR_KM, PAIEMENT_AUTO_SMS, PAIEMENT_SMS_ESSAI, PAIEMENT_LIGDICASH, COMMANDE_SIMPLIFIEE et TRANCHES_PAR_ROUTE
 export const featureDefault = (key) => FEATURES.find((f) => f.key === key)?.defaultOpen ?? true;
 
 // Lignes FeatureSwitch -> { HISTORIQUE: true, … } : une fonction sans ligne garde sa valeur par défaut
@@ -88,3 +94,12 @@ export function featureMap(rows = []) {
 // Historique fermé : les commandes terminées (livrées ou annulées) restent visibles 24 heures
 export const HISTORY_HOURS = 24;
 export const historyCutoff = (now = new Date()) => new Date(now.getTime() - HISTORY_HOURS * 60 * 60 * 1000);
+
+// Plan 2 : paiement automatique, deux interrupteurs indépendants. sms : les SMS du téléphone marchand sont lus ;
+// trial : les formats d'essai comptent aussi (seulement avec sms) ; ligdicash : le paiement en ligne est utilisé ;
+// any : l'un des deux (paiement rattaché affiché à l'équipe). Les deux fermés : vérification à la main, comme avant.
+export function autoPaymentModes(features) {
+  const sms = Boolean(features[AUTO_PAYMENT_SMS]);
+  const ligdicash = Boolean(features[AUTO_PAYMENT_LIGDICASH]);
+  return { sms, trial: sms && Boolean(features[SMS_TRIAL_FORMATS]), ligdicash, any: sms || ligdicash };
+}

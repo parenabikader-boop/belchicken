@@ -62,5 +62,5 @@ staffPrestataireRouter.get('/paiements-auto', handle(async (req, res) => {
 
 staffPrestataireRouter.post('/paiements-auto/test', handle(async (req, res) => {
   const input = z.object({ sender: z.string().min(1, 'Indiquez l’expéditeur.').max(60), text: z.string().min(1, 'Collez le SMS.').max(1000) }).parse(req.body);
-  res.json({ result: testSms(input) });
+  res.json({ result: await testSms(input) });
 }));

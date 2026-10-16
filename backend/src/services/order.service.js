@@ -95,7 +95,7 @@ export async function createOrder(input, agent = null) {
   // (saisie par un agent : pas sur ses propres téléphones, il vient de la créer)
   notifyTeamNewOrder(order).catch((e) => console.error('[whatsapp]', e));
   pushTeamNewOrder(order, { exceptStaffId: agent?.staff.id }).catch((e) => console.error('[push]', e));
-  // Plan 2 : un paiement déjà reçu par SMS valide-t-il cette commande ? (interrupteur PAIEMENT_AUTO ; ne fait rien fermé)
+  // Plan 2 : un paiement déjà reçu par SMS valide-t-il cette commande ? (interrupteur PAIEMENT_AUTO_SMS ; ne fait rien fermé)
   matchNewOrder(order.id);
 
   return order;

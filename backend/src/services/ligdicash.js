@@ -1,5 +1,6 @@
 // Plan 2, solution A (PRÉPARÉE, contrat pas encore signé) : paiement du repas par Ligdicash, « Payin avec redirection »
-// (developers.ligdicash.com). Même interrupteur PAIEMENT_AUTO et même validation que les SMS. Identifiants : variables
+// (developers.ligdicash.com). Interrupteur à part, PAIEMENT_LIGDICASH (indépendant des SMS),
+// même validation que les SMS : une commande n'est jamais validée deux fois. Identifiants : variables
 // Render LIGDICASH_API_KEY et LIGDICASH_API_TOKEN (vides = rien ne se fait). Règles sans base : testées.
 //
 // 1. Créer la facture (POST checkout-invoice/create) : montant des plats calculé par le serveur, référence de la
@@ -43,6 +44,14 @@ export function invoiceBody(order, { siteUrl, apiUrl }) {
       custom_data: { transaction_id: order.reference },
     },
   };
+}
+
+// Facture possible pour cette commande ? null, ou la raison du refus (commande déjà vérifiée, ou paiement déjà reçu
+// par SMS : une commande n'a qu'un seul paiement rattaché)
+export function invoiceError(order) {
+  if (!order || order.status !== 'PAIEMENT_A_VERIFIER') return 'Cette commande n’attend pas de paiement.';
+  if (order.autoPayment) return 'Un paiement est déjà reçu pour cette commande.';
+  return null;
 }
 
 // Réponse de création : { token, url } ou { error }

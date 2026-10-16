@@ -4,7 +4,8 @@ import { env } from '../config/env.js';
 import { ligdicashCallback, receiveSms } from '../services/auto-payment.service.js';
 import { smsBodySchema, smsKeyMatches } from '../services/payment-sms.js';
 
-// Plan 2 : paiement du repas validé automatiquement (interrupteur PAIEMENT_AUTO, fermé = 404, comme une adresse inconnue).
+// Plan 2 : paiement du repas validé automatiquement (/sms : interrupteur PAIEMENT_AUTO_SMS ; /ligdicash :
+// interrupteur PAIEMENT_LIGDICASH ; fermé = 404, comme une adresse inconnue).
 export const paymentAutoRouter = Router();
 
 const limiter = rateLimit({

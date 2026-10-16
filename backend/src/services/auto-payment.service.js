@@ -1,26 +1,28 @@
-// Plan 2 : paiement du repas validé automatiquement (interrupteur PAIEMENT_AUTO, fermé sans ligne). Accès à la base ;
-// règles dans payment-sms.js (SMS du téléphone marchand) et ligdicash.js (préparé). La table AutoPayment n'est lue et
-// écrite que l'interrupteur ouvert : fermé, rien ne change et rien de nouveau n'est demandé à la base.
+// Plan 2 : paiement du repas validé automatiquement. Deux interrupteurs indépendants, fermés sans ligne :
+// PAIEMENT_AUTO_SMS (SMS du téléphone marchand, règles dans payment-sms.js ; formats d'essai : PAIEMENT_SMS_ESSAI) et
+// PAIEMENT_LIGDICASH (préparé, ligdicash.js). La table AutoPayment n'est lue et écrite que l'un d'eux ouvert : les deux
+// fermés, rien ne change. Les deux ouverts : une commande n'a qu'un paiement rattaché (AutoPayment.orderId unique) et
+// n'est validée qu'une fois (validateOrder ne change qu'une commande encore « paiement à vérifier »).
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/AppError.js';
-import { isFeatureOpen } from './features.service.js';
-import { AUTO_PAYMENT } from './features.js';
+import { getFeatures } from './features.service.js';
+import { autoPaymentModes } from './features.js';
 import { getAppSettings } from './app-settings.service.js';
 import { isPartnerDelivery, paymentConfirmError } from './order-status.js';
 import { afterChange, notifyPartner, statusChange } from './staff-orders.service.js';
 import {
   AUTO_NAME, autoReason, decide, dedupeKey, loadFormats, ORDER_AFTER_SMS_MS, ORDER_BEFORE_SMS_MS, parseSms, paymentForNewOrder,
 } from './payment-sms.js';
-import { callbackReference, CONFIRM_URL, CREATE_URL, invoiceBody, ligdicashHeaders, ligdicashReady, readConfirm, readCreate } from './ligdicash.js';
+import { callbackReference, CONFIRM_URL, CREATE_URL, invoiceBody, invoiceError, ligdicashHeaders, ligdicashReady, readConfirm, readCreate } from './ligdicash.js';
 
 const LABEL = { ORANGE_MONEY: 'Orange Money', MOOV_MONEY: 'Moov Money', TELECEL_MONEY: 'Telecel Money' };
 const AUTO = { id: null, name: AUTO_NAME };
 const unique = (e) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
 const notFound = () => new AppError(404, 'Adresse inconnue.', 'INTROUVABLE');
 
-export const autoPaymentOpen = () => isFeatureOpen(AUTO_PAYMENT);
+export const autoPaymentState = async () => autoPaymentModes(await getFeatures());
 const formats = () => loadFormats(env.autoPayment.smsFormats).formats;
 
 // Commandes en attente qui peuvent correspondre (même opérateur, même montant, sans paiement rattaché, récentes)
@@ -34,8 +36,9 @@ const pendingOrders = (operator, amount, from, to) =>
 
 // Un SMS transmis par l'application Android. Renvoie { status } (jamais d'erreur pour un SMS sans rapport).
 export async function receiveSms({ sender, text }, now = new Date()) {
-  if (!(await autoPaymentOpen())) throw notFound();
-  const parsed = parseSms({ sender, text }, formats());
+  const modes = await autoPaymentState();
+  if (!modes.sms) throw notFound();
+  const parsed = parseSms({ sender, text }, formats(), { trial: modes.trial });
   if (parsed.ignored) return { status: 'IGNORE' }; // expéditeur non officiel : rien n'est gardé
   const key = dedupeKey({ sender, text }, parsed);
   if (await prisma.autoPayment.findUnique({ where: { dedupeKey: key }, select: { id: true } })) return { status: 'DEJA_RECU' };
@@ -74,7 +77,7 @@ export async function receiveSms({ sender, text }, now = new Date()) {
 // N'échoue jamais.
 export function matchNewOrder(orderId) {
   (async () => {
-    if (!(await autoPaymentOpen())) return;
+    if (!(await autoPaymentState()).sms) return;
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       select: { id: true, reference: true, status: true, paymentMethod: true, itemsTotal: true, paymentPayerPhone: true, createdAt: true },
@@ -145,24 +148,29 @@ export async function validateOrder(paymentId, orderId) {
 // ─────────── Page Prestataire ───────────
 
 // Lire un SMS collé dans la page (aucune écriture, aucune validation)
-export function testSms({ sender, text }) {
+// Formats d'essai lus comme si leur interrupteur était ouvert ; trialOpen dit s'ils comptent vraiment aujourd'hui.
+export async function testSms({ sender, text }) {
   const { formats: list, error } = loadFormats(env.autoPayment.smsFormats);
-  const parsed = parseSms({ sender, text }, list);
-  return { ...parsed, key: parsed.ignored ? null : dedupeKey({ sender, text }, parsed), formatsError: error };
+  const parsed = parseSms({ sender, text }, list, { trial: true });
+  const modes = await autoPaymentState();
+  return { ...parsed, key: parsed.ignored ? null : dedupeKey({ sender, text }, parsed), formatsError: error, smsOpen: modes.sms, trialOpen: modes.trial };
 }
 
 export async function autoPaymentOverview() {
   const { formats: list, error } = loadFormats(env.autoPayment.smsFormats);
-  const open = await autoPaymentOpen();
-  const recent = open
+  const modes = await autoPaymentState();
+  const recent = modes.any
     ? await prisma.autoPayment.findMany({ orderBy: { receivedAt: 'desc' }, take: 50, include: { order: { select: { reference: true } } } })
     : [];
   return {
-    open,
+    open: modes.any,
+    smsOpen: modes.sms,
+    trialOpen: modes.trial,
+    ligdicashOpen: modes.ligdicash,
     smsKeySet: env.autoPayment.smsKey.length >= 24,
     ligdicashSet: ligdicashReady(env.autoPayment),
     formatsError: error,
-    formats: list.map((f) => ({ operator: f.operator, label: f.label, senders: f.senders, supposed: Boolean(f.supposed), example: f.example || null })),
+    formats: list.map((f) => ({ operator: f.operator, label: f.label, senders: f.senders, supposed: Boolean(f.supposed), trial: Boolean(f.trial), example: f.example || null })),
     recent: recent.map((p) => ({
       id: p.id, source: p.source, status: p.status, operator: p.operator, amount: p.amount, payerPhone: p.payerPhone, externalId: p.externalId,
       sender: p.sender, text: p.text, detail: p.detail, reference: p.order?.reference || null, receivedAt: p.receivedAt,
@@ -174,13 +182,14 @@ export async function autoPaymentOverview() {
 
 // Facture Ligdicash pour une commande en attente : adresse de la page de paiement. Pas encore proposé au client.
 export async function createLigdicashPayment(reference, { fetchImpl = globalThis.fetch } = {}) {
-  if (!(await autoPaymentOpen()) || !ligdicashReady(env.autoPayment)) throw notFound();
-  const order = await prisma.order.findUnique({ where: { reference }, select: { id: true, reference: true, status: true, itemsTotal: true } });
-  if (!order || order.status !== 'PAIEMENT_A_VERIFIER') throw new AppError(400, 'Cette commande n’attend pas de paiement.', 'PAIEMENT_IMPOSSIBLE');
+  if (!(await autoPaymentState()).ligdicash || !ligdicashReady(env.autoPayment)) throw notFound();
+  const order = await prisma.order.findUnique({ where: { reference }, select: { id: true, reference: true, status: true, itemsTotal: true, autoPayment: { select: { id: true } } } });
+  const refused = invoiceError(order);
+  if (refused) throw new AppError(400, refused, 'PAIEMENT_IMPOSSIBLE');
   const res = await fetchImpl(CREATE_URL, { method: 'POST', headers: ligdicashHeaders(env.autoPayment), body: JSON.stringify(invoiceBody(order, env)) });
   const created = readCreate(await res.json().catch(() => null));
   if (created.error) throw new AppError(502, created.error, 'LIGDICASH');
-  await prisma.autoPayment.create({
+  await prisma.autoPayment.create({ // orderId unique : un SMS rattaché entre-temps fait échouer la facture (aucun double)
     data: { source: 'LIGDICASH', dedupeKey: `LIGDICASH:${created.token}`, externalId: created.token, amount: order.itemsTotal, status: 'EN_ATTENTE', orderId: order.id },
   });
   return { url: created.url };
@@ -188,7 +197,7 @@ export async function createLigdicashPayment(reference, { fetchImpl = globalThis
 
 // Message de Ligdicash : jamais cru tel quel. Référence -> token gardé -> « confirm » -> validation commune.
 export async function ligdicashCallback(payload, { fetchImpl = globalThis.fetch } = {}) {
-  if (!(await autoPaymentOpen()) || !ligdicashReady(env.autoPayment)) throw notFound();
+  if (!(await autoPaymentState()).ligdicash || !ligdicashReady(env.autoPayment)) throw notFound();
   const reference = callbackReference(payload);
   if (!reference) return { status: 'IGNORE' };
   const order = await prisma.order.findUnique({ where: { reference }, select: { id: true, itemsTotal: true, autoPayment: true } });

@@ -849,13 +849,19 @@ Interrupteur `FRAIS_PAR_KM` (Prestataire), fermé sans ligne. Détails : README 
 
 ### Plan 2 : paiement du repas validé automatiquement (16 octobre 2026, pas encore en ligne)
 
-Interrupteur `PAIEMENT_AUTO` (Prestataire), fermé sans ligne. Détails : README « Paiement du repas validé
+Deux interrupteurs indépendants du Prestataire, fermés sans ligne (depuis le 16 octobre 2026, à la place de
+`PAIEMENT_AUTO`) : `PAIEMENT_AUTO_SMS` « Paiement automatique par SMS » et `PAIEMENT_LIGDICASH` « Paiement en ligne
+Ligdicash » ; en plus `PAIEMENT_SMS_ESSAI` « Formats SMS d'essai ». Détails : README « Paiement du repas validé
 automatiquement (plan 2) ».
 
 - [x] Solution B (SMS du téléphone marchand) : lecteur, rapprochement, journal, « Tester un SMS », call center.
 - [x] Solution A (Ligdicash) : structure seulement, sans identifiants.
 - [x] Tests (`backend/test/paiement-auto.test.js`), construction.
 - [x] Migration `20261016220000_paiement_auto` écrite sans base, **non appliquée**, dans `backend/prisma/migrations-en-attente/`.
+- [x] Deux interrupteurs (SMS, Ligdicash) ; les deux ouverts = chaque commande validée une seule fois (16 octobre 2026, commit local).
+- [x] Format d'essai « Orange Money · transfert reçu (essai) » d'après un vrai SMS du client (téléphone personnel),
+  derrière l'interrupteur « Formats SMS d'essai » ; transfert envoyé écarté (16 octobre 2026, commit local).
+- [ ] Essai réel avec le téléphone personnel du client (README, plan 2), puis fermer « Formats SMS d'essai ».
 - [ ] Le client fournit un vrai SMS de paiement reçu par opérateur (Orange Money, Moov Money, Telecel Money) ; formats
   corrigés et marqués vérifiés (`supposed: false`).
 - [ ] Le client crée `SMS_PAIEMENT_CLE` sur Render et installe « SMS to URL Forwarder » sur le téléphone marchand.

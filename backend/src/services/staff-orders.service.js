@@ -10,7 +10,7 @@ import { feeCorrectionError, feeEditRight, isNightTime, minutesToHHMM, nightFeeA
 import { kmGrid, loadGrid } from './delivery-fees.service.js';
 import { getAppSettings } from './app-settings.service.js';
 import { featureClosedError, getFeatures, isFeatureOpen } from './features.service.js';
-import { AUTO_PAYMENT, CALL_CENTER_LIGHT, CUSTOMER_TRACKING, historyCutoff } from './features.js';
+import { autoPaymentModes, CALL_CENTER_LIGHT, CUSTOMER_TRACKING, historyCutoff } from './features.js';
 import { quietMode, trackingPath } from './tracking.js';
 import { kmLockError, lockedEditRight } from './delivery-km.js';
 import { notifyCustomer } from './customer-push.service.js';
@@ -149,10 +149,10 @@ const notice = (o, { light = false, quiet = false } = {}) => noticeState(o, { au
 const staffModes = async (db = prisma) => {
   const features = await getFeatures(db);
   const feesLocked = Boolean(await kmGrid(db, features));
-  return { light: features[CALL_CENTER_LIGHT], quiet: features[CUSTOMER_TRACKING], feesLocked, autoPay: features[AUTO_PAYMENT] };
+  return { light: features[CALL_CENTER_LIGHT], quiet: features[CUSTOMER_TRACKING], feesLocked, autoPay: autoPaymentModes(features).any };
 };
 
-// Plan 2 : paiement reçu automatiquement pour cette commande (lu seulement l'interrupteur PAIEMENT_AUTO ouvert)
+// Plan 2 : paiement reçu automatiquement pour cette commande (lu seulement si PAIEMENT_AUTO_SMS ou PAIEMENT_LIGDICASH est ouvert)
 const withAutoPayment = async (order, modes) =>
   modes.autoPay ? { ...modes, autoPayment: await prisma.autoPayment.findUnique({ where: { orderId: order.id } }) } : modes;
 
