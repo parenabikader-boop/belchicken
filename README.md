@@ -591,6 +591,13 @@ sa page Équipe (« Compte Prestataire », sans numéro ni action), et `npm run 
   Google Authenticator + la clé en texte, vérification avec un code de l'application, puis 10 codes de secours affichés une seule
   fois) ; 2. Téléphone perdu (nouvelle clé, nouveaux codes de secours, tous les appareils déconnectés) ; 3. Nouveau mot de passe ;
   4. Débloquer. Demande `PRESTATAIRE_TOTP_KEY` (32 octets en base64) dans `backend/.env` et sur Render, jamais dans le code.
+  Le script affiche d'abord le nom du serveur Neon (jamais l'adresse) ; sur un autre serveur que dev, il faut taper
+  `PRODUCTION` pour continuer.
+- **Compte en production** : depuis une fenêtre PowerShell à part, les trois valeurs de Render (`DATABASE_URL`,
+  `DIRECT_URL`, `PRESTATAIRE_TOTP_KEY`) sont collées en saisie masquée dans des variables de cette fenêtre seulement
+  (elles passent avant `backend/.env`), jamais dans un fichier ; on ferme la fenêtre ensuite. La clé doit être celle de
+  Render, sinon le code à 6 chiffres sera refusé sur le vrai site. `npm run base:nom` affiche le nom du serveur utilisé
+  (dev ou PRODUCTION), sans l'adresse.
 - **Connexion en deux temps** : `POST /api/staff/login` répond `{ codeRequired: true }` et pose un jeton de 5 minutes (cookie
   httpOnly `bc_equipe_code`, limité à `/api/staff/login`, n'ouvre aucune page) ; puis `POST /api/staff/login/code { code }`
   (6 chiffres TOTP, bibliothèque `otpauth`, 30 s de tolérance, un même code ne sert qu'une fois ; ou code de secours à usage
@@ -634,6 +641,12 @@ table `DeliveryCompany`, une ligne ; pas de ligne = mode Restaurant). Règles : 
   société, codes).
 
 ## Livreurs indépendants (troisième mode de livraison)
+
+**Migration mise de côté (16 octobre 2026)** : elle est rangée dans `backend/prisma/migrations-en-attente/`, que Prisma
+ne lit pas, pour que Render ne l'applique pas à la mise en ligne. Le code reste en place ; la base n'a pas la valeur
+`INDEPENDANT`, ce qui ne gêne rien tant que l'interrupteur est fermé. **Ne pas ouvrir `LIVREURS_INDEPENDANTS`** (ni sur dev,
+ni en production) avant d'avoir remis le dossier dans `backend/prisma/migrations/` et appliqué la migration (sauvegarde
+Neon et accord écrit du client avant) : sinon, choisir ce mode ou créer un livreur indépendant échouerait.
 
 Interrupteur `LIVREURS_INDEPENDANTS` (page Prestataire), **fermé sans ligne** : fermé, le troisième choix n'apparaît pas,
 l'API le refuse, et un mode déjà enregistré compte comme Restaurant. Rien ne change pour les modes Restaurant et
@@ -961,6 +974,25 @@ connexion comprise) : nouvelle adresse ~3 s ; ancienne : Jour ~4 s, Semaine 7 à
 (à côté de Neon), tout est beaucoup plus court. L'ancienne adresse pourrait être accélérée sans changer les chiffres
 (ses 5 lectures partent l'une après l'autre ; en parallèle, essai à part : 3 à 5 fois plus rapide) : pas fait, attend
 l'accord du client.
+
+## Nouveau visuel de l'espace équipe
+
+Espace équipe au style « application » (cartes, gros boutons, barre d'onglets en bas sur téléphone et tablette, menu à
+gauche sur ordinateur). **Apparence seulement** : aucune règle, aucun droit, aucun calcul ni aucune adresse de l'API ne
+change. Aucune migration : l'interrupteur est une simple ligne `FeatureSwitch` (pas de ligne = fermé).
+
+- **Interrupteur `NOUVEAU_VISUEL`** (page Prestataire), **fermé sans ligne** : fermé, inconnu ou illisible = l'espace
+  équipe exactement comme avant, et rien du nouveau visuel n'est téléchargé (fichiers chargés à part). Ouvert seulement
+  si le serveur répond explicitement `true` (`isNewVisual()` dans `frontend/src/staff/nv/visual.js`).
+- **Pages concernées** (dossier `frontend/src/staff/nv/`) : cadre (`NvShell.jsx` : barre du haut, onglets en bas, 4 au
+  plus selon le rôle, le dernier, « Plus », ouvre le panneau ⋮ existant, mêmes pages et mêmes droits que `nav-pages.js`),
+  Commandes en cartes (`NvOrders.jsx`), détail d'une commande (`NvOrderDetail.jsx`, mêmes étapes et mêmes boutons),
+  tableau de bord (`NvDashboard.jsx`). Livreur et Responsable livraison : même cadre, avec leurs propres onglets.
+  Les autres pages gardent leur contenu, avec les couleurs du nouveau thème.
+- **Style** : tout dans `nv/theme.css`, rangé sous `.nv` (rien ne s'applique quand l'interrupteur est fermé) ; police
+  Rubik (Google Fonts), icônes `lucide-react`.
+- Tests : `frontend/src/staff/nv/visual.test.js` (onglets selon le rôle, interrupteur), `backend/test/prestataire.test.js`
+  (fermé sans ligne).
 
 ## Démonstration commerciale (base dev seulement)
 

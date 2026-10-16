@@ -18,6 +18,7 @@
     "db:studio": "prisma studio",
     "equipe:patron": "node scripts/create-patron.js",
     "equipe:prestataire": "node scripts/prestataire.js",
+    "base:nom": "node scripts/nom-base.js",
     "cloudinary:check": "node scripts/cloudinary-check.js",
     "demo:remplir": "node scripts/demo-remplir.js",
     "demo:effacer": "node scripts/demo-effacer.js",

@@ -14,6 +14,7 @@ import {
 } from '../src/services/prestataire-auth.js';
 import { logSecurity } from '../src/services/security-log.service.js';
 import { createPrompt } from './prompt.js';
+import { DEV_SERVER, PROD_SERVER, serverNameOf } from './demo-commun.js';
 
 const { ask, askHidden, close } = createPrompt();
 
@@ -131,8 +132,20 @@ async function unlock() {
   console.log(`\nCompte de ${user.name} débloqué.\n`);
 }
 
+// Nom du serveur Neon seulement (jamais l'adresse) ; sur la production, il faut taper PRODUCTION pour continuer
+async function confirmServer() {
+  const names = [process.env.DATABASE_URL, process.env.DIRECT_URL].map(serverNameOf);
+  if (!names[0] || !names[1]) throw new Error('Adresse de la base absente.');
+  if (names[0] !== names[1]) throw new Error(`Les deux adresses ne pointent pas sur la même base (${names[0]}, ${names[1]}).`);
+  const label = names[0] === DEV_SERVER ? 'dev' : names[0] === PROD_SERVER ? 'PRODUCTION' : 'serveur inconnu';
+  console.log(`\nBase : ${names[0]} (${label})`);
+  if (names[0] === DEV_SERVER) return;
+  if ((await ask(`Tapez PRODUCTION pour agir sur cette base (${label}) : `)) !== 'PRODUCTION') throw new Error('Rien n’a été fait.');
+}
+
 async function main() {
   totpKey(); // arrête tout de suite si PRESTATAIRE_TOTP_KEY manque
+  await confirmServer();
   console.log('\nCompte Prestataire de l’espace équipe Belchicken\n');
   console.log('  1. Créer le compte');
   console.log('  2. Téléphone perdu (nouvelle clé et nouveaux codes de secours)');

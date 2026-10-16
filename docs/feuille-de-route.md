@@ -775,11 +775,27 @@ Derrière l'interrupteur `LIVREURS_INDEPENDANTS`, fermé par défaut. Détails :
 
 - [x] Code et tests (`backend/test/livreurs-independants.test.js`, interrupteur fermé = rien ne change, prouvé).
 - [x] Migration `20261014120000_livreurs_independants` écrite sans base (`ALTER TYPE "DeliveryOperator" ADD VALUE 'INDEPENDANT'`).
-- [ ] Sauvegarde Neon de dev par le client, puis migration appliquée sur dev (`npm run db:deploy`), avec son accord écrit.
+- [x] **16 octobre 2026 : plus prioritaire** (notre équipe livre, voir « Idées à discuter avec Belchicken »). Migration
+  rangée dans `backend/prisma/migrations-en-attente/` (Prisma ne la lit pas, Render ne l'appliquera pas). Le serveur
+  démarre et `prisma migrate status` ne voit rien en attente sur dev. Ne pas ouvrir l'interrupteur avant de la remettre.
+- [ ] Remettre le dossier dans `backend/prisma/migrations/`, sauvegarde Neon de dev par le client, puis migration
+  appliquée sur dev (`npm run db:deploy`), avec son accord écrit.
 - [ ] Essais sur dev (interrupteur ouvert sur dev seulement), puis refermé.
 - [ ] Envoi sur GitHub avec l'accord écrit du client (Render applique alors la migration en production :
   sauvegarde de production avant).
 - [ ] Modèles Meta `…_independant` à soumettre seulement avant l'envoi automatique.
+
+### Nouveau visuel de l'espace équipe (16 octobre 2026, pas encore en ligne)
+
+Style « application » de l'espace équipe, apparence seulement, derrière l'interrupteur `NOUVEAU_VISUEL` (Prestataire),
+fermé sans ligne. Aucune migration. Détails : README « Nouveau visuel de l'espace équipe ».
+
+- [x] Code et tests (`frontend/src/staff/nv/visual.test.js`, `backend/test/prestataire.test.js`), construction du site.
+- [x] Interrupteur ouvert sur dev le 16 octobre 2026 pour l'essai complet en mode Prestataire (avant : aucune ligne ;
+  pour remettre : supprimer la ligne `NOUVEAU_VISUEL`). Laissé ouvert à la demande du client.
+- [ ] Essai par le client sur le vrai site, avec de vrais téléphones (le client ouvre l'interrupteur avec son compte
+  Prestataire de production ; fermé = rien ne change pour Belchicken).
+- [ ] Envoi sur GitHub avec l'accord écrit du client, après sa sauvegarde Neon de production.
 
 ## Démonstration commerciale (base dev)
 
@@ -821,6 +837,19 @@ réservé », pas de migration pour l'instant.
   n'est pas encaisser : seul « Espèces remises » est un vrai encaissement.
 - [ ] **Veulent-ils un jour rapprocher les commandes de l'application et les tickets de caisse ?** (par exemple
   retrouver le ticket d'une commande, ou vérifier que chaque commande payée a bien son ticket)
+
+**Nouvelles décisions du client (16 octobre 2026)** :
+
+- Belchicken nous a confié la livraison par contrat : c'est **notre équipe** (mode Prestataire) qui livre. Le mode
+  « Livreurs indépendants » n'est plus prioritaire : code gardé tel quel, interrupteur `LIVREURS_INDEPENDANTS` fermé,
+  migration `20261014120000_livreurs_independants` **non appliquée** (le serveur et le site démarrent sans elle) et
+  rangée dans `backend/prisma/migrations-en-attente/` pour que Render ne l'applique pas.
+- Essai du site complet en mode Prestataire : sur le **vrai site**, avec de vrais téléphones (décision du 16 octobre
+  2026, plus en local). Le client crée lui-même son compte Prestataire de production (README « Compte Prestataire »).
+- **Plus tard (pas maintenant)** : repas payé en ligne et validé automatiquement (plus de vérification par le call
+  center) ; frais de livraison calculés d'après la position du client avant le paiement, puis payés **au livreur** à
+  la livraison ; la livraison aura sa propre adresse et son propre hébergement, reliés à Belchicken. Plan à faire
+  après l'essai complet en mode Prestataire sur dev du 16 octobre 2026.
 
 **Les deux vrais gains pour le call center** (ils dépendent de Belchicken) :
 
