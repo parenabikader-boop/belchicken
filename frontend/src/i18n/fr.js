@@ -4,7 +4,7 @@
 // L'espace équipe n'utilise pas ces fichiers : il reste en français.
 import { drinksLabel } from '../utils/drinks.js';
 import { feeLabel, hourLabel, nightLine } from '../utils/deliveryFee.js';
-import { plural } from '../utils/format.js';
+import { formatPrice, plural } from '../utils/format.js';
 import { HOURS, RESTAURANT } from '../restaurant.js';
 
 const time = (iso) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -185,6 +185,12 @@ export default {
     priceLater: 'Livraison : prix confirmé par notre équipe',
     priceLoading: 'Calcul du prix…',
     priceTbc: 'prix à confirmer',
+    // Sous « Ma position », une fois le prix calculé (km : distance ; approx : distance estimée ; fee : null = à confirmer)
+    positionThanks: ({ km, approx, fee }) => {
+      const where = km != null ? ` Vous êtes à ${approx ? 'environ ' : ''}${String(km).replace('.', ',')} km de Belchicken :` : '';
+      const cost = fee == null ? 'le prix de la livraison sera confirmé par notre équipe' : fee === 0 ? 'la livraison est offerte' : `la livraison vous coûtera ${formatPrice(fee)}`;
+      return `✅ Merci, votre position est bien reçue.${where ? `${where} ${cost}` : ` ${cost[0].toUpperCase()}${cost.slice(1)}`}.`;
+    },
     priceFreeShort: 'offerte',
     km: (d) => `${String(d).replace('.', ',')} km`,
     estimate: 'Distance estimée.',

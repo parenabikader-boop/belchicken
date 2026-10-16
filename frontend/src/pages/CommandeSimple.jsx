@@ -219,7 +219,8 @@ export default function CommandeSimple() {
               {geoState === 'searching' ? S.locating : geo && !geo.picked ? S.relocate : S.useLocation}
             </button>
             {(geoState === 'denied' || geoState === 'unsupported') && <p className="cs-muted">{S.geoRefused}</p>}
-            {geo && !showMap && <p className="cs-ok">✓ {geo.picked ? S.mapDone : S.geoDone}</p>}
+            {/* Position reçue, prix pas encore là : une coche ; prix calculé : le message de remerciement ci-dessous */}
+            {geo && !showMap && !price && !quote?.error && <p className="cs-ok">✓ {geo.picked ? S.mapDone : S.geoDone}</p>}
             {showMap ? (
               <Suspense fallback={<p className="cs-muted">…</p>}>
                 <MapPicker value={geo} center={RESTAURANT} hint={S.mapHint} onPick={(p) => setGeo(mapLocation(p))} />
@@ -229,6 +230,8 @@ export default function CommandeSimple() {
             )}
             {/* Prix impossible (trop loin, position imprécise…) : une seule ligne, le paiement reste caché */}
             {geo && quote?.error && <p className="cs-bad" role="alert">{quote.error}</p>}
+            {/* Position reçue et prix calculé : un seul message court, mis à jour si la position change */}
+            {delivery && geo && price && <p className="cs-thanks" aria-live="polite">{S.positionThanks({ km: price.km, approx: price.estimate, fee: price.fee })}</p>}
             <label className="cs-label" htmlFor="cs-note">{S.landmark}</label>
             <input id="cs-note" className="cs-input" value={f.note} onChange={(e) => set('note', e.target.value)} placeholder={S.landmarkPh} maxLength={300} />
           </>

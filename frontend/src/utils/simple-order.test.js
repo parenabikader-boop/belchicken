@@ -81,3 +81,15 @@ test('écran large : le panneau seulement avec des plats ; panier vide, le menu 
   assert.equal(sidePanelShown(true, 12), true);
   assert.equal(sidePanelShown(false, 3), false); // téléphone : la barre en bas
 });
+
+test('message après la position : distance et prix, « environ » si estimée, en français et en anglais', async () => {
+  const fr = (await import('../i18n/fr.js')).default.simple.positionThanks;
+  const en = (await import('../i18n/en.js')).default.simple.positionThanks;
+  const nb = (s) => s.replace(/[  ]/g, ' '); // espaces insécables des montants
+  assert.equal(nb(fr({ km: 4.2, approx: false, fee: 1400 })), '✅ Merci, votre position est bien reçue. Vous êtes à 4,2 km de Belchicken : la livraison vous coûtera 1 400 F.');
+  assert.equal(nb(fr({ km: 4.2, approx: true, fee: 1400 })), '✅ Merci, votre position est bien reçue. Vous êtes à environ 4,2 km de Belchicken : la livraison vous coûtera 1 400 F.');
+  assert.equal(nb(en({ km: 4.2, approx: false, fee: 1400 })), '✅ Thank you, your location has been received. You are 4.2 km from Belchicken: delivery will cost 1 400 F.');
+  assert.equal(nb(en({ km: 4.2, approx: true, fee: 1400 })), '✅ Thank you, your location has been received. You are about 4.2 km from Belchicken: delivery will cost 1 400 F.');
+  assert.match(fr({ km: 2, approx: false, fee: 0 }), /la livraison est offerte\.$/);
+  assert.match(fr({ km: null, approx: false, fee: null }), /reçue\. Le prix de la livraison sera confirmé par notre équipe\.$/);
+});

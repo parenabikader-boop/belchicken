@@ -999,3 +999,5 @@ header.top .wrap:has(.lang-sw){gap:12px}
 .cs-mode{display:grid;gap:2px;justify-items:center}
 .cs-km{font-size:13px;font-weight:600;color:var(--muted)}
 .cs-mode.on .cs-km{color:var(--brand-ink)}
+/* Commande simplifiée : message court une fois la position reçue et le prix calculé */
+.cs-thanks{margin:0;font-size:15px;font-weight:600;color:var(--ok)}

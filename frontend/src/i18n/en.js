@@ -282,6 +282,11 @@ export default {
     priceLater: 'Delivery: price confirmed by our team',
     priceLoading: 'Calculating the price…',
     priceTbc: 'price to confirm',
+    positionThanks: ({ km, approx, fee }) => {
+      const where = km != null ? ` You are ${approx ? 'about ' : ''}${km} km from Belchicken:` : '';
+      const cost = fee == null ? 'the delivery price will be confirmed by our team' : fee === 0 ? 'delivery is free' : `delivery will cost ${formatPrice(fee)}`;
+      return `✅ Thank you, your location has been received.${where ? `${where} ${cost}` : ` ${cost[0].toUpperCase()}${cost.slice(1)}`}.`;
+    },
     priceFreeShort: 'free',
     km: (d) => `${d} km`,
     estimate: 'Estimated distance.',

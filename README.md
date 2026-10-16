@@ -1152,6 +1152,9 @@ d'avant (`GET /api/site` sans rien de plus, `test/menu-borne-commandes.test.js` 
   « Envoyer ma commande » ; le serveur refuse aussi une livraison passée sur le site sans position quand l'interrupteur
   est ouvert (`POSITION_OBLIGATOIRE`, `backend/src/services/simple-order.js`), jamais pour une commande à récupérer
   ni pour une commande saisie par un agent. Le prix s'affiche dans le bouton : « Livraison · 1 400 F », km en petit.
+  Sous « Ma position », une fois le prix calculé : « ✅ Merci, votre position est bien reçue. Vous êtes à X km de
+  Belchicken : la livraison vous coûtera Y F. » (« environ X km » si la distance est estimée), mis à jour à chaque
+  nouvelle position.
 - **Plus aucun quartier.** Position refusée, impossible ou moins précise que 1 km : petite carte OpenStreetMap
   (`components/MapPicker.jsx`, Leaflet 1.9.4, téléchargée seulement à l'ouverture) où le client pose son point ; le
   prix se calcule de la même façon. Le site envoie le montant affiché (`expectedFee`), comparé par le serveur.
