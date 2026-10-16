@@ -1,6 +1,6 @@
 -- Plan 2, paiement du repas validé automatiquement (interrupteur PAIEMENT_AUTO, fermé par défaut).
--- Écrite sans base (prisma migrate diff), NON APPLIQUÉE. Rangée dans prisma/migrations-en-attente/ : à déplacer dans
--- prisma/migrations/ seulement avec l'accord écrit du client, après une sauvegarde Neon.
+-- Écrite sans base (prisma migrate diff). Déplacée dans prisma/migrations/ le 16 octobre 2026 avec l'accord écrit du
+-- client, après sa sauvegarde Neon de production (« sauvegarde-prod-avant-lots-3-4 ») : appliquée par Render au déploiement.
 -- Structure seulement, aucune donnée écrite : une table AutoPayment (journal des paiements reçus), vide, reliée à
 -- Order par sa propre colonne orderId. Aucune colonne ajoutée à une table existante : tant que l'interrupteur est
 -- fermé, le code tourne même sans cette migration.

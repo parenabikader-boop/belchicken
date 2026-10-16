@@ -1,6 +1,6 @@
 -- Plan 3, frais de livraison par kilomètre (interrupteur FRAIS_PAR_KM, fermé par défaut).
--- Écrite sans base (prisma migrate diff), NON APPLIQUÉE. Rangée dans prisma/migrations-en-attente/ : à déplacer dans
--- prisma/migrations/ seulement avec l'accord écrit du client, après une sauvegarde Neon.
+-- Écrite sans base (prisma migrate diff). Déplacée dans prisma/migrations/ le 16 octobre 2026 avec l'accord écrit du
+-- client, après sa sauvegarde Neon de production (« sauvegarde-prod-avant-lots-3-4 ») : appliquée par Render au déploiement.
 -- Structure seulement, aucune donnée écrite :
 --   - deux valeurs ajoutées à la liste DeliveryFeeSource (KM_ROUTE, KM_ESTIMATION), utilisées seulement quand
 --     l'interrupteur est ouvert (PostgreSQL ne permet pas de retirer une valeur d'une liste ; inutilisées, elles ne gênent rien) ;

@@ -1053,7 +1053,7 @@ Interrupteur `FRAIS_PAR_KM` (page Prestataire), **fermé sans ligne** : fermé, 
 (`backend/test/frais-par-km.test.js`). Règles : `backend/src/services/delivery-km.js`, distance :
 `route-distance.service.js`.
 
-**Migration `20261016200000_frais_par_km`, NON APPLIQUÉE**, rangée dans `backend/prisma/migrations-en-attente/` : table
+**Migration `20261016200000_frais_par_km`** (dans `backend/prisma/migrations/` depuis le 16 octobre 2026, appliquée par Render à la mise en ligne) : table
 `DeliveryKmGrid` (vide) et valeurs `KM_ROUTE`, `KM_ESTIMATION` de `DeliveryFeeSource`. Aucune colonne ajoutée à une
 table existante, et la table n'est lue que l'interrupteur ouvert : fermé, le code tourne même sans la migration.
 **Ne pas ouvrir l'interrupteur avant de l'avoir appliquée.**
@@ -1086,7 +1086,7 @@ Interrupteur `PAIEMENT_AUTO` (page Prestataire), **fermé sans ligne** : fermé,
 Règles : `payment-sms.js` (SMS), `payment-sms-formats.js` (formats, données seulement), `ligdicash.js` (préparé) ;
 base : `auto-payment.service.js` ; adresses : `routes/payment-auto.routes.js` (`/api/paiements`).
 
-**Migration `20261016220000_paiement_auto`, NON APPLIQUÉE**, rangée dans `backend/prisma/migrations-en-attente/` :
+**Migration `20261016220000_paiement_auto`** (dans `backend/prisma/migrations/` depuis le 16 octobre 2026, appliquée par Render à la mise en ligne) :
 table `AutoPayment` (journal des paiements reçus), vide. Aucune colonne ajoutée à une table existante, et la table
 n'est lue que l'interrupteur ouvert. **Ne pas ouvrir l'interrupteur avant de l'avoir appliquée.**
 

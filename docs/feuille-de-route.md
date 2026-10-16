@@ -843,8 +843,9 @@ Interrupteur `FRAIS_PAR_KM` (Prestataire), fermé sans ligne. Détails : README 
 - [x] Tests (`backend/test/frais-par-km.test.js`, `frontend/src/utils/km-fee.test.js`), construction.
 - [x] Migration `20261016200000_frais_par_km` écrite sans base, **non appliquée**, dans `backend/prisma/migrations-en-attente/`.
 - [ ] Le client crée la variable Render `OPENROUTESERVICE_API_KEY` (clé gratuite d'openrouteservice.org).
-- [ ] Avec l'accord écrit du client : sauvegarde Neon, migration déplacée dans `backend/prisma/migrations/`, envoi ;
-  puis le Prestataire ouvre l'interrupteur et le Patron règle et allume sa grille.
+- [x] 16 octobre 2026 : sauvegarde « sauvegarde-prod-avant-lots-3-4 » par le client, migration déplacée dans
+  `backend/prisma/migrations/`, envoi avec son accord écrit (dev **non migrée**).
+- [ ] Le Prestataire ouvre l'interrupteur, le Patron règle et allume sa grille.
 
 ### Plan 2 : paiement du repas validé automatiquement (16 octobre 2026, pas encore en ligne)
 
@@ -859,7 +860,8 @@ automatiquement (plan 2) ».
   corrigés et marqués vérifiés (`supposed: false`).
 - [ ] Le client crée `SMS_PAIEMENT_CLE` sur Render et installe « SMS to URL Forwarder » sur le téléphone marchand.
 - [ ] Accord écrit de Belchicken pour transmettre les SMS du téléphone marchand.
-- [ ] Avec l'accord écrit du client : sauvegarde Neon, migration déplacée, envoi ; puis ouverture de l'interrupteur.
+- [x] 16 octobre 2026 : même sauvegarde, migration déplacée, envoi avec l'accord écrit du client (dev **non migrée**).
+- [ ] Ouverture de l'interrupteur, seulement après les vrais formats de SMS.
 - [ ] Ligdicash : contrat, identifiants, bouton « Payer en ligne » pour le client.
 
 ## Démonstration commerciale (base dev)
