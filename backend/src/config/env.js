@@ -41,6 +41,9 @@ export const env = {
     latitude: Number(process.env.RESTAURANT_LATITUDE) || 12.352187,
     longitude: Number(process.env.RESTAURANT_LONGITUDE) || -1.519188,
   },
+  // Plan 3 : clé OpenRouteService (distance par la route), seulement sur Render et dans backend/.env, jamais dans le
+  // code. Vide ou service injoignable : distance à vol d'oiseau × 1,3, notée « estimation » sur la commande.
+  openRouteServiceKey: process.env.OPENROUTESERVICE_API_KEY || '',
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
     apiKey: process.env.CLOUDINARY_API_KEY || '',

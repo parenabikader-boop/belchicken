@@ -147,6 +147,11 @@ export function feeOrigin(o) {
       return `Autre quartier ou trop loin${distance ? ` (${distance})` : ''} : à confirmer avec le client au téléphone`;
     case 'AGENT':
       return `Fixés par l’équipe${o.deliveryZoneName ? ` · quartier choisi : ${o.deliveryZoneName}` : ''}${distance ? ` · ${distance}` : ''}`;
+    // Plan 3 : grille par km, montant accepté par le client avant de payer
+    case 'KM_ROUTE':
+      return `Grille par km, acceptés par le client : ${km(o.deliveryDistanceM ?? 0)} par la route`;
+    case 'KM_ESTIMATION':
+      return `Grille par km, acceptés par le client : environ ${km(o.deliveryDistanceM ?? 0)} (estimation, service de distance indisponible)`;
     default:
       return null; // anciennes commandes, grille vide
   }

@@ -4,8 +4,10 @@ import { requireFeature } from '../middlewares/feature.js';
 import { orderSchema } from '../services/menu-edit.js';
 import { bandSchema, bandUpdateSchema, settingsSchema, zoneSchema, zoneUpdateSchema } from '../services/delivery-fees.js';
 import {
-  createBand, createZone, deleteBand, getStaffGrid, reorderZones, setSettings, updateBand, updateZone,
+  createBand, createZone, deleteBand, getStaffGrid, reorderZones, setKmGrid, setSettings, updateBand, updateZone,
 } from '../services/delivery-fees.service.js';
+import { kmGridSchema } from '../services/delivery-km.js';
+import { FEES_BY_KM } from '../services/features.js';
 
 // Page « Frais de livraison » : Patron seulement (quartiers, tranches de distance, « Autre quartier »)
 export const staffDeliveryFeesRouter = Router();
@@ -53,4 +55,9 @@ staffDeliveryFeesRouter.delete('/bands/:id', handle(async (req, res) => {
 
 staffDeliveryFeesRouter.put('/settings', handle(async (req, res) => {
   res.json(await setSettings(settingsSchema.parse(req.body)));
+}));
+
+// Plan 3 : grille par kilomètre (interrupteur FRAIS_PAR_KM ouvert, sinon 403)
+staffDeliveryFeesRouter.put('/km', requireFeature(FEES_BY_KM), handle(async (req, res) => {
+  res.json(await setKmGrid(kmGridSchema.parse(req.body), req.staff));
 }));

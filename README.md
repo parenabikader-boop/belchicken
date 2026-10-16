@@ -1047,6 +1047,39 @@ Ouvert :
   `quietMode()`) ; WhatsApp ne s'ouvre plus aux étapes. Le détail de la commande affiche le lien de suivi du client,
   à copier (`trackingUrl`), par exemple pour une commande prise au téléphone.
 
+## Frais par kilomètre avant le paiement (plan 3)
+
+Interrupteur `FRAIS_PAR_KM` (page Prestataire), **fermé sans ligne** : fermé, tout est exactement comme avant
+(`backend/test/frais-par-km.test.js`). Règles : `backend/src/services/delivery-km.js`, distance :
+`route-distance.service.js`.
+
+**Migration `20261016200000_frais_par_km`, NON APPLIQUÉE**, rangée dans `backend/prisma/migrations-en-attente/` : table
+`DeliveryKmGrid` (vide) et valeurs `KM_ROUTE`, `KM_ESTIMATION` de `DeliveryFeeSource`. Aucune colonne ajoutée à une
+table existante, et la table n'est lue que l'interrupteur ouvert : fermé, le code tourne même sans la migration.
+**Ne pas ouvrir l'interrupteur avant de l'avoir appliquée.**
+
+**Variable Render `OPENROUTESERVICE_API_KEY`** (clé gratuite d'openrouteservice.org, jamais dans le code). Vide, ou
+service injoignable (4 s), ou réponse illisible : distance à vol d'oiseau × 1,3, notée « estimation » (`KM_ESTIMATION`).
+La clé part dans l'en-tête `Authorization`, jamais dans l'adresse. Distances gardées en mémoire (6 h ; estimation 10 min)
+pour que le montant accepté soit le même à la commande.
+
+Ouvert, et grille allumée par le Patron :
+
+- **Patron** (page Frais de livraison, section « Grille par kilomètre », `PUT /api/staff/frais-livraison/km`) : prix
+  de départ + prix par km × distance par la route, arrondi **au-dessus** à 50 ou 100 F, minimum et maximum, distance
+  maximale facultative (au-delà, pas de livraison) ; exemples à 2, 5 et 10 km. Quartiers et tranches restent réglables.
+- **Client** (page Vos informations) : la livraison passe avant le paiement. Position partagée : « Livraison : X F
+  (Y km par la route), à payer au livreur », bouton « J'accepte » ; le paiement du repas reste fermé jusque-là. Sans
+  position : son quartier dans la liste (prix du quartier). « Autre quartier » n'est plus proposé ; position trop
+  imprécise (plus de 1 km) : refusée, avec une phrase claire. Le site renvoie le montant accepté (`expectedFee`),
+  comparé par le serveur ; sans lui, commande refusée (`FRAIS_A_ACCEPTER`) ; montant changé : `FRAIS_CHANGES`, à
+  accepter de nouveau.
+- **Commande** : montant, origine (`KM_ROUTE` ou `KM_ESTIMATION`) et distance par la route (`deliveryDistanceM`)
+  figés. Pas de supplément de nuit dans la grille par km (les quartiers gardent le leur).
+- **Call center** : ne corrige plus des frais déjà calculés (ni en confirmant le paiement, ni avec « Corriger »,
+  `kmLockError()`) ; le Patron le peut encore, avec un motif. Le livreur voit le montant, sans pouvoir le changer
+  (comme avant).
+
 ## Démonstration commerciale (base dev seulement)
 
 Un mois d'activité fictive mais réaliste sur la base **dev**, pour présenter le tableau de bord, les ventes,

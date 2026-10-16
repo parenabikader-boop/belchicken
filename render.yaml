@@ -60,6 +60,9 @@ services:
         sync: false
       - key: CLOUDINARY_FOLDER
         value: belchicken
+      # Plan 3 : distance par la route pour les frais par km (clé gratuite sur openrouteservice.org). Vide : estimation
+      - key: OPENROUTESERVICE_API_KEY
+        sync: false
       # Notifications de l'équipe sur téléphone : mêmes valeurs que dans backend/.env, à ne jamais changer ensuite
       - key: VAPID_PUBLIC_KEY
         sync: false

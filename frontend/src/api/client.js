@@ -177,6 +177,8 @@ export const staffApi = {
   updateDeliveryBand: (id, body) => staffRequest(`/frais-livraison/bands/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteDeliveryBand: (id) => staffRequest(`/frais-livraison/bands/${id}`, { method: 'DELETE' }),
   setDeliverySettings: (body) => staffRequest('/frais-livraison/settings', { method: 'PUT', body: JSON.stringify(body) }),
+  // Plan 3 : grille par kilomètre (interrupteur FRAIS_PAR_KM ouvert)
+  setDeliveryKmGrid: (body) => staffRequest('/frais-livraison/km', { method: 'PUT', body: JSON.stringify(body) }),
 
   // Caisse : frais à vérifier, espèces chez les livreurs, remises
   cash: () => staffRequest('/caisse'),

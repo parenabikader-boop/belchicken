@@ -54,6 +54,10 @@ enum DeliveryFeeSource {
   DISTANCE // tranche de distance depuis le restaurant (position GPS du client)
   A_CONFIRMER // autre quartier, au-delà de la dernière tranche ou position imprécise : l'agent fixe les frais au téléphone
   AGENT // saisis ou corrigés par l'équipe
+  // Plan 3 (interrupteur FRAIS_PAR_KM) : grille par kilomètre du Patron, distance par la route (OpenRouteService)…
+  KM_ROUTE
+  // … ou, service de distance injoignable, vol d'oiseau × 1,3 (« estimation »)
+  KM_ESTIMATION
 }
 
 // Frais de livraison payés au livreur à la réception : comment le client les a payés
@@ -800,4 +804,21 @@ model CustomerPushSubscription {
   createdAt DateTime @default(now())
 
   @@unique([orderId, endpoint])
+}
+
+// Plan 3, frais par kilomètre (interrupteur FRAIS_PAR_KM, fermé par défaut) : grille du Patron de Belchicken, une
+// seule ligne (id = 1), créée au premier enregistrement. Lue seulement quand l'interrupteur est ouvert. Frais =
+// prix de départ + prix par km × distance par la route, arrondi au-dessus (50 ou 100 F), entre le minimum et le
+// maximum ; au-delà de maxKm (vide = pas de limite), pas de livraison. Figés sur la commande comme les autres frais.
+model DeliveryKmGrid {
+  id            Int      @id @default(1)
+  enabled       Boolean  @default(false) // le Patron l'allume quand ses prix sont prêts
+  baseFee       Int      @default(0) // prix de départ, en F
+  perKmFee      Int      @default(0) // prix par km, en F
+  roundTo       Int      @default(100) // arrondi au-dessus : 50 ou 100 F
+  minFee        Int      @default(0)
+  maxFee        Int      @default(50000)
+  maxKm         Float? // distance maximale de livraison par la route, en km (vide = pas de limite)
+  updatedByName String? // copie figée
+  updatedAt     DateTime @updatedAt
 }

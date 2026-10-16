@@ -832,6 +832,20 @@ Interrupteur `SUIVI_SANS_WHATSAPP` (Prestataire), fermé sans ligne. Détails : 
   client : sauvegarde Neon de dev, migration sur dev, essais ; puis sauvegarde de production, dossier déplacé dans
   `backend/prisma/migrations/`, envoi (Render applique la migration).
 
+### Plan 3 : frais par kilomètre avant le paiement (16 octobre 2026, pas encore en ligne)
+
+Interrupteur `FRAIS_PAR_KM` (Prestataire), fermé sans ligne. Détails : README « Frais par kilomètre avant le paiement
+(plan 3) ».
+
+- [x] Grille par km du Patron, distance par la route (OpenRouteService, repli vol d'oiseau × 1,3 « estimation »),
+  « J'accepte » avant le paiement du repas, quartier sans position, « Autre quartier » retiré, call center sans
+  correction des frais.
+- [x] Tests (`backend/test/frais-par-km.test.js`, `frontend/src/utils/km-fee.test.js`), construction.
+- [x] Migration `20261016200000_frais_par_km` écrite sans base, **non appliquée**, dans `backend/prisma/migrations-en-attente/`.
+- [ ] Le client crée la variable Render `OPENROUTESERVICE_API_KEY` (clé gratuite d'openrouteservice.org).
+- [ ] Avec l'accord écrit du client : sauvegarde Neon, migration déplacée dans `backend/prisma/migrations/`, envoi ;
+  puis le Prestataire ouvre l'interrupteur et le Patron règle et allume sa grille.
+
 ## Démonstration commerciale (base dev)
 
 Pour la présentation commerciale à Belchicken : un mois d'activité fictive sur la base **dev** seulement (tableau de

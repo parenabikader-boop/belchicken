@@ -922,3 +922,12 @@ header.top .wrap:has(.lang-sw){gap:12px}
 .trk-share input{width:100%;box-sizing:border-box;font:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:#fff;color:var(--ink)}
 .cur-order{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:10px 0 0;padding:10px 14px;border-radius:var(--r);background:var(--brand-soft);border:1px solid var(--brand-line);color:var(--ink);text-decoration:none}
 .cur-order b{color:var(--brand-ink)}
+
+/* Plan 3 : frais de livraison par km, à accepter avant de payer le repas */
+.km-accept{margin:16px 0 0;padding:14px 16px;border-radius:var(--r);background:var(--gold-soft);border-left:4px solid var(--gold);display:grid;gap:8px;justify-items:start}
+.km-accept.ok{background:var(--ok-soft);border-left-color:var(--ok)}
+.km-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.km-line{margin:0;font-size:17px}
+.km-note,.km-wait{margin:0;font-size:14px;color:var(--muted)}
+.km-ok{margin:0;font-weight:700;color:var(--ok)}
+.km-ok .lnk{margin-left:8px;font-weight:400}

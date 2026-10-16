@@ -347,6 +347,22 @@ export default {
     sending: 'Sending…',
     send: 'Send my order',
     slow: 'Sending, please wait…',
+    // Plan 3: delivery fee per kilometre, to accept before paying for the meal
+    kmFee: {
+      title: 'Your delivery fee',
+      line: (fee, km) => `Delivery: ${fee}${km ? ` (${km})` : ''}, to pay the rider`,
+      lineZone: (fee, zone) => `Delivery: ${fee} (${zone}), to pay the rider`,
+      lineFree: (km) => `Free delivery${km ? ` (${km})` : ''}: nothing to pay the rider`,
+      road: (d) => `${d} km by road`,
+      estimate: 'Estimated distance: our calculation service is not responding right now.',
+      how: 'Paid to the rider on delivery, in cash or by mobile money. Not included in the payment for your meal.',
+      accept: 'I accept',
+      accepted: 'Fee accepted',
+      change: 'Change',
+      waiting: 'Share your location or choose your neighbourhood to see your delivery fee.',
+      lockPay: 'First accept your delivery fee (step 2): the payment for your meal then appears.',
+      needAccept: 'Accept your delivery fee.',
+    },
     back: '‹ Back to my order',
   },
   tracking: {

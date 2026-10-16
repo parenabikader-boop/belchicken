@@ -250,7 +250,8 @@ function TrackingNote({ order: o }) {
 // Bouton de l'étape suivante (avec confirmation pour le paiement et les frais) et annulation
 export function Actions({ order: o, steps }) {
   const { shortFlow, loaded } = useAppSettings();
-  const { features } = useStaff();
+  const { features, user } = useStaff();
+  const role = user?.role;
   const light = isCallCenterLight(features); // plan 1 : « Paiement vérifié » imprime aussi le bon
   const next = nextAction(o, { shortFlow });
   const pickup = isPickup(o);
@@ -283,6 +284,8 @@ export function Actions({ order: o, steps }) {
   // Frais calculés par la grille et changés par l'agent : c'est une correction, avec un motif
   const gridFee = o.deliveryFee;
   const changed = !noFee && gridFee != null && amount !== gridFee;
+  // Plan 3, grille par km active : frais calculés et acceptés par le client, le call center ne les change pas
+  const feeReadOnly = Boolean(o.feesLocked) && gridFee != null && !['PATRON', 'PRESTATAIRE'].includes(role);
   // Frais tapés par l'agent (à confirmer, grille vide, ou changés) : « dont supplément de nuit » facultatif
   const typed = !noFee && (gridFee == null || changed);
   const nightFee = toNight(night);
@@ -317,7 +320,10 @@ export function Actions({ order: o, steps }) {
             {feeOrigin(o) && <p className="st-muted">{feeOrigin(o)}.</p>}
             {gridFee != null && o.deliveryNightFee > 0 && !changed && <p className="st-muted">{nightLine(o.deliveryNightFee)}.</p>}
             <span className="of-amount">
-              <input id="st-fee" type="text" inputMode="numeric" autoComplete="off" placeholder="ex. 1000" value={fee} onChange={(e) => setFee(e.target.value.replace(/[^\d\s]/g, ''))} autoFocus={gridFee == null} />
+              <input
+                id="st-fee" type="text" inputMode="numeric" autoComplete="off" placeholder="ex. 1000" value={fee} onChange={(e) => setFee(e.target.value.replace(/[^\d\s]/g, ''))} autoFocus={gridFee == null}
+                readOnly={feeReadOnly}
+              />
               <span>F</span>
             </span>
             {changed && (
@@ -607,7 +613,11 @@ function DeliveryFeeAmount({ order: o, steps }) {
       )}
       {!editing && feeOrigin(o) && <p className="st-muted of-origin">{feeOrigin(o)}</p>}
       {!editing && patronOnly && !canEditFee(o, user.role) && o.deliveryFee != null && (
-        <p className="st-muted of-origin">Le livreur est parti : seul le Patron peut encore corriger les frais.</p>
+        <p className="st-muted of-origin">
+          {o.feesLocked
+            ? 'Frais calculés par le site et acceptés par le client : seul le Patron peut encore les corriger.' // plan 3
+            : 'Le livreur est parti : seul le Patron peut encore corriger les frais.'}
+        </p>
       )}
 
       {o.deliveryFee != null && !paid && o.status !== 'ANNULEE' && (

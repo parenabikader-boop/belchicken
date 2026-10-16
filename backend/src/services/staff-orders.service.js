@@ -7,11 +7,12 @@ import {
 import { deliveryProofs, PARTNER_ONLY } from './dispatch.js';
 import { courseReadyNotification, partnerNotification } from './push.message.js';
 import { feeCorrectionError, feeEditRight, isNightTime, minutesToHHMM, nightFeeAfter } from './delivery-fees.js';
-import { loadGrid } from './delivery-fees.service.js';
+import { kmGrid, loadGrid } from './delivery-fees.service.js';
 import { getAppSettings } from './app-settings.service.js';
 import { featureClosedError, getFeatures, isFeatureOpen } from './features.service.js';
 import { CALL_CENTER_LIGHT, CUSTOMER_TRACKING, historyCutoff } from './features.js';
 import { quietMode, trackingPath } from './tracking.js';
+import { kmLockError, lockedEditRight } from './delivery-km.js';
 import { notifyCustomer } from './customer-push.service.js';
 import { CONFIRM_TYPES, customerMessage, MESSAGE_KEYS, messageLabel, needsThanks, noticeError, noticePending, noticeState, stageSince, thanksWhere } from './customer-messages.js';
 import { autoNotifyCustomer } from './whatsapp.service.js';
@@ -144,16 +145,19 @@ const withCancelReason = (o) => ({ ...o, cancelReason: o.statusChanges.findLast(
 const notice = (o, { light = false, quiet = false } = {}) => noticeState(o, { auto: quietMode({ auto: customerAutoEnabled(), trackingOpen: quiet }), light });
 
 // Plan 1 : « Call center allégé » ; plan 4 : « Suivi sans WhatsApp » (interrupteurs fermés sans ligne)
+// Plan 3 : feesLocked, grille par km active : le call center ne corrige plus des frais calculés
 const staffModes = async (db = prisma) => {
   const features = await getFeatures(db);
-  return { light: features[CALL_CENTER_LIGHT], quiet: features[CUSTOMER_TRACKING] };
+  const feesLocked = Boolean(await kmGrid(db, features));
+  return { light: features[CALL_CENTER_LIGHT], quiet: features[CUSTOMER_TRACKING], feesLocked };
 };
 
 // night : heures de nuit réglées (null = réglage éteint), pour le rappel « commande passée de nuit »
 // ctx : contexte des messages (lot 5 : avec nos codes pour une commande en mode Prestataire, messageContextFor)
 // light : call center allégé (plan 1), le message de l'étape est proposé sans bloquer (skippable)
 // quiet : suivi sans WhatsApp (plan 4), aucun message à envoyer (notice.tracking) ; lien de suivi du client
-export function toStaffOrder(order, night = null, ctx = messageContext(), { light = false, quiet = false } = {}) {
+// feesLocked : grille par km active (plan 3), le call center ne corrige plus des frais calculés (feeEdit 'PATRON')
+export function toStaffOrder(order, night = null, ctx = messageContext(), { light = false, quiet = false, feesLocked = false } = {}) {
   const o = withCancelReason(order);
   const state = notice(o, { light, quiet });
   const from = sendFrom(o);
@@ -198,7 +202,8 @@ export function toStaffOrder(order, night = null, ctx = messageContext(), { ligh
     deliveryFeeSource: o.deliveryFeeSource,
     deliveryZoneName: o.deliveryZoneName,
     deliveryDistanceM: o.deliveryDistanceM,
-    feeEdit: feeEditRight(o).who,
+    feeEdit: feesLocked ? lockedEditRight(feeEditRight(o).who, o) : feeEditRight(o).who,
+    ...(feesLocked && { feesLocked: true }),
     // Livreur et code de remise (ou de retrait, à emporter). Le code est montré à l'équipe (il est dans
     // le message « en route » ou « prête », et peut être dicté au client par appel), jamais au livreur.
     courier: o.courierName ? { id: o.courierId, name: o.courierName, assignedAt: o.courierAssignedAt } : null,
@@ -367,6 +372,7 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, n
     const shortcut = isShortcut(order.status, to);
     if (shortcut && !(await getAppSettings(tx)).shortFlow) throw new AppError(400, SHORTCUT_OFF, 'CHANGEMENT_IMPOSSIBLE');
     const paying = to === 'PAYEE' || shortcut; // règles de la confirmation du paiement
+    const modes = await staffModes(tx);
     // Retrait au comptoir : avec le code du client, ou sans code avec un motif
     const counter = to === 'LIVREE' && pickup;
     const withCode = counter && !reason?.trim();
@@ -376,8 +382,10 @@ export async function changeStatus(reference, { from, to, reason, deliveryFee, n
       transitionError(order.status, shortcut ? 'PAYEE' : to, reason, order.mode, order.deliveryOperator) ||
       // Lot 5c : une commande Prestataire part avec « Commande récupérée », jamais par ce bouton
       (to === 'EN_LIVRAISON' && partner ? PARTNER_ONLY : null) ||
-      (to !== 'ANNULEE' ? noticeError(notice(order, await staffModes(tx))) : null) ||
+      (to !== 'ANNULEE' ? noticeError(notice(order, modes)) : null) ||
       (paying ? paymentConfirmError(fee, order.mode, order.deliveryFee, order.deliveryOperator) : null) ||
+      // Plan 3 : grille par km active, le call center ne change pas les frais calculés
+      (paying && !pickup && modes.feesLocked ? kmLockError(order, staff.role, fee) : null) ||
       night?.error ||
       // Frais de la grille changés par l'agent en confirmant le paiement : c'est une correction, avec un motif
       (paying && !pickup && order.deliveryFee != null && fee !== order.deliveryFee && (!feeReason || feeReason.trim().length < 3)
@@ -507,7 +515,8 @@ export async function setDeliveryFee(reference, amount, staff, reason = null, ni
   await prisma.$transaction(async (tx) => {
     const order = await findForRules(tx, reference);
     const night = nightFeeAfter(order, amount, nightFee);
-    const error = feeCorrectionError(order, staff.role, amount, reason, night.nightFee) || night.error;
+    const locked = (await staffModes(tx)).feesLocked ? kmLockError(order, staff.role, amount) : null; // plan 3
+    const error = locked || feeCorrectionError(order, staff.role, amount, reason, night.nightFee) || night.error;
     if (error) throw new AppError(order.deliveryFee === amount && !night.error ? 409 : 400, error, 'FRAIS_IMPOSSIBLES');
     await guardedUpdate(tx, order, { deliveryFee: amount, deliveryNightFee: night.nightFee, deliveryFeeSource: 'AGENT' });
     await tx.orderEvent.create({ data: feeEvent(order, amount, staff, reason) });

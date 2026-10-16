@@ -257,6 +257,22 @@ export default {
     sending: 'Envoi en cours…',
     send: 'Envoyer ma commande',
     slow: 'Envoi en cours, merci de patienter…',
+    // Plan 3 : frais par kilomètre, à accepter avant de payer le repas
+    kmFee: {
+      title: 'Vos frais de livraison',
+      line: (fee, km) => `Livraison : ${fee}${km ? ` (${km})` : ''}, à payer au livreur`,
+      lineZone: (fee, zone) => `Livraison : ${fee} (${zone}), à payer au livreur`,
+      lineFree: (km) => `Livraison offerte${km ? ` (${km})` : ''} : rien à payer au livreur`,
+      road: (d) => `${String(d).replace('.', ',')} km par la route`,
+      estimate: 'Distance estimée : notre service de calcul ne répond pas pour l’instant.',
+      how: 'Payés au livreur à la réception, en espèces ou par mobile money. Ils ne sont pas compris dans le paiement de votre repas.',
+      accept: 'J’accepte',
+      accepted: 'Frais acceptés',
+      change: 'Modifier',
+      waiting: 'Partagez votre position ou choisissez votre quartier pour connaître vos frais de livraison.',
+      lockPay: 'Acceptez d’abord vos frais de livraison (étape 2) : le paiement de votre repas s’affiche ensuite.',
+      needAccept: 'Acceptez vos frais de livraison.',
+    },
     back: '‹ Retour à ma commande',
   },
   tracking: {

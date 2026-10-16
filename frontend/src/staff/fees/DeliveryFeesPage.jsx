@@ -339,6 +339,90 @@ function NightHours({ settings, run }) {
   );
 }
 
+// ─── Plan 3 : grille par kilomètre (interrupteur FRAIS_PAR_KM ouvert) ───
+
+// Même calcul que le serveur (delivery-km.js), pour l'aperçu pendant la saisie ; le serveur reste seul juge
+const previewFee = (g, km) => {
+  if (g.maxKm != null && km > g.maxKm) return null;
+  const rounded = Math.ceil((g.baseFee + g.perKmFee * km) / g.roundTo - 1e-9) * g.roundTo;
+  return Math.min(g.maxFee, Math.max(g.minFee, rounded));
+};
+
+function KmGrid({ km, run }) {
+  const fields = (k) => ({ base: feeInput(k.baseFee), perKm: feeInput(k.perKmFee), min: feeInput(k.minFee), max: feeInput(k.maxFee), maxKm: k.maxKm == null ? '' : String(k.maxKm).replace('.', ','), roundTo: k.roundTo });
+  const [f, setF] = useState(() => fields(km));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
+  useEffect(() => setF(fields(km)), [km]); // la grille enregistrée remplace la saisie
+  const set = (key) => (v) => { setF((x) => ({ ...x, [key]: v })); setSaved(false); };
+  const body = {
+    baseFee: parseFee(f.base), perKmFee: parseFee(f.perKm), minFee: parseFee(f.min), maxFee: parseFee(f.max),
+    roundTo: Number(f.roundTo), maxKm: String(f.maxKm).trim() === '' ? null : parseKm(f.maxKm),
+  };
+  const valid = [body.baseFee, body.perKmFee, body.minFee, body.maxFee].every((n) => Number.isInteger(n) && n >= 0) && body.minFee <= body.maxFee && (body.maxKm == null || body.maxKm >= 0.5);
+  const save = async (enabled) => {
+    setSaving(true);
+    setError('');
+    setSaved(false);
+    try {
+      await run(() => staffApi.setDeliveryKmGrid({ ...body, enabled }), { rethrow: true });
+      setSaved(true);
+    } catch (e) {
+      setError(e.message);
+    }
+    setSaving(false);
+  };
+  return (
+    <section className="st-box fe-sec">
+      <h2>Grille par kilomètre</h2>
+      <div className="fe-other">
+        <p className="st-muted">
+          Allumée, le site calcule les frais avec la <b>distance par la route</b> depuis le restaurant (position partagée par le
+          client) : prix de départ + prix par km, arrondi au-dessus, entre le minimum et le maximum. Le client voit
+          « Livraison : X F (Y km), à payer au livreur » et l’accepte <b>avant</b> de payer son repas. Sans position, il choisit
+          son quartier (prix du quartier) ; « Autre quartier » n’est plus proposé ; le call center ne corrige plus les frais.
+        </p>
+        <Switch checked={km.enabled} disabled={saving || (!km.enabled && !valid)} onChange={() => save(!km.enabled)} label="Grille par kilomètre" on="Allumée" off="Éteinte" />
+      </div>
+      {!km.routeService && (
+        <p className="st-closed-note">Service de distance par la route pas encore réglé : la distance est estimée (vol d’oiseau × {String(km.estimateFactor).replace('.', ',')}) et notée « estimation » sur la commande.</p>
+      )}
+      <form className="fe-form" onSubmit={(e) => { e.preventDefault(); if (valid) save(km.enabled); }} noValidate>
+        <div className="fields">
+          <FeeField id="fk-base" value={f.base} onChange={set('base')} label="Prix de départ (F)" hint="Ajouté à chaque livraison." placeholder="500" />
+          <FeeField id="fk-perkm" value={f.perKm} onChange={set('perKm')} label="Prix par km (F)" hint="Par km de route." placeholder="200" />
+          <FeeField id="fk-min" value={f.min} onChange={set('min')} label="Minimum (F)" hint="Jamais moins." placeholder="500" />
+          <FeeField id="fk-max" value={f.max} onChange={set('max')} label="Maximum (F)" hint="Jamais plus." placeholder="3000" />
+          <div className="f">
+            <label htmlFor="fk-round">Arrondi</label>
+            <select id="fk-round" value={f.roundTo} onChange={(e) => set('roundTo')(Number(e.target.value))}>
+              <option value={50}>À 50 F au-dessus</option>
+              <option value={100}>À 100 F au-dessus</option>
+            </select>
+          </div>
+          <div className="f">
+            <label htmlFor="fk-maxkm">Distance maximale (km)</label>
+            <input id="fk-maxkm" type="text" inputMode="decimal" autoComplete="off" value={f.maxKm} onChange={(e) => set('maxKm')(e.target.value)} placeholder="15" />
+            <span className="hint">Au-delà, pas de livraison. Vide = pas de limite.</span>
+          </div>
+        </div>
+        {valid && (
+          <p className="fe-beyond">
+            Exemples : {[2, 5, 10].map((d) => `${d} km = ${previewFee(body, d) == null ? 'trop loin' : feeText(previewFee(body, d))}`).join(' · ')}
+          </p>
+        )}
+        {!valid && <p className="st-err">Montants : des nombres entiers de francs, le minimum au plus égal au maximum ; distance maximale : au moins 0,5 km.</p>}
+        {error && <p className="st-err" role="alert">{error}</p>}
+        <div className="st-action-row">
+          <button type="submit" className="btn btn-p" disabled={saving || !valid}>{saving ? 'Enregistrement…' : 'Enregistrer la grille par km'}</button>
+          {saved && <span className="st-muted" role="status">Enregistré{km.updatedByName ? ` par ${km.updatedByName}` : ''}.</span>}
+        </div>
+      </form>
+    </section>
+  );
+}
+
 export default function DeliveryFeesPage() {
   const [grid, setGrid] = useState(null);
   const [error, setError] = useState(null);
@@ -381,6 +465,8 @@ export default function DeliveryFeesPage() {
               <span><b>Grille vide.</b> Tant qu’aucun quartier ni aucune tranche n’est actif, le site fonctionne comme avant : l’équipe saisit les frais en confirmant le paiement.</span>
             </div>
           )}
+          {/* Plan 3 : seulement quand le Prestataire a ouvert l'interrupteur FRAIS_PAR_KM */}
+          {grid.km && <KmGrid km={grid.km} run={run} />}
           <Zones zones={grid.zones} run={run} />
           <Bands bands={grid.bands} run={run} />
           <NightHours settings={grid.settings} run={run} />

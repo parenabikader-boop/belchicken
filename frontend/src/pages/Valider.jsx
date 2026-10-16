@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import { TunnelHead } from '../components/PageParts.jsx';
@@ -10,6 +10,7 @@ import { formatPrice } from '../utils/format.js';
 import { fillCode, MOBILE_MONEY, usePaymentCodes } from '../utils/payment.js';
 import { normalize } from '../utils/deliveryFee.js';
 import { saveCurrent } from '../utils/tracking.js';
+import { checkoutOrder, kmAcceptedFor, quoteReady } from '../utils/km-fee.js';
 import { Rich, useLang } from '../i18n/index.jsx';
 
 const DRAFT_KEY = 'belchicken.infos.v1';
@@ -186,6 +187,39 @@ function FeeSummary({ grid, quote }) {
   );
 }
 
+// Plan 3, frais par kilomètre : « Livraison : X F (Y km), à payer au livreur », que le client accepte avant de payer
+// son repas. Le montant vient toujours du serveur (aperçu) ; le site ne renvoie que le montant accepté, comparé.
+function KmAccept({ quote, accepted, onAccept, onChange }) {
+  const { t } = useLang();
+  const K = t.checkout.kmFee;
+  let body;
+  if (!quote) body = <p className="km-wait">{K.waiting}</p>;
+  else if (quote.loading) body = <p className="km-wait">{t.checkout.feeLoading}</p>;
+  else if (quote.error) body = <p className="err-line">{quote.error}</p>;
+  else {
+    const km = quote.distanceKm != null ? K.road(quote.distanceKm) : null;
+    const line = quote.fee === 0 ? K.lineFree(km || quote.zoneName) : quote.zoneName ? K.lineZone(formatPrice(quote.fee), quote.zoneName) : K.line(formatPrice(quote.fee), km);
+    body = (
+      <>
+        <p className="km-line"><b>{line}</b></p>
+        {quote.estimate && <p className="km-note">{K.estimate}</p>}
+        {quote.fee !== 0 && <p className="km-note">{K.how}</p>}
+        {accepted ? (
+          <p className="km-ok">✓ {K.accepted} <button type="button" className="lnk" onClick={onChange}>{K.change}</button></p>
+        ) : (
+          <button type="button" className="btn btn-p" onClick={onAccept}>{K.accept}</button>
+        )}
+      </>
+    );
+  }
+  return (
+    <div className={`km-accept${accepted ? ' ok' : ''}`} aria-live="polite">
+      <span className="km-title">{K.title}</span>
+      {body}
+    </div>
+  );
+}
+
 // Après le choix de l'opérateur : le code marchand avec le montant des plats déjà rempli
 function PayStep({ method, total, payment }) {
   const { t } = useLang();
@@ -352,12 +386,24 @@ export default function Valider() {
     setErrors(({ zone: _, ...rest }) => rest);
   };
 
+  // Plan 3, grille par km active : le client accepte ses frais, puis seulement il paie son repas. Un autre montant
+  // (nouvelle position, autre quartier, prix changé) doit être accepté à nouveau.
+  const kmMode = gridOn && Boolean(grid?.km);
+  const [acceptedQuote, setAcceptedQuote] = useState(null);
+  const feeReady = quoteReady(quote);
+  const kmAccepted = kmMode && kmAcceptedFor(quote, acceptedQuote);
+  const payLocked = kmMode && !kmAccepted;
+
   const submit = async () => {
     if (sending) return;
     const { fields, summary } = validate(form, gridOn ? grid : null, C);
     if (gridOn && quote?.error && !fields.zone) {
       fields.zone = quote.error;
       summary.push(quote.error);
+    }
+    if (kmMode && !kmAccepted && !fields.zone) {
+      fields.zone = C.kmFee.needAccept;
+      summary.push(C.kmFee.needAccept);
     }
     setErrors(fields);
     if (summary.length) {
@@ -379,7 +425,9 @@ export default function Valider() {
         delivery: {
           ...(form.zone && { zoneId: form.zone.id }),
           ...(form.other && !form.zone && { other: true }),
-          ...(quote && !quote.loading && !quote.error && { expectedFee: quote.fee }),
+          ...(kmMode
+            ? kmAccepted && { expectedFee: acceptedQuote.fee } // plan 3 : le montant que le client a accepté
+            : quote && !quote.loading && !quote.error && { expectedFee: quote.fee }),
         },
       }),
       // Jamais de prix : le serveur les recalcule
@@ -429,7 +477,7 @@ export default function Valider() {
       // Prix changé par le Patron entre l'aperçu et l'envoi : le nouveau montant s'affiche, le client revalide
       // (ou début des heures de nuit) : la liste des quartiers est rechargée avec les prix du moment
       if (err.code === 'FRAIS_CHANGES' && err.details?.quote) {
-        setQuote(err.details.quote);
+        setQuote(err.details.quote); // plan 3 : nouveau montant, à accepter de nouveau
         loadGrid();
       }
       if (err.code === 'FRAIS_LIVRAISON') loadGrid();
@@ -458,6 +506,87 @@ export default function Valider() {
   else if (geoState === 'unsupported') geoSub = C.geoUnsupported;
   else if (form.geo) [geoTitle, geoSub] = [C.geoDone, C.geoAccuracy(form.geo.accuracy)];
 
+  // Paiement du repas, puis livraison ; plan 3 (grille par km) : livraison d'abord, paiement après « J'accepte »
+  const paymentBox = (
+    <section className="box">
+      <div className="box-h"><span className="n">{kmMode ? 3 : 2}</span><h2>{C.payment}</h2></div>
+      <div className="box-b">
+        {payLocked ? <p className="pay-hint">{C.kmFee.lockPay}</p> : <>
+          <fieldset>
+            <legend>{C.operator}<i style={{ color: 'var(--bad)', fontStyle: 'normal' }}>*</i></legend>
+            <div className="methods" role="radiogroup">
+              {METHODS.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={form.method === m.id}
+                  className={`opt${form.method === m.id ? ' on' : ''}`}
+                  onClick={() => set('method', m.id)}
+                >
+                  <span className={m.cls}>{m.logo}</span>
+                  <span className="l"><b>{m.label}</b><small>{C.merchantCode}</small></span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          {errors.method && <p className="err-line">{errors.method}</p>}
+          <PayStep method={form.method} total={total} payment={payment} />
+          <div className="fields" style={{ marginTop: 16 }}>
+            <Field id="c-payer" label={C.payer} required error={errors.payer}>
+              <input {...input('payer')} type="tel" inputMode="tel" placeholder="+226 76 12 34 56" />
+            </Field>
+          </div>
+        </>}
+      </div>
+    </section>
+  );
+  const modeBox = (
+    <section className="box">
+      <div className="box-h"><span className="n">{kmMode ? 2 : 3}</span><h2>{C.mode}</h2></div>
+      <div className="box-b">
+        <div className="methods modes" role="radiogroup" aria-label={C.mode}>
+          {MODES.map((m) => (
+            <button key={m.id} type="button" role="radio" aria-checked={form.mode === m.id} className={`opt${form.mode === m.id ? ' on' : ''}`} onClick={() => set('mode', m.id)}>
+              <span className="rd" aria-hidden="true" />
+              <span className="l"><b>{C.modes[m.id][0]}</b><small>{C.modes[m.id][1]}</small></span>
+            </button>
+          ))}
+        </div>
+        {delivery ? (
+          <>
+            {gridOn && <ZonePicker grid={grid} form={form} onPick={pickZone} error={errors.zone} />}
+            <div className={`geo${form.geo && !geoState ? ' ok' : ''}`} style={{ marginTop: 16 }}>
+              <div className="ic"><PinIcon /></div>
+              <div style={{ flex: 1 }} aria-live="polite"><b>{geoTitle}</b><span>{geoSub}</span></div>
+              <button type="button" className="btn btn-s" style={{ padding: '9px 16px' }} onClick={locate} disabled={geoState === 'searching'}>
+                {form.geo ? C.geoRefresh : C.geoButton}
+              </button>
+            </div>
+            {errors.geo && <p className="err-line">{errors.geo}</p>}
+            <div className="fields" style={{ marginTop: 16 }}>
+              <Field id="c-addr" label={gridOn ? C.landmarks : C.zoneLandmarks} hint={C.landmarksHint} error={errors.addr} full>
+                <textarea {...input('addr')} placeholder={gridOn ? C.landmarksPh : C.zoneLandmarksPh} maxLength={300} />
+              </Field>
+            </div>
+            {kmMode && <KmAccept quote={feeReady || quote?.loading || quote?.error ? quote : null} accepted={kmAccepted} onAccept={() => { setAcceptedQuote(quote); setErrors(({ zone: _, ...rest }) => rest); }} onChange={() => setAcceptedQuote(null)} />}
+          </>
+        ) : (
+          <div className="pickup">
+            <div className="ic"><PinIcon /></div>
+            <div className="pickup-t">
+              <b>{RESTAURANT.name}</b>
+              <span>{t.restaurant.address}, {RESTAURANT.city}</span>
+              <small>{t.restaurant.hours.map((h) => `${h.days} : ${h.time}`).join(' · ')}</small>
+              <small>{C.pickupWrite}</small>
+            </div>
+            <a className="btn btn-s" href={DIRECTIONS_URL} target="_blank" rel="noreferrer">{t.common.directions}</a>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+
   return (
     <>
       <div className="wrap pagebody tunnel-body" style={{ maxWidth: 1160 }}>
@@ -483,79 +612,8 @@ export default function Valider() {
                 </div></div>
               </section>
 
-              <section className="box">
-                <div className="box-h"><span className="n">2</span><h2>{C.payment}</h2></div>
-                <div className="box-b">
-                  <fieldset>
-                    <legend>{C.operator}<i style={{ color: 'var(--bad)', fontStyle: 'normal' }}>*</i></legend>
-                    <div className="methods" role="radiogroup">
-                      {METHODS.map((m) => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          role="radio"
-                          aria-checked={form.method === m.id}
-                          className={`opt${form.method === m.id ? ' on' : ''}`}
-                          onClick={() => set('method', m.id)}
-                        >
-                          <span className={m.cls}>{m.logo}</span>
-                          <span className="l"><b>{m.label}</b><small>{C.merchantCode}</small></span>
-                        </button>
-                      ))}
-                    </div>
-                  </fieldset>
-                  {errors.method && <p className="err-line">{errors.method}</p>}
-                  <PayStep method={form.method} total={total} payment={payment} />
-                  <div className="fields" style={{ marginTop: 16 }}>
-                    <Field id="c-payer" label={C.payer} required error={errors.payer}>
-                      <input {...input('payer')} type="tel" inputMode="tel" placeholder="+226 76 12 34 56" />
-                    </Field>
-                  </div>
-                </div>
-              </section>
-
-              <section className="box">
-                <div className="box-h"><span className="n">3</span><h2>{C.mode}</h2></div>
-                <div className="box-b">
-                  <div className="methods modes" role="radiogroup" aria-label={C.mode}>
-                    {MODES.map((m) => (
-                      <button key={m.id} type="button" role="radio" aria-checked={form.mode === m.id} className={`opt${form.mode === m.id ? ' on' : ''}`} onClick={() => set('mode', m.id)}>
-                        <span className="rd" aria-hidden="true" />
-                        <span className="l"><b>{C.modes[m.id][0]}</b><small>{C.modes[m.id][1]}</small></span>
-                      </button>
-                    ))}
-                  </div>
-                  {delivery ? (
-                    <>
-                      {gridOn && <ZonePicker grid={grid} form={form} onPick={pickZone} error={errors.zone} />}
-                      <div className={`geo${form.geo && !geoState ? ' ok' : ''}`} style={{ marginTop: 16 }}>
-                        <div className="ic"><PinIcon /></div>
-                        <div style={{ flex: 1 }} aria-live="polite"><b>{geoTitle}</b><span>{geoSub}</span></div>
-                        <button type="button" className="btn btn-s" style={{ padding: '9px 16px' }} onClick={locate} disabled={geoState === 'searching'}>
-                          {form.geo ? C.geoRefresh : C.geoButton}
-                        </button>
-                      </div>
-                      {errors.geo && <p className="err-line">{errors.geo}</p>}
-                      <div className="fields" style={{ marginTop: 16 }}>
-                        <Field id="c-addr" label={gridOn ? C.landmarks : C.zoneLandmarks} hint={C.landmarksHint} error={errors.addr} full>
-                          <textarea {...input('addr')} placeholder={gridOn ? C.landmarksPh : C.zoneLandmarksPh} maxLength={300} />
-                        </Field>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="pickup">
-                      <div className="ic"><PinIcon /></div>
-                      <div className="pickup-t">
-                        <b>{RESTAURANT.name}</b>
-                        <span>{t.restaurant.address}, {RESTAURANT.city}</span>
-                        <small>{t.restaurant.hours.map((h) => `${h.days} : ${h.time}`).join(' · ')}</small>
-                        <small>{C.pickupWrite}</small>
-                      </div>
-                      <a className="btn btn-s" href={DIRECTIONS_URL} target="_blank" rel="noreferrer">{t.common.directions}</a>
-                    </div>
-                  )}
-                </div>
-              </section>
+              {/* Plan 3, grille par km : la livraison (et ses frais à accepter) avant le paiement du repas */}
+              {checkoutOrder(kmMode).slice(1).map((step) => <Fragment key={step}>{step === 'mode' ? modeBox : paymentBox}</Fragment>)}
             </div>
 
             <aside className="box sum">
