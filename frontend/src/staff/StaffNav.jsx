@@ -12,10 +12,9 @@ const BellIcon = () => (
 // Alertes et « ⋮ », qui ouvre un panneau sur le côté avec toutes les pages du rôle (nav-pages.js), le nom de la
 // personne connectée et Déconnexion. L'API vérifie toujours les droits : le panneau ne fait que cacher les liens.
 export default function StaffNav({ unseen, chiffres }) {
-  const { user, logout, hasFeature } = useStaff();
+  const { user, hasFeature } = useStaff();
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
-  const panel = useRef(null);
   const opener = useRef(null);
   const prestataire = user.role === 'PRESTATAIRE';
   const pages = staffPages({ role: user.role, patron: isPatronLevel(user.role), hasFeature, chiffres });
@@ -23,22 +22,6 @@ export default function StaffNav({ unseen, chiffres }) {
 
   // Nouvelle page : le panneau se referme
   useEffect(() => setOpen(false), [pathname]);
-
-  // Ouvert : Échap le referme, la page derrière ne défile plus, le premier lien reçoit le focus
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => e.key === 'Escape' && setOpen(false);
-    document.addEventListener('keydown', onKey);
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    panel.current?.querySelector('a, button')?.focus();
-    const back = opener.current;
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = overflow;
-      back?.focus();
-    };
-  }, [open]);
 
   return (
     <header className="st-top sn-top">
@@ -58,13 +41,40 @@ export default function StaffNav({ unseen, chiffres }) {
           {unseen > 0 && <span className="st-badge sn-dot" aria-label={`${unseen} nouvelles commandes`}>{unseen}</span>}
         </button>
       </div>
-      {open && (
+      {open && <NavPanel pages={pages} unseen={unseen} opener={opener} onClose={() => setOpen(false)} />}
+    </header>
+  );
+}
+
+// Panneau « ⋮ » : toutes les pages du rôle, la personne connectée et Déconnexion. Aussi ouvert par l'onglet « Plus »
+// du nouveau visuel (nv/NvShell.jsx). Affiché = ouvert : Échap le referme, la page derrière ne défile plus, le
+// premier lien reçoit le focus, puis le bouton qui l'a ouvert (opener) le retrouve à la fermeture.
+export function NavPanel({ pages, unseen = 0, opener, onClose }) {
+  const { user, logout } = useStaff();
+  const { pathname } = useLocation();
+  const panel = useRef(null);
+
+  useEffect(() => {
+    const onKey = (e) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    panel.current?.querySelector('a, button')?.focus();
+    const back = opener?.current;
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = overflow;
+      back?.focus();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
         <div className="sn-layer">
-          <div className="sn-shade" onClick={() => setOpen(false)} aria-hidden="true" />
+          <div className="sn-shade" onClick={onClose} aria-hidden="true" />
           <div className="sn-panel" ref={panel} role="dialog" aria-modal="true" aria-label="Pages de l’espace équipe">
             <div className="sn-panel-top">
               <span className="sn-panel-brand"><b>Belchicken</b><small>Espace équipe</small></span>
-              <button type="button" className="sn-close" aria-label="Fermer" onClick={() => setOpen(false)}>×</button>
+              <button type="button" className="sn-close" aria-label="Fermer" onClick={onClose}>×</button>
             </div>
             <nav className="sn-links" aria-label="Espace équipe">
               {pages.map((p) => (
@@ -83,7 +93,5 @@ export default function StaffNav({ unseen, chiffres }) {
             </div>
           </div>
         </div>
-      )}
-    </header>
   );
 }

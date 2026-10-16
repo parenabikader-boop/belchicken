@@ -174,8 +174,8 @@ test('jeton entre le mot de passe et le code : cookie httpOnly limité à l’ad
 test('interrupteurs : pas de ligne = ouvert, fermer ne touche que la fonction fermée', () => {
   const all = featureMap([]);
   assert.deepEqual(Object.keys(all), FEATURE_KEYS);
-  // Exceptions, fermées sans ligne : RELEVE (lot 5d, relevé vu par le Patron) et LIVREURS_INDEPENDANTS
-  const closed = ['RELEVE', 'LIVREURS_INDEPENDANTS'];
+  // Exceptions, fermées sans ligne : RELEVE (lot 5d, relevé vu par le Patron), LIVREURS_INDEPENDANTS et NOUVEAU_VISUEL
+  const closed = ['RELEVE', 'LIVREURS_INDEPENDANTS', 'NOUVEAU_VISUEL'];
   assert.ok(Object.entries(all).every(([key, open]) => open === !closed.includes(key)));
   const map = featureMap([{ key: 'CAISSE', enabled: false }, { key: 'HISTORIQUE', enabled: true }, { key: 'INCONNUE', enabled: false }]);
   assert.equal(map.CAISSE, false);
@@ -239,4 +239,10 @@ test('supplément de nuit fermé : plus d’heures de nuit, la grille continue d
   assert.equal(closed.zones.length, 1);
   // Page Frais de livraison fermée : la grille reste appliquée pour les clients
   assert.equal((await loadGrid(fakeDb({ delivery, closed: ['FRAIS_LIVRAISON'] }))).zones[0].fee, 500);
+});
+
+test('NOUVEAU_VISUEL : fermé sans ligne, ouvert seulement par le Prestataire (apparence seulement)', () => {
+  assert.equal(featureMap([]).NOUVEAU_VISUEL, false);
+  assert.equal(featureMap([{ key: 'NOUVEAU_VISUEL', enabled: false }]).NOUVEAU_VISUEL, false);
+  assert.equal(featureMap([{ key: 'NOUVEAU_VISUEL', enabled: true }]).NOUVEAU_VISUEL, true);
 });

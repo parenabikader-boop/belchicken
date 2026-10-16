@@ -41,7 +41,7 @@ export default function OrderDetail() {
 
 // Lot 7 : avis du client sur une commande livrée ou retirée. Patron et Prestataire seulement, AVIS ouvert
 // (l'API le vérifie) : l'Opérateur ne voit pas les notes. Lu à part, une fois la commande livrée.
-function OrderReview({ order }) {
+export function OrderReview({ order }) {
   const { user, hasFeature } = useStaff();
   const allowed = isPatronLevel(user.role) && hasFeature('AVIS') && order.status === 'LIVREE';
   const [review, setReview] = useState(undefined);

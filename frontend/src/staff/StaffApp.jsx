@@ -11,6 +11,13 @@ import StaffNav from './StaffNav.jsx';
 import { teamHome } from './nav-pages.js';
 // Lot 12 : nouvelle page Commandes (réglage « Nouvelle page Commandes », et /equipe/commandes-v2 pour l'essayer)
 const OrdersPage2 = lazy(() => import('./orders2/OrdersPage2.jsx'));
+// Nouveau visuel (interrupteur NOUVEAU_VISUEL du Prestataire, fermé par défaut) : chargé seulement quand il est ouvert.
+// Fermé : rien de ce code ni de son style n'est téléchargé, l'espace équipe est exactement comme avant.
+import { isNewVisual } from './nv/visual.js';
+const NvShell = lazy(() => import('./nv/NvShell.jsx'));
+const NvOrders = lazy(() => import('./nv/NvOrders.jsx'));
+const NvOrderDetail = lazy(() => import('./nv/NvOrderDetail.jsx'));
+const NvDashboard = lazy(() => import('./nv/NvDashboard.jsx'));
 import OrderDetail from './orders/OrderDetail.jsx';
 import MenuAdmin from './menu/MenuAdmin.jsx';
 import ProductForm from './menu/ProductForm.jsx';
@@ -110,7 +117,7 @@ function TeamRoutes() {
         <Route index element={<TeamHome />} />
         <Route path="commandes" element={<OrdersChoice />} />
         <Route path="commandes/nouvelle" element={<NewOrder />} />
-        <Route path="commandes/:reference" element={<OrderDetail />} />
+        <Route path="commandes/:reference" element={<Visual old={<OrderDetail />} nv={NvOrderDetail} />} />
         <Route path="menu" element={<MenuAdmin />} />
         <Route path="caisse" element={<RequireFeature feature="CAISSE"><CashPage /></RequireFeature>} />
         <Route path="alertes" element={<AlertsPage />} />
@@ -123,7 +130,7 @@ function TeamRoutes() {
           <Route path="menu/categories/nouvelle" element={<CategoryForm />} />
           <Route path="menu/categories/:id" element={<CategoryForm />} />
           <Route path="accueil" element={<HomeAdmin />} />
-          <Route path="tableau-de-bord" element={<RequireFeature feature="TABLEAU_DE_BORD"><Dashboard /></RequireFeature>} />
+          <Route path="tableau-de-bord" element={<RequireFeature feature="TABLEAU_DE_BORD"><Visual old={<Dashboard />} nv={NvDashboard} /></RequireFeature>} />
           <Route path="ventes" element={<RequireFeature feature="VENTES"><SalesPage /></RequireFeature>} />
           <Route path="avis" element={<RequireFeature feature="AVIS"><ReviewsPage /></RequireFeature>} />
           <Route path="equipe" element={<TeamPage />} />
@@ -152,7 +159,7 @@ function TeamRoutes() {
 // En-tête du livreur : ses courses, ses alertes, son mot de passe.
 // Lot 5b : aussi celui du Responsable livraison (page Livraison, sans alertes).
 function CourierShell({ home = '/equipe/courses', homeLabel = 'Mes courses', subtitle = 'Espace livreur', alerts = true }) {
-  const { user, logout } = useStaff();
+  const { user, logout, features } = useStaff();
   const { pathname } = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -161,6 +168,10 @@ function CourierShell({ home = '/equipe/courses', homeLabel = 'Mes courses', sub
   // Barre simple (logo, nom de la page, Alertes, « ⋮ ») avec la nouvelle page Commandes : quand le réglage
   // « Nouvelle page Commandes » est actif, et sur /equipe/commandes-v2 pour l'essayer. Sinon l'ancienne barre.
   const { newOrdersPage } = useAppSettings();
+  // Nouveau visuel : même cadre que l'équipe, avec ses propres onglets (Courses, Alertes ; ou Livraison)
+  if (isNewVisual(features)) {
+    return <Suspense fallback={null}><NvShell kind={home === '/equipe/livraison' ? 'delivery' : 'courier'} /></Suspense>;
+  }
   if (newOrdersPage || pathname === '/equipe/commandes-v2') {
     return (
       <div className="st-app">
@@ -227,6 +238,9 @@ function RequireStaff() {
 // le Prestataire l'inclut, interrupteur NOUVELLE_PAGE_COMMANDES), la nouvelle page. Réglage illisible : page actuelle.
 function OrdersChoice() {
   const { newOrdersPage, loaded } = useAppSettings();
+  const { features } = useStaff();
+  // Nouveau visuel : commandes en cartes (mêmes données, mêmes étapes)
+  if (isNewVisual(features)) return <Suspense fallback={null}><NvOrders /></Suspense>;
   if (!loaded) return <p className="st-muted">Chargement…</p>;
   return newOrdersPage ? <Suspense fallback={null}><OrdersPage2 /></Suspense> : <OrdersList />;
 }
@@ -238,6 +252,13 @@ function TeamHome() {
   const { newOrdersPage, loaded } = useAppSettings();
   if (!loaded) return <p className="st-muted">Chargement…</p>;
   return <Navigate to={teamHome({ role: user.role, newOrdersPage, hasFeature })} replace />;
+}
+
+// Nouveau visuel : l'écran `nv` (chargé à part) quand l'interrupteur NOUVEAU_VISUEL est ouvert, sinon `old`, l'écran
+// actuel, inchangé
+function Visual({ old, nv: Nv }) {
+  const { features } = useStaff();
+  return isNewVisual(features) ? <Suspense fallback={null}><Nv /></Suspense> : old;
 }
 
 // Lot 12 : page réservée au Patron et au Prestataire ; les autres reviennent à `to`
@@ -276,7 +297,7 @@ function StaffLayout() {
 }
 
 function StaffShell() {
-  const { user, logout, hasFeature } = useStaff();
+  const { user, logout, hasFeature, features } = useStaff();
   const { unseen, soundReady } = useOrdersFeed();
   const patron = isPatronLevel(user.role);
   const prestataire = user.role === 'PRESTATAIRE';
@@ -291,6 +312,10 @@ function StaffShell() {
   // Barre simple (logo, nom de la page, Alertes, « ⋮ ») avec la nouvelle page Commandes : quand le réglage
   // « Nouvelle page Commandes » est actif, et sur /equipe/commandes-v2 pour l'essayer. Sinon l'ancienne barre.
   const { newOrdersPage } = useAppSettings();
+  // Nouveau visuel (interrupteur NOUVEAU_VISUEL ouvert) : onglets en bas sur téléphone, menu à gauche sur ordinateur
+  if (isNewVisual(features)) {
+    return <Suspense fallback={null}><NvShell kind="team" unseen={unseen.size} chiffres={chiffres} soundReady={soundReady} /></Suspense>;
+  }
   if (newOrdersPage || pathname === '/equipe/commandes-v2') {
     return (
       <div className="st-app">

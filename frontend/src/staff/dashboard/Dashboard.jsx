@@ -201,7 +201,7 @@ function Card({ title, sub, children, wide }) {
 
 // Tableau de bord par période (Jour, Semaine, Mois). Avec la nouvelle présentation, il est replié sous « Analyse
 // détaillée » (embedded : sans titre ni onglets, déjà au-dessus) et ne se charge qu'une fois ouvert.
-function DetailedDashboard({ embedded = false }) {
+export function DetailedDashboard({ embedded = false }) {
   const [period, setPeriod] = useState('day');
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState(null);
