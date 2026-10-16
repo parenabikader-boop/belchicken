@@ -988,3 +988,6 @@ header.top .wrap:has(.lang-sw){gap:12px}
   .cs-side .cs-tot b{font-family:var(--display);font-size:26px;color:var(--brand-ink)}
 }
 .cs-head h2,.cs-title,.cs-tot b{font-family:var(--display)}
+/* Commande simplifiée : récapitulatif replié en haut de la page de commande */
+.cs-cart-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cs-cart-row b{font-family:var(--display);font-size:18px}

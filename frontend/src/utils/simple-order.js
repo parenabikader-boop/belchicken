@@ -8,9 +8,6 @@ export function simpleOrderState(stored, answer, done) {
   return stored === '1';
 }
 
-// Panneau « Ma commande » ouvert par l'adresse (/menu?panier=1, là où mène l'ancienne page /commande)
-export const sheetAsked = (search) => search?.get('panier') === '1';
-
 // Position demandée à la carte : position refusée, impossible, ou moins précise que 1 km (comme le serveur)
 export const MAX_ACCURACY_M = 1000;
 export const needsMap = ({ geoState, geo }) => geoState === 'denied' || geoState === 'unsupported' || (geo?.accuracy != null && geo.accuracy > MAX_ACCURACY_M);

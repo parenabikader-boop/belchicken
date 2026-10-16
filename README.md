@@ -1139,10 +1139,10 @@ d'avant (`GET /api/site` sans rien de plus, `test/menu-borne-commandes.test.js` 
     chaque ajout (plats, + et −, retirer, total en grand, « Commander » vers la page de commande ; vide : « Choisissez
     vos plats. ») ; le menu se décale pour lui laisser la place ;
   - **téléphone** : barre fixe « Commander · X articles · Y F », avec « + dernier plat ajouté » pendant 3,5 s
-    (`addedLine()`) ; au toucher, panneau « Ma commande » par-dessus le menu (plats, + et −, retirer, total,
-    « Commander »).
-  L'ancienne adresse `/commande` ouvre ce panneau (`/menu?panier=1`).
-- **Une seule page de commande** `/valider` (`pages/CommandeSimple.jsx`, fichier à part), dans l'ordre : Livraison
+    (`addedLine()`) ; au toucher, **directement la page de commande** (plus de panneau qui s'ouvre).
+  L'ancienne adresse `/commande` mène à la page de commande.
+- **Une seule page de commande** `/valider` (`pages/CommandeSimple.jsx`, fichier à part), dans l'ordre : récapitulatif
+  replié sur une ligne (« 3 articles · 7 500 F », « Modifier » : plats, + et −, retirer ; panier vide : retour au menu) ; Livraison
   ou À emporter ; « 📍 Utiliser ma position » puis « Livraison : X F (Y km) » (prix calculé par le serveur avec la
   grille active : par km du plan 3, sinon tranches de distance) et un repère facultatif ; nom et téléphone ; le
   paiement (opérateur, « Payer maintenant » / « Copier le code », numéro qui a payé, rappel « Repas : X F maintenant.

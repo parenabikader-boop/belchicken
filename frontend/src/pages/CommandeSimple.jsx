@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
 import PayCode from '../components/PayCode.jsx';
+import { Lines } from '../components/CartSheet.jsx';
 import { useCart, useCartDetails } from '../context/CartContext.jsx';
 import { useMenu } from '../context/MenuContext.jsx';
 import { RESTAURANT } from '../restaurant.js';
@@ -17,6 +18,7 @@ import { useLang } from '../i18n/index.jsx';
 const MapPicker = lazy(() => import('../components/MapPicker.jsx'));
 
 // Lot « Commande simplifiée » (interrupteur COMMANDE_SIMPLIFIEE) : une seule page, dans l'ordre, très peu de texte :
+//   0. récapitulatif replié (« 3 articles · 7 500 F », « Modifier » : plats, + et −, retirer) ;
 //   a. Livraison ou À emporter ;
 //   b. livraison : « Utiliser ma position » (ou un point sur la carte), puis le prix calculé par le serveur, et un repère ;
 //   c. nom et téléphone ;
@@ -53,7 +55,8 @@ const clearDraft = () => {
 export default function CommandeSimple() {
   const navigate = useNavigate();
   const { lines } = useCart();
-  const { items, total, ready } = useCartDetails();
+  const { items, total, count, ready } = useCartDetails();
+  const [cartOpen, setCartOpen] = useState(false); // récapitulatif replié sur une ligne
   const { reload, products } = useMenu();
   const payment = usePaymentCodes();
   const { t, lang, enabled: langEnabled } = useLang();
@@ -186,6 +189,16 @@ export default function CommandeSimple() {
     <div className="wrap pagebody cs-page">
       <h1 className="cs-title">{S.title}</h1>
       {alert && <div className="alert err" role="alert" ref={alertRef}><span>{alert}</span></div>}
+
+      {/* Récapitulatif replié sur une ligne ; « Modifier » : plats, + et −, retirer (panier vide : retour au menu) */}
+      <section className="cs-block cs-cart">
+        <div className="cs-cart-row">
+          <b>{S.summary(count, formatPrice(total))}</b>
+          <button type="button" className="lnk cs-link" aria-expanded={cartOpen} onClick={() => setCartOpen((o) => !o)}>{cartOpen ? S.editDone : S.edit}</button>
+        </div>
+        {cartOpen && <Lines items={items} />}
+        {items.some((i) => i.problem) && <p className="cs-bad">{t.cart.blocked}</p>}
+      </section>
 
       {/* a. Livraison ou À emporter */}
       <section className="cs-block">

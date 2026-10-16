@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { MAX_QTY, useCart, useCartDetails } from '../context/CartContext.jsx';
 import { formatPrice } from '../utils/format.js';
-import { addedLabel, addedLine, sheetAsked, WIDE_QUERY } from '../utils/simple-order.js';
+import { addedLabel, addedLine, WIDE_QUERY } from '../utils/simple-order.js';
 import { useT } from '../i18n/index.jsx';
 
 // Lot « Commande simplifiée » (interrupteur COMMANDE_SIMPLIFIEE), sur le menu classique et le menu façon borne :
 //   - écran large (900 px et plus) : panneau « Votre commande » fixe à droite, toujours visible et mis à jour à chaque
 //     ajout (plats, + et −, retirer, total, « Commander ») ;
 //   - téléphone : barre fixe en bas « Commander · X articles · Y F », avec quelques secondes « + dernier plat ajouté » ;
-//     au toucher, le panneau « Ma commande » s'ouvre par-dessus le menu, sans changer de page.
+//     au toucher, directement la page de commande (récapitulatif modifiable en haut).
 // Remplace la barre et la page « Ma commande » d'avant.
 const ADDED_MS = 3500;
 
@@ -28,7 +28,7 @@ function useWide() {
 }
 
 // Plats de la commande, avec + et −, retirer, et le prix de chaque ligne
-function Lines({ items }) {
+export function Lines({ items }) {
   const { changeQty, remove } = useCart();
   const t = useT();
   return (
@@ -70,8 +70,7 @@ function Footer({ items, total }) {
 export default function CartSheet() {
   const { items, total, count, ready } = useCartDetails();
   const { lines } = useCart();
-  const [search, setSearch] = useSearchParams();
-  const [open, setOpen] = useState(() => sheetAsked(search));
+  const navigate = useNavigate();
   const wide = useWide();
   const t = useT();
   const S = t.simple;
@@ -88,35 +87,12 @@ export default function CartSheet() {
     return () => clearTimeout(timer);
   }, [lines]);
 
-  // /menu?panier=1 (là où mène l'ancienne page « Ma commande ») : panneau ouvert, puis l'adresse redevient /menu
-  useEffect(() => {
-    if (!sheetAsked(search)) return;
-    setOpen(true);
-    const next = new URLSearchParams(search);
-    next.delete('panier');
-    setSearch(next, { replace: true });
-  }, [search, setSearch]);
-
   // Écran large : le menu laisse la place au panneau de droite
   useEffect(() => {
     if (!wide) return undefined;
     document.body.classList.add('cs-has-side');
     return () => document.body.classList.remove('cs-has-side');
   }, [wide]);
-
-  // Panneau du téléphone ouvert : le menu derrière ne défile plus ; Échap ferme
-  const sheetOpen = open && !wide;
-  useEffect(() => {
-    if (!sheetOpen) return undefined;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (e) => e.key === 'Escape' && setOpen(false);
-    window.addEventListener('keydown', onKey);
-    return () => {
-      document.body.style.overflow = overflow;
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [sheetOpen]);
 
   if (!ready) return null;
 
@@ -134,33 +110,15 @@ export default function CartSheet() {
     );
   }
 
+  // Téléphone : la barre mène directement à la page de commande (récapitulatif modifiable en haut de la page)
+  if (!count) return null;
   const added = addedLabel(items.find((i) => i.key === addedKey));
   return (
-    <>
-      {count > 0 && !open && (
-        <div className="cs-bar">
-          <button type="button" className="btn btn-p cs-bar-btn" onClick={() => setOpen(true)}>
-            <span>{S.bar(count, formatPrice(total))}</span>
-            {added && <small className="cs-added" aria-live="polite">{S.added(added)}</small>}
-          </button>
-        </div>
-      )}
-      {open && (
-        <div className="cs-overlay" role="dialog" aria-modal="true" aria-label={S.sheetTitle} onClick={(e) => e.target === e.currentTarget && setOpen(false)}>
-          <div className="cs-sheet">
-            <header className="cs-head">
-              <h2>{S.sheetTitle}</h2>
-              <button type="button" className="cs-x" aria-label={S.close} onClick={() => setOpen(false)}>×</button>
-            </header>
-            {items.length === 0 ? <p className="cs-empty">{S.empty}</p> : (
-              <>
-                <Lines items={items} />
-                <Footer items={items} total={total} />
-              </>
-            )}
-          </div>
-        </div>
-      )}
-    </>
+    <div className="cs-bar">
+      <button type="button" className="btn btn-p cs-bar-btn" onClick={() => navigate('/valider')}>
+        <span>{S.bar(count, formatPrice(total))}</span>
+        {added && <small className="cs-added" aria-live="polite">{S.added(added)}</small>}
+      </button>
+    </div>
   );
 }

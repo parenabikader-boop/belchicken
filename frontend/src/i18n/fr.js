@@ -160,6 +160,9 @@ export default {
   simple: {
     bar: (n, total) => `Commander · ${n} article${n > 1 ? 's' : ''} · ${total}`,
     added: (name) => `+ ${name}`,
+    summary: (n, total) => `${n} article${n > 1 ? 's' : ''} · ${total}`,
+    edit: 'Modifier',
+    editDone: 'OK',
     sideTitle: 'Votre commande',
     sideEmpty: 'Choisissez vos plats.',
     sheetTitle: 'Ma commande',

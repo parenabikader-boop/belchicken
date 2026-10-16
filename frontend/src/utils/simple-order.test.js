@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  deliveryPayload, deliveryPrice, locationPayload, mapLocation, missingFields, needsMap, paymentVisible, sheetAsked, simpleOrderState,
+  deliveryPayload, deliveryPrice, locationPayload, mapLocation, missingFields, needsMap, paymentVisible, simpleOrderState,
 } from './simple-order.js';
 
 test('fermé (ou réponse inconnue) : le site actuel', () => {
@@ -11,8 +11,6 @@ test('fermé (ou réponse inconnue) : le site actuel', () => {
   assert.equal(simpleOrderState('0', null, true), false); // serveur injoignable : dernière réponse gardée
   assert.equal(simpleOrderState('1', null, true), true);
   assert.equal(simpleOrderState(null, { commandeSimple: true }, true), true);
-  assert.equal(sheetAsked(new URLSearchParams('panier=1')), true);
-  assert.equal(sheetAsked(new URLSearchParams('')), false);
 });
 
 test('position : GPS, sinon un point sur la carte ; jamais de quartier', () => {

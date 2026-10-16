@@ -257,6 +257,9 @@ export default {
   simple: {
     bar: (n, total) => `Order · ${n} item${n > 1 ? 's' : ''} · ${total}`,
     added: (name) => `+ ${name}`,
+    summary: (n, total) => `${n} item${n > 1 ? 's' : ''} · ${total}`,
+    edit: 'Change',
+    editDone: 'Done',
     sideTitle: 'Your order',
     sideEmpty: 'Choose your dishes.',
     sheetTitle: 'My order',

@@ -874,6 +874,8 @@ simplifiée (site client) ».
 - [x] Tests (`frontend/src/utils/simple-order.test.js`, `backend/test/menu-borne-commandes.test.js`), construction.
 - [x] Complément : panneau « Votre commande » à droite sur écran large, « + dernier plat ajouté » dans la barre du
   téléphone (`cd5a12e` déjà en ligne, interrupteur fermé ; complément en commit local).
+- [x] Téléphone : la barre mène directement à la page de commande (plus de panneau), `/commande` aussi ; récapitulatif
+  replié et modifiable en haut de la page de commande (commit local).
 - [ ] Essai par le client sur téléphone et ordinateur (de préférence avec la grille par km du plan 3 allumée).
 - [ ] Envoi sur GitHub avec l'accord écrit du client.
 

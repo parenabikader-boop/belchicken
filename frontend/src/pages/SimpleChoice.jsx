@@ -7,9 +7,9 @@ import { useSimpleOrder } from '../utils/site.js';
 // Lot « Commande simplifiée » : page de commande unique, téléchargée seulement quand l'interrupteur est ouvert
 const CommandeSimple = lazy(() => import('./CommandeSimple.jsx'));
 
-// /commande : interrupteur ouvert, le panneau « Ma commande » du menu remplace cette page ; fermé, la page actuelle
+// /commande : interrupteur ouvert, la page de commande unique (récapitulatif modifiable en haut) ; fermé, la page actuelle
 export function CartPage() {
-  return useSimpleOrder() ? <Navigate to="/menu?panier=1" replace /> : <Commande />;
+  return useSimpleOrder() ? <Navigate to="/valider" replace /> : <Commande />;
 }
 
 // /valider : interrupteur ouvert, la page de commande unique ; fermé, la page actuelle
