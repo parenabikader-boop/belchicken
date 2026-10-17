@@ -4,7 +4,9 @@ import { AppError } from '../utils/AppError.js';
 import { getAppSettings } from './app-settings.service.js';
 import { isFeatureOpen } from './features.service.js';
 import { periodOrError } from './statement.service.js';
-import { pushDeliveryManagers, pushPatrons } from './push.service.js';
+import { pushDeliveryManagers, pushPatrons, pushRoles } from './push.service.js';
+import { PATRON_SIMPLE } from './features.js';
+import { lowReviewForPatron } from './patron-digest.js';
 import { lowReviewNotification } from './push.message.js';
 import {
   buildReviews, checkCallBack, checkReviewInput, forDeliveryManager, isReviewToken, lowDeliveryForPartner, newReviewToken,
@@ -66,7 +68,11 @@ function alertLowReview(orderId, review) {
     .findUnique({ where: { id: orderId }, select: { id: true, reference: true, mode: true, deliveryOperator: true, courierName: true } })
     .then(async (order) => {
       if (!order) return;
-      await pushPatrons(order, lowReviewNotification(order, review));
+      // Compte Patron simplifié : le Patron reçoit aussi le commentaire du client ; le Prestataire, comme avant
+      if (await isFeatureOpen(PATRON_SIMPLE).catch(() => false)) {
+        await pushRoles(order, ['PATRON'], lowReviewForPatron(order, review));
+        await pushRoles(order, ['PRESTATAIRE'], lowReviewNotification(order, review));
+      } else await pushPatrons(order, lowReviewNotification(order, review));
       if (lowDeliveryForPartner(review, order)) await pushDeliveryManagers(order, lowReviewNotification(order, review, { forPartner: true }));
     })
     .catch((e) => console.error('[push] avis', e));

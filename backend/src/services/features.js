@@ -3,8 +3,8 @@
 //
 // Pas de ligne FeatureSwitch = ouvert : sans Prestataire, tout fonctionne comme avant (sauf RELEVE, lot 5d,
 // fermé sans ligne : le Patron ne voit le relevé que si le Prestataire l'ouvre ; de même LIVREURS_INDEPENDANTS,
-// NOUVEAU_VISUEL, CALL_CENTER_ALLEGE, SUIVI_SANS_WHATSAPP, FRAIS_PAR_KM, PAIEMENT_AUTO_SMS, PAIEMENT_SMS_ESSAI, PAIEMENT_LIGDICASH, COMMANDE_SIMPLIFIEE et
-// TRANCHES_PAR_ROUTE, fermés sans ligne).
+// NOUVEAU_VISUEL, CALL_CENTER_ALLEGE, SUIVI_SANS_WHATSAPP, FRAIS_PAR_KM, PAIEMENT_AUTO_SMS, PAIEMENT_SMS_ESSAI, PAIEMENT_LIGDICASH, COMMANDE_SIMPLIFIEE,
+// TRANCHES_PAR_ROUTE et COMPTE_PATRON_SIMPLE, fermés sans ligne).
 // Fermer bloque l'accès, ne supprime aucune donnée, et bloque aussi le Prestataire (il doit rouvrir).
 // Deux niveaux pour les réglages : le Prestataire décide si une fonction est incluse, le Patron l'allume
 // ou l'éteint à l'intérieur. Une fonction n'est active que si elle est incluse et allumée.
@@ -59,6 +59,9 @@ export const FEATURES = [
   { key: 'PAIEMENT_LIGDICASH', label: 'Paiement en ligne Ligdicash', help: 'Ouvert (après le contrat et les identifiants Ligdicash) : le paiement en ligne confirmé par Ligdicash valide seul la commande. Fermé : Ligdicash n’est plus utilisé (les SMS ne sont pas concernés).', defaultOpen: false },
   { key: 'FRAIS_PAR_KM', label: 'Frais par kilomètre avant le paiement', help: 'Ouvert : le Patron règle une grille par kilomètre (prix de départ, prix par km, arrondi, minimum, maximum) ; une fois allumée, le site calcule les frais avec la distance par la route, le client les voit (« Livraison : X F (Y km), à payer au livreur ») et les accepte avant de payer son repas. Sans position, il choisit son quartier ; « Autre quartier » n’est plus proposé ; le call center ne corrige plus les frais (le Patron, toujours avec un motif). Fermé : comme avant.', defaultOpen: false },
   { key: 'SUIVI_SANS_WHATSAPP', label: 'Suivi sans WhatsApp', help: 'Ouvert : le client suit sa commande en direct sur sa page de suivi (lien secret donné à la commande : livreur à appeler, code de livraison, montant à payer au livreur, avis) et reçoit des alertes gratuites sur son téléphone (« en route », « livrée, merci »). Le call center n’a plus de message à confirmer ni de client à remercier. Fermé : comme avant.', defaultOpen: false },
+  // Compte Patron simplifié : fermé sans ligne. Ouvert, le Patron n'a plus que 5 onglets (Comptes, Menu, Frais de
+  // livraison, Équipe, Avis), reçoit le résumé du soir et de la semaine, et seulement les alertes importantes.
+  { key: 'COMPTE_PATRON_SIMPLE', label: 'Compte Patron simplifié', help: 'Ouvert : le compte Patron n’a plus que 5 onglets (Comptes, Menu, Frais de livraison, Équipe, Avis) ; Comptes = ventes des repas, transactions, phrases, carte des clients. Résumé du soir et de la semaine sur son téléphone ; plus d’alerte de commande, seulement les mauvais avis (avec le commentaire) et les plats en rupture depuis longtemps. Commandes, Caisse et Réglages restent gérés par vous. Fermé : le compte Patron comme avant.', defaultOpen: false },
   { key: 'CALL_CENTER_ALLEGE', label: 'Call center allégé', help: 'Ouvert : aucune étape n’attend plus la confirmation d’un message au client (le message reste proposé, sauf le remerciement qui reste demandé) ; « Paiement vérifié » imprime aussi le bon ; le livreur peut valider une livraison sans le code du client, avec un motif obligatoire (signalée en rouge au Responsable livraison et comptée à part dans le relevé). Fermé : comme avant.', defaultOpen: false },
 ];
 
@@ -78,11 +81,13 @@ export const AUTO_PAYMENT_LIGDICASH = 'PAIEMENT_LIGDICASH';
 export const SIMPLE_ORDER = 'COMMANDE_SIMPLIFIEE';
 // Tranches de distance mesurées par la route
 export const ROAD_BANDS = 'TRANCHES_PAR_ROUTE';
+// Compte Patron simplifié
+export const PATRON_SIMPLE = 'COMPTE_PATRON_SIMPLE';
 
 export const FEATURE_CLOSED = 'Fonction non incluse dans votre formule, contactez votre prestataire.';
 
 // Ouverte ou fermée quand elle n'a pas de ligne : ouverte, sauf RELEVE (lot 5d), LIVREURS_INDEPENDANTS, NOUVEAU_VISUEL
-// CALL_CENTER_ALLEGE, SUIVI_SANS_WHATSAPP, FRAIS_PAR_KM, PAIEMENT_AUTO_SMS, PAIEMENT_SMS_ESSAI, PAIEMENT_LIGDICASH, COMMANDE_SIMPLIFIEE et TRANCHES_PAR_ROUTE
+// CALL_CENTER_ALLEGE, SUIVI_SANS_WHATSAPP, FRAIS_PAR_KM, PAIEMENT_AUTO_SMS, PAIEMENT_SMS_ESSAI, PAIEMENT_LIGDICASH, COMMANDE_SIMPLIFIEE, TRANCHES_PAR_ROUTE et COMPTE_PATRON_SIMPLE
 export const featureDefault = (key) => FEATURES.find((f) => f.key === key)?.defaultOpen ?? true;
 
 // Lignes FeatureSwitch -> { HISTORIQUE: true, … } : une fonction sans ligne garde sa valeur par défaut

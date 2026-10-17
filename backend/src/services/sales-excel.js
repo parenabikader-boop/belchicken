@@ -15,7 +15,7 @@ const money = (n) => `${Math.round(n || 0).toLocaleString('fr-FR').replace(/[ 
 const methodOf = (row, method) => row.payments.find((p) => p.method === method) || { count: 0, amount: 0 };
 
 // Feuille en tableau : en-tête rouge, première ligne figée, largeurs et formats par colonne
-function table(wb, name, columns, rows, note) {
+export function table(wb, name, columns, rows, note) {
   const ws = wb.addWorksheet(name, { views: [{ state: 'frozen', ySplit: note ? 2 : 1 }] });
   ws.columns = columns.map((c) => ({ key: c.key, width: c.width || 16, style: c.format ? { numFmt: c.format } : {} }));
   if (note) {

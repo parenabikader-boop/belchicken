@@ -2,6 +2,8 @@ import webpush from 'web-push';
 import { env, pushEnabled } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
 import { AppError } from '../utils/AppError.js';
+import { isFeatureOpen } from './features.service.js';
+import { PATRON_SIMPLE } from './features.js';
 import { courseCancelledNotification, courseNotification, deliveredNotification, deviceLabel, newOrderNotification, testNotification } from './push.message.js';
 
 // Notifications de l'équipe sur téléphone (Web Push), à côté de l'alerte WhatsApp.
@@ -66,19 +68,24 @@ async function sendTo(sub, payload) {
   }
 }
 
+// Compte Patron simplifié (interrupteur COMPTE_PATRON_SIMPLE ouvert) : le Patron ne reçoit plus les alertes de
+// commande (nouvelle, livrée), seulement ses résumés et les alertes importantes. Interrupteur illisible : comme avant.
+export const teamRoles = (patronSimple) => (patronSimple ? ['OPERATEUR'] : ['PATRON', 'OPERATEUR']);
+const patronSimpleOpen = () => isFeatureOpen(PATRON_SIMPLE).catch(() => false);
+
 // Alerte toute l'équipe (Patron et Opérateur, pas les livreurs) d'une nouvelle commande.
 // Ne lève jamais d'erreur : un échec d'envoi ne doit pas faire échouer la commande, il est journalisé.
 // exceptStaffId : l'agent qui vient de saisir la commande (pas d'alerte sur ses propres téléphones).
 export async function pushTeamNewOrder(order, { exceptStaffId = null } = {}) {
   if (!pushEnabled()) return;
-  const where = { staffUser: { isActive: true, role: { in: ['PATRON', 'OPERATEUR'] } }, ...(exceptStaffId && { NOT: { staffUserId: exceptStaffId } }) };
+  const where = { staffUser: { isActive: true, role: { in: teamRoles(await patronSimpleOpen()) } }, ...(exceptStaffId && { NOT: { staffUserId: exceptStaffId } }) };
   await pushAndLog(order, where, newOrderNotification(order));
 }
 
 // Commande livrée : Patron et Opérateurs (pas les livreurs). Ne lève jamais d'erreur.
 export async function pushTeamDelivered(order, info) {
   if (!pushEnabled()) return;
-  await pushAndLog(order, { staffUser: { isActive: true, role: { in: ['PATRON', 'OPERATEUR'] } } }, deliveredNotification(order, info));
+  await pushAndLog(order, { staffUser: { isActive: true, role: { in: teamRoles(await patronSimpleOpen()) } } }, deliveredNotification(order, info));
 }
 
 // Nouvelle course assignée : seulement les téléphones de ce livreur. Ne lève jamais d'erreur.
@@ -108,8 +115,28 @@ export async function pushDeliveryManagers(order, payload) {
 
 // Lot 7 : mauvais avis d'un client, au Patron et au Prestataire. Ne lève jamais d'erreur.
 export async function pushPatrons(order, payload) {
+  await pushRoles(order, ['PATRON', 'PRESTATAIRE'], payload);
+}
+
+// Notification liée à une commande pour certains rôles (noté dans le journal de la commande). Ne lève jamais d'erreur.
+export async function pushRoles(order, roles, payload) {
   if (!pushEnabled()) return;
-  await pushAndLog(order, { staffUser: { isActive: true, role: { in: ['PATRON', 'PRESTATAIRE'] } } }, payload);
+  await pushAndLog(order, { staffUser: { isActive: true, role: { in: roles } } }, payload);
+}
+
+// Compte Patron simplifié : notification sans commande (résumé du soir, de la semaine, plat en rupture), pour certains
+// rôles. Renvoie le nombre de téléphones atteints. Ne lève jamais d'erreur.
+export async function pushStaffRoles(roles, payload) {
+  if (!pushEnabled()) return 0;
+  const subs = await prisma.pushSubscription
+    .findMany({ where: { staffUser: { isActive: true, role: { in: roles } } }, include: { staffUser: { select: { name: true } } } })
+    .catch(() => []);
+  const results = await Promise.all(subs.map(async (sub) => {
+    const result = await sendTo(sub, payload);
+    if (!result.ok) console.error(`[push] échec vers ${sub.staffUser.name} (${deviceLabel(sub.userAgent)}) pour « ${payload.title} » : ${result.error}`);
+    return result.ok;
+  }));
+  return results.filter(Boolean).length;
 }
 
 async function pushAndLog(order, where, payload) {

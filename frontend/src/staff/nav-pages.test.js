@@ -16,7 +16,7 @@ test('Opérateur : Commandes, Menu, Caisse seulement', () => {
 
 test('Prestataire : pages du Patron, plus Prestataire et Livraison, sans Relevé (onglet de Livraison)', () => {
   assert.deepEqual(labels({ role: 'PRESTATAIRE', patron: true, hasFeature: all, chiffres: '/equipe/tableau-de-bord' }),
-    ['Commandes', 'Menu', 'Caisse', 'Frais de livraison', 'Tableau de bord', 'Équipe', 'Réglages', 'Accueil du site', 'Prestataire', 'Livraison']);
+    ['Commandes', 'Menu', 'Caisse', 'Frais de livraison', 'Tableau de bord', 'Équipe', 'Réglages', 'Accueil du site', 'Prestataire', 'Livraison', 'Comptes du Patron']); // Comptes du Patron : interrupteur COMPTE_PATRON_SIMPLE ouvert
 });
 
 test('interrupteurs fermés par le Prestataire : pages cachées comme avant', () => {

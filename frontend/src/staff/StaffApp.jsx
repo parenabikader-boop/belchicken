@@ -42,6 +42,11 @@ import SalesPrint from './sales/SalesPrint.jsx';
 import ReviewsPage from './reviews/ReviewsPage.jsx';
 import { chiffresHome } from './dashboard/ChiffresTabs.jsx';
 import { FeatureClosed } from './FeatureGate.jsx';
+// Compte Patron simplifié (interrupteur COMPTE_PATRON_SIMPLE du Prestataire, fermé par défaut) : chargé seulement s'il est ouvert
+import { isPatronSimple, PATRON_HOME } from './patron/patron-simple.js';
+const PatronShell = lazy(() => import('./patron/PatronShell.jsx'));
+const ComptesPage = lazy(() => import('./patron/ComptesPage.jsx'));
+const PatronAccountPage = lazy(() => import('./patron/PatronAccountPage.jsx'));
 import InstallBanner from '../components/InstallBanner.jsx';
 import './staff.css';
 
@@ -77,10 +82,37 @@ export default function StaffApp() {
 // Le livreur a ses propres pages : toute autre adresse le ramène à ses courses (l'API refuse aussi).
 // Lot 5b : le Responsable livraison aussi, avec seulement la page Livraison et son mot de passe.
 function RoleRoutes() {
-  const { user } = useStaff();
+  const { user, features } = useStaff();
   if (user.role === 'LIVREUR') return <CourierRoutes />;
   if (user.role === 'RESPONSABLE_LIVRAISON') return <DeliveryManagerRoutes />;
+  if (isPatronSimple(user.role, features)) return <PatronRoutes />;
   return <TeamRoutes />;
+}
+
+// Compte Patron simplifié : 5 onglets (Comptes, Menu, Frais de livraison, Équipe, Avis), « Mon compte », ses alertes
+// et son mot de passe. Toute autre adresse (Commandes, Caisse, Réglages…) ramène à Comptes. Pas de son ni d'alerte
+// de nouvelle commande (pas d'OrdersFeedProvider). L'API garde les droits du Patron : rien n'est supprimé.
+function PatronRoutes() {
+  const lazyPage = (Page) => <Suspense fallback={<p className="st-muted">Chargement…</p>}><Page /></Suspense>;
+  return (
+    <Routes>
+      <Route element={<Suspense fallback={null}><PatronShell /></Suspense>}>
+        <Route path="comptes" element={lazyPage(ComptesPage)} />
+        <Route path="menu" element={<MenuAdmin />} />
+        <Route path="menu/plats/nouveau" element={<ProductForm />} />
+        <Route path="menu/plats/:id" element={<ProductForm />} />
+        <Route path="menu/categories/nouvelle" element={<CategoryForm />} />
+        <Route path="menu/categories/:id" element={<CategoryForm />} />
+        <Route path="frais-livraison" element={<RequireFeature feature="FRAIS_LIVRAISON"><DeliveryFeesPage /></RequireFeature>} />
+        <Route path="equipe" element={<TeamPage />} />
+        <Route path="avis" element={<RequireFeature feature="AVIS"><ReviewsPage /></RequireFeature>} />
+        <Route path="mon-compte" element={lazyPage(PatronAccountPage)} />
+        <Route path="alertes" element={<AlertsPage />} />
+        <Route path="mot-de-passe" element={<PasswordPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to={PATRON_HOME} replace />} />
+    </Routes>
+  );
 }
 
 function DeliveryManagerRoutes() {
@@ -136,6 +168,8 @@ function TeamRoutes() {
           <Route path="equipe" element={<TeamPage />} />
           <Route path="frais-livraison" element={<RequireFeature feature="FRAIS_LIVRAISON"><DeliveryFeesPage /></RequireFeature>} />
           <Route path="reglages" element={<RequireFeature feature="REGLAGES"><SettingsPage /></RequireFeature>} />
+          {/* Compte Patron simplifié : le Prestataire voit la page Comptes du Patron */}
+          <Route path="comptes" element={<RequireFeature feature="COMPTE_PATRON_SIMPLE"><Suspense fallback={null}><ComptesPage /></Suspense></RequireFeature>} />
         </Route>
         <Route element={<RequirePrestataire />}>
           <Route path="prestataire" element={<PrestatairePage />} />

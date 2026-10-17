@@ -7,6 +7,8 @@ import { salesShortcuts, useSalesPeriod } from '../sales/SalesPage.jsx';
 import { periodText } from '../sales/SalesView.jsx';
 import { plural } from '../../utils/format.js';
 import { formatPhone } from '../orders/labels.js';
+import { useStaff } from '../StaffContext.jsx';
+import { isPatronSimple } from '../patron/patron-simple.js';
 
 // Lot 7 : avis des clients (/equipe/avis), Patron et Prestataire (l'API le vérifie). Onglet « Avis » de la page
 // Tableau de bord. Moyennes de la période (date de l'avis), par agent (celui qui a vérifié le paiement) et par
@@ -15,6 +17,13 @@ import { formatPhone } from '../orders/labels.js';
 const UTC = { timeZone: 'UTC' };
 export const when = (iso) => new Date(iso).toLocaleString('fr-FR', { ...UTC, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const avg = (n) => (n == null ? '—' : String(n).replace('.', ','));
+// Référence de la commande : lien vers son détail, sauf pour le compte Patron simplifié (plus de page Commandes)
+function OrderRef({ reference }) {
+  const { user, features } = useStaff();
+  if (isPatronSimple(user?.role, features)) return <b>{reference}</b>;
+  return <Link to={`/equipe/commandes/${reference}`}>{reference}</Link>;
+}
+
 const TEAM = { RESTAURANT: 'Restaurant', PRESTATAIRE: 'Notre partenaire' };
 
 // « ★★★★☆ » avec la note en clair pour les lecteurs d'écran ; rouge à 2 ou moins
@@ -51,7 +60,7 @@ function CallBack({ r, onDone }) {
     <li className="rv-call">
       <div className="rv-call-head">
         <b>{r.customerName}</b>
-        <Link to={`/equipe/commandes/${r.reference}`}>{r.reference}</Link>
+        <OrderRef reference={r.reference} />
         <span className="st-muted">{when(r.at)}</span>
       </div>
       <Notes r={r} />
@@ -206,7 +215,7 @@ export default function ReviewsPage() {
                   {list.map((r) => (
                     <li key={r.id} className={r.lowRating ? 'low' : undefined}>
                       <div className="rv-call-head">
-                        <Link to={`/equipe/commandes/${r.reference}`}>{r.reference}</Link>
+                        <OrderRef reference={r.reference} />
                         <span>{r.customerName}</span>
                         {r.mode === 'A_EMPORTER' && <span className="st-muted">à récupérer</span>}
                         <span className="st-muted">{when(r.at)}</span>

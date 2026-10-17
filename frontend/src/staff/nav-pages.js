@@ -15,6 +15,8 @@ export function staffPages({ role, patron, hasFeature, chiffres }) {
     patron && { to: '/equipe/accueil', label: 'Accueil du site', match: /^\/equipe\/accueil/ },
     prestataire && { to: '/equipe/prestataire', label: 'Prestataire', match: /^\/equipe\/prestataire/ },
     prestataire && { to: '/equipe/livraison', label: 'Livraison', match: /^\/equipe\/livraison/ },
+    // Compte Patron simplifié : la page Comptes du Patron, vue par le Prestataire
+    prestataire && hasFeature('COMPTE_PATRON_SIMPLE') && { to: '/equipe/comptes', label: 'Comptes du Patron', match: /^\/equipe\/comptes/ },
     // Lot 5d : le Patron (RELEVE ouvert) ; le Prestataire passe par l'onglet « Relevé » de la page Livraison
     !prestataire && patron && hasFeature('RELEVE') && { to: '/equipe/releve', label: 'Relevé', match: /^\/equipe\/releve/ },
   ];

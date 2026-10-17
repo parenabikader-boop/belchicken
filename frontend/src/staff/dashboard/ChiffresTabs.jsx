@@ -1,10 +1,13 @@
 import { NavLink } from 'react-router-dom';
 import { useStaff } from '../StaffContext.jsx';
+import { isPatronSimple } from '../patron/patron-simple.js';
 
 // Lot 6 : onglets « Tableau de bord » et « Ventes » (lot 7 : « Avis »), chacun seulement si le Prestataire ne l'a pas fermé.
 // Un seul lien dans l'en-tête du Patron (déjà plein sur tablette), les deux pages derrière ces onglets.
 export function ChiffresTabs() {
-  const { hasFeature } = useStaff();
+  const { hasFeature, user, features } = useStaff();
+  // Compte Patron simplifié : Avis est un onglet à part entière, sans Tableau de bord ni Ventes
+  if (isPatronSimple(user?.role, features)) return null;
   const tabs = [
     hasFeature('TABLEAU_DE_BORD') && { to: '/equipe/tableau-de-bord', label: 'Tableau de bord' },
     hasFeature('VENTES') && { to: '/equipe/ventes', label: 'Ventes' },

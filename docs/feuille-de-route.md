@@ -889,6 +889,50 @@ simplifiée (site client) ».
 - [ ] Essai par le client sur téléphone et ordinateur (de préférence avec la grille par km du plan 3 allumée).
 - [ ] Envoi sur GitHub avec l'accord écrit du client.
 
+### Compte Patron simplifié, lot A (17 octobre 2026, pas encore en ligne)
+
+Interrupteur `COMPTE_PATRON_SIMPLE` (Prestataire), fermé sans ligne. Détails : README « Compte Patron simplifié ».
+
+Contrôle des chiffres du tableau de bord actuel (rien n'y a été changé, `test/compte-patron.test.js`) :
+
+- Chiffre d'affaires, commandes payées, panier moyen : plats des commandes payées et au-delà, le jour où la commande a
+  été passée (une commande de 23 h 55 payée à 0 h 05 compte la veille). Jamais les annulées ni celles à vérifier.
+- Annulées : un seul nombre, qui mélange les commandes payées puis annulées (argent à rendre) et celles jamais payées.
+- Frais de livraison : jamais dans le chiffre des plats. « Frais encaissés » = seulement les livreurs du restaurant ;
+  ceux de notre équipe (mode Prestataire) sont montrés au Patron à part (« payés sur ses codes, non comptés »).
+- Payées automatiquement (SMS) et saisies par un agent : comptées comme les autres (Ventes : « Paiement automatique »
+  apparaît comme un vérificateur).
+- Commandes d'essai : **comptées partout** (aucun moyen de les reconnaître).
+- Heures et jours de pointe : la demande (commandes reçues, même jamais payées), sans les annulées ; jours en total
+  (un mois à 5 samedis gonfle le samedi).
+- Paiements Orange / Moov / Telecel : les anciennes commandes en espèces sont dans le chiffre mais pas dans ce bloc.
+
+Corrigé dans la page Comptes seulement (derrière l'interrupteur) : date de début des comptes (`COMPTES_PATRON_DEPUIS`),
+annulations séparées (après / avant paiement), heures et jours sur les ventes payées, jours en moyenne par jour ouvert,
+frais de notre équipe absents.
+
+- [x] 5 onglets, page Comptes, phrases, carte des clients, transactions et Excel, résumés du soir et de la semaine,
+  alertes importantes seulement, réveil par cron-job.org (clé `RESUME_PATRON_CLE`).
+- [x] Tests (backend 420, frontend 63), construction, page vue avec des données inventées (faux serveur, aucune base).
+- [x] Migration `20261017120000_compte_patron` écrite, rangée dans `migrations-en-attente/`, appliquée nulle part.
+- [ ] Essai par le client ; choix de la date `COMPTES_PATRON_DEPUIS` ; compte cron-job.org et clé sur Render.
+- [ ] Migration (sauvegarde Neon, accord écrit), puis envoi sur GitHub avec l'accord écrit du client.
+
+### Compte Patron, lot B (plan seulement)
+
+1. **Objectif du mois** : le Patron tape un montant (onglet Comptes, « Mon objectif ») ; barre de progression sous les
+   ventes du mois, phrase « Encore 320 000 F en 13 jours, soit 24 600 F par jour » ; rappel dans le résumé du soir.
+   Une colonne `monthlyGoal` dans `PatronAccount` (ou une petite table par mois pour garder l'historique) : migration.
+2. **Rapport mensuel PDF** aux couleurs Belchicken : page d'impression comme le relevé et les ventes (pas de
+   bibliothèque PDF sur le serveur), logo, ventes, évolution, plats, heures, carte, avis ; prévenu le 1er du mois par le
+   réveil (« Votre rapport de septembre est prêt »).
+3. **Application installable** avec l'icône Belchicken pour le Patron : l'application « Belchicken Équipe » existe
+   déjà ; il suffit d'ouvrir sur Comptes (`start_url` du manifeste ou page d'arrivée) et de proposer l'installation
+   depuis « Mon compte ». Pas de Play Store (lot 10).
+4. **Clients fidèles** sans données personnelles : clients revenus (même numéro, empreinte calculée par le serveur,
+   jamais affichée), part des commandes faites par des habitués, « 38 clients sont revenus ce mois-ci », meilleurs
+   clients en rang seulement (« Client n° 1 : 14 commandes, 96 000 F »), jamais de nom ni de numéro.
+
 ## Démonstration commerciale (base dev)
 
 Pour la présentation commerciale à Belchicken : un mois d'activité fictive sur la base **dev** seulement (tableau de

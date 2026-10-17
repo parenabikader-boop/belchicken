@@ -27,7 +27,11 @@ const hashRows = (rows) =>
 export async function takePhoto(prisma, takenAt = new Date(), columns = {}) {
   const tables = {};
   for (const { name } of Prisma.dmmf.datamodel.models) {
-    const rows = await prisma[delegate(name)].findMany();
+    // Table d'une migration pas encore appliquée (ex. migrations-en-attente/) : vue comme vide, la même dans les deux photos
+    const rows = await prisma[delegate(name)].findMany().catch((e) => {
+      if (e?.code === 'P2021') return [];
+      throw e;
+    });
     const keys = columns[delegate(name)];
     tables[name] = { count: rows.length, hash: hashRows(keys ? projectRows(rows, keys) : rows) };
     // Journal de sécurité : empreinte des seules lignes d'avant la photo de référence (voir comparePhotos)

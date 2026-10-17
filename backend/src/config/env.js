@@ -57,6 +57,13 @@ export const env = {
     ligdicashApiKey: process.env.LIGDICASH_API_KEY || '',
     ligdicashApiToken: process.env.LIGDICASH_API_TOKEN || '',
   },
+  // Compte Patron simplifié (interrupteur COMPTE_PATRON_SIMPLE) : valeurs sur Render seulement.
+  patron: {
+    // Clé secrète du service de réveil (cron-job.org) qui appelle /api/reveil (au moins 24 caractères) ; vide = adresse fermée
+    wakeKey: process.env.RESUME_PATRON_CLE || '',
+    // Début des comptes du Patron (AAAA-MM-JJ) : les commandes d'avant (essais) ne comptent pas ; vide = toutes
+    accountsSince: process.env.COMPTES_PATRON_DEPUIS || '',
+  },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
     apiKey: process.env.CLOUDINARY_API_KEY || '',

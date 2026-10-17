@@ -11,6 +11,7 @@ import { reviewRouter } from './routes/review.routes.js';
 import { siteRouter } from './routes/site.routes.js';
 import { paymentAutoRouter } from './routes/payment-auto.routes.js';
 import { staffRouter } from './routes/staff.routes.js';
+import { wakeRouter } from './routes/wake.routes.js';
 import { errorHandler, notFound } from './middlewares/errors.js';
 
 export const app = express();
@@ -29,6 +30,7 @@ app.use('/api/delivery', deliveryRouter); // grille des frais de livraison et ap
 app.use('/api/avis', reviewRouter); // lot 7 : avis des clients (page publique, par la clé du lien)
 app.use('/api/site', siteRouter);
 app.use('/api/paiements', paymentAutoRouter); // plan 2 : paiements reçus (SMS du téléphone marchand, Ligdicash) // lot 8 : bouton FR / EN du site client
+app.use('/api/reveil', wakeRouter); // compte Patron simplifié : réveil par cron-job.org (résumés, ruptures)
 app.use('/api/staff', staffRouter); // espace équipe, protégé par connexion
 
 app.use(notFound);

@@ -1196,6 +1196,47 @@ d'avant (`GET /api/site` sans rien de plus, `test/menu-borne-commandes.test.js` 
 - Tuiles d'OpenStreetMap (`tile.openstreetmap.org`) : gratuites pour un usage modéré, avec la mention
   « © OpenStreetMap » ; un usage intensif demanderait un fournisseur de tuiles.
 
+## Compte Patron simplifié
+
+Interrupteur `COMPTE_PATRON_SIMPLE` (page Prestataire, « Compte Patron simplifié »), **fermé sans ligne** : fermé, le
+compte Patron est exactement celui d'avant (`test/compte-patron.test.js`, `frontend/src/staff/patron/patron-simple.test.js`).
+Seul le rôle Patron change ; le Prestataire garde tout et voit en plus « Comptes du Patron » dans le panneau ⋮.
+
+Ouvert, le Patron (`frontend/src/staff/patron/`, `RoleRoutes` de `StaffApp.jsx`) n'a plus que **5 onglets** (en bas sur
+téléphone) : **Comptes** (page d'accueil), **Menu**, **Frais de livraison** (si `FRAIS_LIVRAISON` ouvert), **Équipe**,
+**Avis** (si `AVIS` ouvert), plus « Mon compte » (rond en haut à droite : alertes de ce téléphone, heures des résumés, mot
+de passe, déconnexion). Commandes, Caisse, Réglages, Accueil du site, Tableau de bord et Ventes disparaissent de son
+écran (toute autre adresse ramène à Comptes), sans rien supprimer : **l'API garde ses droits** (rien ne casse si le
+Prestataire referme). Plus de son ni d'alerte de nouvelle commande ou de commande livrée (`teamRoles()` dans
+`push.service.js`).
+
+- **Comptes** (`GET /api/staff/comptes?periode=jour|semaine|mois|dates&du&au`, Excel : `/comptes/excel`, Patron et
+  Prestataire, interrupteur vérifié par l'API ; règles : `backend/src/services/patron-accounts.js`) : ventes des repas
+  (jamais les frais de livraison), commandes payées, panier moyen, livraison / à récupérer, annulations (après paiement,
+  avec le montant, et avant paiement), comparaison avec la période précédente au même moment (« Trop tôt pour comparer »
+  sous 5 ventes) ; phrases calculées par le serveur seulement avec assez de données (`insights()` : tendance,
+  meilleure heure, meilleur jour et jour le plus calme en moyenne par jour ouvert, plat le plus vendu, part « à
+  récupérer ») ; ventes par heure et par jour ; plats les plus vendus ; **carte des clients** (OpenStreetMap, cases
+  d'environ 1 km, une case de moins de 3 commandes livrées n'est jamais montrée, `clientZones()`) ; **toutes les
+  transactions** (heure du paiement, référence, montant, opérateur, automatique ou à la main et par qui, numéro masqué
+  « 70 •• •• 56 », jamais le nom du client) avec export Excel.
+- **Commandes d'essai** : variable Render `COMPTES_PATRON_DEPUIS` (AAAA-MM-JJ) : les commandes d'avant ne comptent pas
+  dans Comptes ni dans les résumés. Vide = toutes.
+- **Résumé du soir** (ventes, commandes, meilleur plat, note moyenne des avis du jour ; heure réglable, 22 h par
+  défaut ; avant 6 h il parle de la veille) et **résumé de la semaine** (lundi, 8 h par défaut, avec l'évolution),
+  envoyés au Patron en Web Push (clés VAPID existantes). Règles : `patron-digest.js`.
+- **Alertes importantes seulement** : mauvais avis (une note de 1 ou 2) avec le commentaire (`lowReviewForPatron()`, le
+  Prestataire garde l'ancienne alerte) et plat indisponible depuis plus de 24 heures (une fois par rupture).
+- **Réveil** : Render gratuit s'endort, aucun minuteur dans le serveur (il réveillerait aussi Neon). Un service gratuit
+  (cron-job.org) appelle `GET https://belchicken-api.onrender.com/api/reveil` **toutes les 10 minutes** avec l'en-tête
+  `X-Cle: <RESUME_PATRON_CLE>` (ou `?cle=`), clé de 24 caractères au moins, sur Render seulement. Chaque résumé est
+  réservé en base avant l'envoi (jamais deux fois) ; plus de 3 heures de retard, il n'est plus envoyé. Clé fausse :
+  401 ; interrupteur fermé : 404. Ces appels gardent aussi le serveur éveillé (≈ 744 h par mois, sous les 750 h gratuites).
+- **Migration** `20261017120000_compte_patron` (table neuve `PatronAccount`, une ligne : heures, résumés déjà envoyés,
+  ruptures vues), **rangée dans `backend/prisma/migrations-en-attente/`**, appliquée nulle part. Sans elle : la page
+  Comptes marche, les heures restent celles par défaut (enregistrement refusé avec un message clair), le réveil
+  n'envoie rien (`migration: false`).
+
 ## Démonstration commerciale (base dev seulement)
 
 Un mois d'activité fictive mais réaliste sur la base **dev**, pour présenter le tableau de bord, les ventes,

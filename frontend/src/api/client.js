@@ -135,6 +135,11 @@ export const staffApi = {
   orderReview: (reference) => staffRequest(`/avis/commande/${encodeURIComponent(reference)}`).then((d) => d.review),
   callBack: (id, note) => staffRequest(`/avis/${encodeURIComponent(id)}/rappel`, { method: 'POST', body: JSON.stringify({ note }) }).then((d) => d.review),
   partnerReviews: (du, au) => staffRequest(`/livraison/avis?${new URLSearchParams({ du, au })}`).then((d) => d.reviews),
+  // Compte Patron simplifié : page Comptes (query : { periode, du, au }), son Excel, heures des résumés
+  accounts: (query) => staffRequest(`/comptes?${new URLSearchParams(query)}`).then((d) => d.comptes),
+  accountsExcel: (query, name) => downloadFile(`/api/staff/comptes/excel?${new URLSearchParams(query)}`, name),
+  digestSettings: () => staffRequest('/comptes/resumes').then((d) => d.resumes),
+  saveDigestSettings: (body) => staffRequest('/comptes/resumes', { method: 'PUT', body: JSON.stringify(body) }).then((d) => d.resumes),
   salesExcel: (du, au) => downloadFile(`/api/staff/ventes/excel?${new URLSearchParams({ du, au })}`, `ventes-${du}-au-${au}.xlsx`),
   createContractTerms: (body) => staffRequest('/releve/conditions', { method: 'POST', body: JSON.stringify(body) }),
   deleteContractTerms: (id) => staffRequest(`/releve/conditions/${encodeURIComponent(id)}`, { method: 'DELETE' }),

@@ -26,6 +26,7 @@ import { staffDeliveryTeamRouter } from './staff-delivery-team.routes.js';
 import { staffStatementRouter } from './staff-statement.routes.js';
 import { staffSalesRouter } from './staff-sales.routes.js';
 import { staffReviewsRouter } from './staff-reviews.routes.js';
+import { staffAccountsRouter } from './staff-accounts.routes.js';
 import { ownPasswordSchema } from '../services/team.js';
 import { changeOwnPassword } from '../services/team.service.js';
 
@@ -171,3 +172,4 @@ staffRouter.use('/livraison', staffDeliveryTeamRouter); // notre équipe de livr
 staffRouter.use('/releve', staffStatementRouter); // relevé de livraison et conditions du contrat (lot 5d)
 staffRouter.use('/ventes', staffSalesRouter); // ventes par période, provenance et agent (Patron, Prestataire, lot 6)
 staffRouter.use('/avis', staffReviewsRouter); // avis des clients (Patron, Prestataire, lot 7)
+staffRouter.use('/comptes', staffAccountsRouter); // compte Patron simplifié : page Comptes et résumés (Patron, Prestataire)
