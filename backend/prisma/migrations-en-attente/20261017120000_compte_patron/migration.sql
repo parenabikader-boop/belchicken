@@ -1,6 +1,7 @@
--- Compte Patron simplifié (interrupteur COMPTE_PATRON_SIMPLE, fermé par défaut) : une table neuve d'une seule ligne
--- (heures des résumés du soir et de la semaine, résumés déjà envoyés, ruptures de stock vues). Aucune table existante
--- modifiée, aucune donnée écrite : le code tourne sans elle (les heures ne s'enregistrent pas, aucun résumé n'est envoyé).
+-- Compte Patron simplifié (interrupteur COMPTE_PATRON_SIMPLE, fermé par défaut), lots A et B : une table neuve d'une
+-- seule ligne (heures des résumés, résumés et rapports déjà annoncés, objectifs du mois, ruptures de stock vues).
+-- Aucune table existante modifiée, aucune donnée écrite : le code tourne sans elle (les heures et l'objectif ne
+-- s'enregistrent pas, aucun résumé n'est envoyé).
 -- RANGÉE DANS migrations-en-attente/ : Prisma ne la lit pas, Render ne l'applique pas. Pour l'appliquer : sauvegarde
 -- Neon, accord écrit du client, la déplacer dans prisma/migrations/, puis npm run db:deploy (ou envoi sur GitHub).
 
@@ -13,6 +14,9 @@ CREATE TABLE "PatronAccount" (
     "weeklyHour" INTEGER NOT NULL DEFAULT 8,
     "lastEveningFor" TEXT,
     "lastWeeklyFor" TEXT,
+    "monthlyOn" BOOLEAN NOT NULL DEFAULT true,
+    "lastMonthlyFor" TEXT,
+    "goals" JSONB NOT NULL DEFAULT '{}',
     "outages" JSONB NOT NULL DEFAULT '{}',
     "updatedByName" TEXT,
     "updatedAt" TIMESTAMP(3) NOT NULL,

@@ -49,3 +49,26 @@ export function hourWindow(hours) {
   const used = hours.filter((h) => h.count).map((h) => h.hour);
   return hours.slice(Math.min(10, ...used), Math.max(23, ...used) + 1);
 }
+
+// ─── Lot B ───
+
+// Application installable du Patron : icône Belchicken (celle du site client, sans « Équipe »), ouverte sur Comptes.
+// Remplace le manifeste « Belchicken Équipe » pendant que le compte Patron simplifié est affiché (PatronShell.jsx).
+export const PATRON_APP = { manifest: '/patron.webmanifest', appleIcon: '/icons/client-apple-180.png', appleTitle: 'BC Patron' };
+
+// Rapport du mois « AAAA-MM » : du 1er au dernier jour, ou jusqu'à aujourd'hui pour le mois en cours.
+// null si le mois est mal écrit ou pas encore commencé.
+export function monthRange(mois, today) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(mois || ''))) return null;
+  const [y, m] = mois.split('-').map(Number);
+  const du = `${mois}-01`;
+  if (du > today) return null;
+  const last = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+  return { du, au: last < today ? last : today, complete: last < today };
+}
+
+// Mois d'avant « AAAA-MM »
+export function previousMonth(mois) {
+  const [y, m] = mois.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 7);
+}

@@ -918,7 +918,18 @@ frais de notre équipe absents.
 - [ ] Essai par le client ; choix de la date `COMPTES_PATRON_DEPUIS` ; compte cron-job.org et clé sur Render.
 - [ ] Migration (sauvegarde Neon, accord écrit), puis envoi sur GitHub avec l'accord écrit du client.
 
-### Compte Patron, lot B (plan seulement)
+### Compte Patron, lot B (17 octobre 2026, pas encore en ligne)
+
+Même interrupteur `COMPTE_PATRON_SIMPLE`. Détails : README « Compte Patron simplifié », « Lot B ».
+
+- [x] Objectif du mois, rapport mensuel à imprimer en PDF (et annonce le 1er), application « BC Patron » ouverte sur
+  Comptes, clients fidèles sans données personnelles, note des avis.
+- [x] Tests (backend 427, frontend 64), construction, pages vues avec des données inventées (faux serveur, aucune base).
+- [x] Migration du lot A complétée (même table neuve `PatronAccount`, jamais appliquée), toujours en attente.
+- [ ] Essai de l'installation « BC Patron » sur un vrai téléphone Android et un iPhone.
+- [ ] Essai par le client, puis migration et envoi sur GitHub avec son accord écrit.
+
+Plan d'origine :
 
 1. **Objectif du mois** : le Patron tape un montant (onglet Comptes, « Mon objectif ») ; barre de progression sous les
    ventes du mois, phrase « Encore 320 000 F en 13 jours, soit 24 600 F par jour » ; rappel dans le résumé du soir.

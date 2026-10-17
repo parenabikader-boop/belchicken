@@ -12,6 +12,8 @@ const APPS = {
   // Lot 8 : texte du site client dans sa langue (i18n, install.text)
   client: { name: 'Belchicken', icon: '/icons/client-192.png', text: null },
   equipe: { name: 'Belchicken Équipe', icon: '/icons/equipe-192.png', text: 'L’espace équipe en un geste' },
+  // Compte Patron simplifié (lot B) : manifeste patron.webmanifest, icône Belchicken, ouverte sur Comptes
+  patron: { name: 'Belchicken Patron', icon: '/icons/client-192.png', text: 'Vos comptes en un geste' },
 };
 
 const storageKey = (app) => `bc-install-ferme-${app}`;

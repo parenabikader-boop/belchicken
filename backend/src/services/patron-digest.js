@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { formatFcfa } from '../utils/format.js';
 import { DAY, dayKey } from './statement.js';
 
-export const DEFAULT_SETTINGS = { eveningOn: true, eveningHour: 22, weeklyOn: true, weeklyHour: 8 };
+export const DEFAULT_SETTINGS = { eveningOn: true, eveningHour: 22, weeklyOn: true, weeklyHour: 8, monthlyOn: true };
 export const LATE_HOURS = 3;
 // Avant 6 h, le résumé du soir parle de la veille (journée finie après minuit, le vendredi et le samedi)
 export const NIGHT_UNTIL = 6;
@@ -23,6 +23,13 @@ export const digestSettingsSchema = z.object({
   eveningHour: hour,
   weeklyOn: z.boolean(),
   weeklyHour: hour,
+  monthlyOn: z.boolean().default(true), // lot B : « rapport du mois prêt », le 1er à l'heure du résumé de la semaine
+}).strict();
+
+// Lot B : objectif de ventes du mois en cours (0 = pas d'objectif)
+export const goalSchema = z.object({
+  montant: z.coerce.number({ invalid_type_error: 'Indiquez un montant en F.' }).int('Montant en F, sans virgule.')
+    .min(0, 'Le montant ne peut pas être négatif.').max(1_000_000_000, 'Montant trop élevé.'),
 }).strict();
 
 const startOfDay = (t) => Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
@@ -34,7 +41,8 @@ export function eveningDay(now, h) {
 }
 
 // Résumés dus maintenant. state : { lastEveningFor, lastWeeklyFor } (jour ou lundi déjà envoyés, AAAA-MM-JJ).
-// Renvoie [{ kind: 'soir', key, from, to }, { kind: 'semaine', key, from, to }] (0, 1 ou 2).
+// Renvoie [{ kind: 'soir' | 'semaine' | 'mois', key, from, to }] (0 à 3). Lot B : le 1er du mois, à l'heure du résumé
+// de la semaine, l'annonce du rapport du mois fini (state.lastMonthlyFor : « AAAA-MM » déjà annoncé).
 export function dueDigests(now, settings = DEFAULT_SETTINGS, state = {}) {
   const out = [];
   const today = startOfDay(now);
@@ -53,19 +61,29 @@ export function dueDigests(now, settings = DEFAULT_SETTINGS, state = {}) {
     const key = dayKey(monday);
     if (inWindow(at) && state.lastWeeklyFor !== key) out.push({ kind: 'semaine', key, from: monday, to: new Date(today) });
   }
+  if ((settings.monthlyOn ?? true) && now.getUTCDate() === 1) {
+    const at = today + settings.weeklyHour * 3600 * 1000;
+    const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+    const key = dayKey(from).slice(0, 7);
+    if (inWindow(at) && state.lastMonthlyFor !== key) out.push({ kind: 'mois', key, from, to: new Date(today) });
+  }
   return out;
 }
 
 const rating = (n) => String(n).replace('.', ',');
 const fDay = new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
 const fShort = new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC', day: 'numeric', month: 'long' });
+const fMonth = new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC', month: 'long', year: 'numeric' });
 
-// stats : { revenue, paid, topDish: { name, quantity } | null, reviews: { average, count }, change (en %, semaine) }
+// stats : { revenue, paid, topDish: { name, quantity } | null, reviews: { average, count }, change (en %, semaine),
+// goalPct (lot B, soir : % de l'objectif du mois atteint) }
 export function digestNotification(kind, stats, from) {
+  if (kind === 'mois') return monthlyNotification(stats, from);
   const parts = [`${formatFcfa(stats.revenue)} de ventes`, `${stats.paid} commande${stats.paid > 1 ? 's' : ''}`];
   if (kind === 'semaine' && stats.change != null) parts[0] += ` (${stats.change > 0 ? '+' : ''}${stats.change} %)`;
   if (stats.topDish) parts.push(`Meilleur plat : ${stats.topDish.name}`);
   if (stats.reviews?.count) parts.push(`Avis : ${rating(stats.reviews.average)}/5 (${stats.reviews.count})`);
+  if (kind === 'soir' && stats.goalPct != null) parts.push(`Objectif du mois : ${stats.goalPct} %`);
   const title = kind === 'soir'
     ? `Votre journée · ${fDay.format(from)}`
     : `Votre semaine · du ${fShort.format(from)} au ${fShort.format(new Date(from.getTime() + 6 * DAY))}`;
@@ -74,6 +92,17 @@ export function digestNotification(kind, stats, from) {
     body: stats.paid ? parts.join(' · ') : 'Aucune vente sur cette période.',
     url: kind === 'soir' ? '/equipe/comptes?periode=jour' : '/equipe/comptes?periode=semaine',
     tag: `resume-${kind}-${dayKey(from)}`,
+  };
+}
+
+// Lot B : le rapport du mois fini est prêt (le 1er du mois)
+export function monthlyNotification(stats, from) {
+  const month = fMonth.format(from);
+  return {
+    title: `Votre rapport de ${month} est prêt`,
+    body: `${formatFcfa(stats.revenue)} de ventes · ${stats.paid} commande${stats.paid > 1 ? 's' : ''}. Touchez pour l’ouvrir.`,
+    url: `/equipe/comptes/rapport?mois=${dayKey(from).slice(0, 7)}`,
+    tag: `rapport-${dayKey(from).slice(0, 7)}`,
   };
 }
 

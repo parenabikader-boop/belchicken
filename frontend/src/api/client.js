@@ -140,6 +140,8 @@ export const staffApi = {
   accountsExcel: (query, name) => downloadFile(`/api/staff/comptes/excel?${new URLSearchParams(query)}`, name),
   digestSettings: () => staffRequest('/comptes/resumes').then((d) => d.resumes),
   saveDigestSettings: (body) => staffRequest('/comptes/resumes', { method: 'PUT', body: JSON.stringify(body) }).then((d) => d.resumes),
+  // Lot B : objectif de ventes du mois en cours (0 = retiré) ; renvoie la progression ou null
+  saveGoal: (montant) => staffRequest('/comptes/objectif', { method: 'PUT', body: JSON.stringify({ montant }) }).then((d) => d.objectif),
   salesExcel: (du, au) => downloadFile(`/api/staff/ventes/excel?${new URLSearchParams({ du, au })}`, `ventes-${du}-au-${au}.xlsx`),
   createContractTerms: (body) => staffRequest('/releve/conditions', { method: 'POST', body: JSON.stringify(body) }),
   deleteContractTerms: (id) => staffRequest(`/releve/conditions/${encodeURIComponent(id)}`, { method: 'DELETE' }),

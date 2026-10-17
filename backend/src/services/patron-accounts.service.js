@@ -10,7 +10,7 @@ import { AppError } from '../utils/AppError.js';
 import { PAID } from './dashboard.js';
 import { getFeatures } from './features.service.js';
 import { PATRON_SIMPLE } from './features.js';
-import { accountsRange, buildAccounts, pct, topDishes } from './patron-accounts.js';
+import { accountsRange, buildAccounts, goalProgress, monthKey, pct, topDishes } from './patron-accounts.js';
 import { DEFAULT_SETTINGS, digestNotification, dueDigests, outageNotification, outageUpdate } from './patron-digest.js';
 import { pushStaffRoles } from './push.service.js';
 import { average } from './review.js';
@@ -25,6 +25,7 @@ const orderSelect = {
   mode: true,
   paymentMethod: true,
   paymentPayerPhone: true,
+  customerPhone: true, // lot B : clients fidèles, regroupés par numéro ; jamais renvoyé au site (patron-accounts.js)
   itemsTotal: true,
   deliveryFee: true,
   deliveryFeeMethod: true,
@@ -43,15 +44,49 @@ const orderSelect = {
 
 export const accountsSince = () => parseDay(env.patron.accountsSince) || null;
 
+// Ventes des repas depuis `from` (commandes payées, sans les commandes d'essai)
+async function revenueSince(from, to) {
+  const since = accountsSince();
+  const start = since && since > from ? since : from;
+  const agg = await prisma.order.aggregate({ where: { createdAt: { gte: start, lt: to }, status: { in: PAID } }, _sum: { itemsTotal: true } });
+  return agg._sum.itemsTotal || 0;
+}
+
+// Lot B : objectif du mois en cours et sa progression (null sans objectif, ou sans la table PatronAccount)
+export async function currentGoal(now = new Date()) {
+  const row = await readAccount();
+  const amount = Number(row?.goals?.[monthKey(now)]) || 0;
+  if (!amount) return null;
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  return goalProgress(amount, await revenueSince(monthStart, now), now);
+}
+
 export async function getAccounts(query, now = new Date()) {
   const range = accountsRange(query, now);
   if (range.error) throw new AppError(400, range.error, 'PERIODE_INVALIDE');
-  const orders = await prisma.order.findMany({
-    where: { createdAt: { gte: range.prevStart, lt: range.cutoff } },
-    select: orderSelect,
-    orderBy: { createdAt: 'asc' },
-  });
-  return buildAccounts(orders, range, { since: accountsSince(), now });
+  const since = accountsSince();
+  const [orders, reviews, goal] = await Promise.all([
+    prisma.order.findMany({
+      where: { createdAt: { gte: range.prevStart, lt: range.cutoff } },
+      select: orderSelect,
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.orderReview.findMany({
+      where: { createdAt: { gte: range.start, lt: range.cutoff } },
+      select: { callCenterRating: true, foodRating: true, deliveryRating: true, lowRating: true },
+    }),
+    currentGoal(now),
+  ]);
+  // Clients fidèles : numéros des ventes de la période déjà venus avant (commandes payées, après les essais)
+  const phones = [...new Set(orders
+    .filter((o) => PAID.includes(o.status) && o.createdAt >= range.start && (!since || o.createdAt >= since))
+    .map((o) => o.customerPhone).filter(Boolean))];
+  const before = phones.length ? await prisma.order.findMany({
+    where: { customerPhone: { in: phones }, status: { in: PAID }, createdAt: { lt: range.start, ...(since && { gte: since }) } },
+    select: { customerPhone: true },
+    distinct: ['customerPhone'],
+  }) : [];
+  return buildAccounts(orders, range, { since, now, earlier: new Set(before.map((o) => o.customerPhone)), reviews, goal });
 }
 
 // ─── Réglage des résumés (table PatronAccount) ───
@@ -60,7 +95,18 @@ const missingTable = (e) => e?.code === 'P2021' || e?.code === 'P2022';
 const MIGRATION_NEEDED = () => new AppError(503, 'Réglage pas encore disponible : la base doit d’abord être mise à jour par votre prestataire.', 'MIGRATION_EN_ATTENTE');
 const publicSettings = (row) => ({
   eveningOn: row.eveningOn, eveningHour: row.eveningHour, weeklyOn: row.weeklyOn, weeklyHour: row.weeklyHour,
+  monthlyOn: row.monthlyOn ?? true,
 });
+
+// Ligne PatronAccount, ou null (pas encore créée, ou table absente : migration en attente)
+async function readAccount() {
+  try {
+    return await prisma.patronAccount.findUnique({ where: { id: 1 } });
+  } catch (e) {
+    if (missingTable(e)) return null;
+    throw e;
+  }
+}
 
 export async function getDigestSettings() {
   try {
@@ -70,6 +116,25 @@ export async function getDigestSettings() {
     if (missingTable(e)) return { ...DEFAULT_SETTINGS, missing: true };
     throw e;
   }
+}
+
+// Lot B : objectif de ventes du mois en cours (0 = retiré). Les objectifs des mois passés sont gardés.
+export async function saveGoal(montant, staff, now = new Date()) {
+  try {
+    const row = await prisma.patronAccount.findUnique({ where: { id: 1 } });
+    const goals = { ...(row?.goals || {}) };
+    if (montant > 0) goals[monthKey(now)] = montant;
+    else delete goals[monthKey(now)];
+    await prisma.patronAccount.upsert({
+      where: { id: 1 },
+      create: { id: 1, goals, updatedByName: staff.name },
+      update: { goals, updatedByName: staff.name },
+    });
+  } catch (e) {
+    if (missingTable(e)) throw MIGRATION_NEEDED();
+    throw e;
+  }
+  return currentGoal(now);
 }
 
 export async function saveDigestSettings(data, staff) {
@@ -119,13 +184,14 @@ export async function runPatronTick(now = new Date()) {
   }
   const done = [];
   for (const due of dueDigests(now, row, row)) {
-    const field = due.kind === 'soir' ? 'lastEveningFor' : 'lastWeeklyFor';
+    const field = { soir: 'lastEveningFor', semaine: 'lastWeeklyFor', mois: 'lastMonthlyFor' }[due.kind];
     const claimed = await prisma.patronAccount.updateMany({
       where: { id: 1, OR: [{ [field]: null }, { [field]: { not: due.key } }] },
       data: { [field]: due.key },
     });
     if (claimed.count !== 1) continue;
     const stats = await digestStats(due.from, due.to);
+    if (due.kind === 'soir') stats.goalPct = (await currentGoal(now))?.pct ?? null;
     if (due.kind === 'semaine') {
       const before = await digestStats(new Date(due.from.getTime() - (due.to - due.from)), due.from);
       stats.change = before.paid >= 5 ? pct(stats.revenue, before.revenue) : null;

@@ -341,7 +341,7 @@ test('résumés : texte court sur le téléphone (ventes, commandes, meilleur pl
 });
 
 test('réglage des heures : 0 à 23, rien d’autre accepté', () => {
-  assert.deepEqual(digestSettingsSchema.parse({ eveningOn: true, eveningHour: '23', weeklyOn: false, weeklyHour: 7 }), { eveningOn: true, eveningHour: 23, weeklyOn: false, weeklyHour: 7 });
+  assert.deepEqual(digestSettingsSchema.parse({ eveningOn: true, eveningHour: '23', weeklyOn: false, weeklyHour: 7 }), { eveningOn: true, eveningHour: 23, weeklyOn: false, weeklyHour: 7, monthlyOn: true });
   assert.throws(() => digestSettingsSchema.parse({ eveningOn: true, eveningHour: 24, weeklyOn: true, weeklyHour: 8 }));
   assert.throws(() => digestSettingsSchema.parse({ eveningOn: true, eveningHour: 22, weeklyOn: true, weeklyHour: 8, lastEveningFor: 'x' }));
 });

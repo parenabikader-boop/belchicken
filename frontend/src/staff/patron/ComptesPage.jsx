@@ -1,8 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { formatPrice, plural } from '../../utils/format.js';
-import { accountsQuery, changeText, changeTone, hourWindow, PERIODS } from './patron-simple.js';
+import { accountsQuery, changeText, changeTone, hourWindow, PERIODS, previousMonth } from './patron-simple.js';
 import './patron.css';
 
 // Compte Patron simplifié : page « Comptes », page d'accueil du Patron. Gros chiffres, phrases calculées par le serveur,
@@ -47,6 +47,72 @@ function Bars({ bars, money }) {
   );
 }
 
+// Lot B : objectif du mois en cours (quelle que soit la période affichée), barre de progression et phrase du serveur
+function GoalCard({ goal, onSaved }) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(goal ? String(goal.amount) : '');
+  const [state, setState] = useState({ busy: false, error: null });
+  const save = async (e) => {
+    e.preventDefault();
+    setState({ busy: true, error: null });
+    try {
+      onSaved(await staffApi.saveGoal(Number(String(value).replace(/\D/g, '')) || 0));
+      setOpen(false);
+      setState({ busy: false, error: null });
+    } catch (err) {
+      setState({ busy: false, error: err.message });
+    }
+  };
+  return (
+    <section className="pc-card pc-goal">
+      <div className="pc-card-head">
+        <h2>Objectif du mois</h2>
+        <button type="button" className="pc-linkbtn" onClick={() => setOpen((o) => !o)}>{goal ? 'Modifier' : 'Fixer un objectif'}</button>
+      </div>
+      {goal ? (
+        <>
+          <p className="pc-goal-num"><b>{goal.pct} %</b> <span>de {formatPrice(goal.amount)}</span></p>
+          <div className={`pc-goal-bar${goal.reached ? ' done' : ''}`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={goal.pct} aria-label="Objectif du mois">
+            <span style={{ width: `${goal.pct}%` }} />
+          </div>
+          <p className="pc-goal-text">{goal.text}</p>
+        </>
+      ) : !open && <p className="pc-none">Fixez un montant de ventes à atteindre ce mois-ci : vous verrez votre avancée chaque jour.</p>}
+      {open && (
+        <form className="pc-goal-form" onSubmit={save}>
+          <label>Ventes à atteindre ce mois-ci (F)
+            <input inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value)} placeholder="ex. 3 000 000" autoFocus />
+          </label>
+          <button type="submit" className="btn btn-p" disabled={state.busy}>{state.busy ? '…' : 'Enregistrer'}</button>
+          {goal && <button type="button" className="btn btn-s" disabled={state.busy} onClick={() => setValue('0')}>Retirer</button>}
+          {state.error && <p className="pc-err" role="alert">{state.error}</p>}
+        </form>
+      )}
+    </section>
+  );
+}
+
+// Lot B : clients fidèles, sans aucun nom ni numéro (calculés par le serveur)
+function ClientsCard({ c }) {
+  if (!c.customers) return null;
+  return (
+    <section className="pc-card">
+      <h2>Vos clients</h2>
+      <div className="pc-clients">
+        <p><b>{c.customers}</b><span>client{c.customers > 1 ? 's' : ''}</span></p>
+        <p><b>{c.newCustomers}</b><span>nouveau{c.newCustomers > 1 ? 'x' : ''}</span></p>
+        <p><b>{c.returning}</b><span>revenu{c.returning > 1 ? 's' : ''}</span></p>
+      </div>
+      <p className="pc-note">{c.loyalShare} % des commandes viennent d’habitués (déjà venus avant, ou plusieurs fois sur la période).</p>
+      {c.top.length > 0 && (
+        <ol className="pc-ranks">
+          {c.top.map((t) => <li key={t.rank}><b>Client n° {t.rank}</b><span>{plural(t.orders, 'commande')} · {formatPrice(t.revenue)}</span></li>)}
+        </ol>
+      )}
+    </section>
+  );
+}
+
 function periodLabel(p) {
   if (p.kind === 'jour') return `Aujourd’hui, ${fDay.format(new Date(p.du))}`;
   if (p.kind === 'semaine') return 'Cette semaine (depuis lundi)';
@@ -65,6 +131,7 @@ export default function ComptesPage() {
   const [loading, setLoading] = useState(true);
   const [shown, setShown] = useState(PAGE);
   const [excel, setExcel] = useState({ busy: false, error: null });
+  const thisMonth = today().slice(0, 7);
   const query = accountsQuery(periode, params.get('du') || du, params.get('au') || au);
   const key = JSON.stringify(query);
 
@@ -131,6 +198,8 @@ export default function ComptesPage() {
               : <p className="pc-vs muted">Trop tôt pour comparer</p>}
           </section>
 
+          <GoalCard key={data.goal?.amount ?? 0} goal={data.goal} onSaved={(goal) => setData((d) => ({ ...d, goal }))} />
+
           <div className="pc-tiles">
             <div className="pc-tile"><h3>Commandes payées</h3><p>{s.paid}</p><Change pct={c.paid} show={cmp} /></div>
             <div className="pc-tile"><h3>Panier moyen</h3><p>{s.paid ? formatPrice(s.avgBasket) : '—'}</p><Change pct={c.avgBasket} show={cmp && s.paid} /></div>
@@ -142,6 +211,12 @@ export default function ComptesPage() {
                 {s.cancelled.afterPayment.count ? `${s.cancelled.afterPayment.count} après paiement (${formatPrice(s.cancelled.afterPayment.amount)})` : 'aucune après paiement'}
               </small>
             </div>
+            {data.reviews.count > 0 && (
+              <Link to="/equipe/avis" className={`pc-tile pc-tile-link${data.reviews.low ? ' warn' : ''}`}>
+                <h3>Note des avis</h3><p>{String(data.reviews.average).replace('.', ',')}/5</p>
+                <small>{`${data.reviews.count} avis`}{data.reviews.low ? ` · ${data.reviews.low} mauvais` : ''}</small>
+              </Link>
+            )}
           </div>
 
           {data.insights.length > 0 && (
@@ -178,6 +253,8 @@ export default function ComptesPage() {
               </section>
             </>
           )}
+
+          <ClientsCard c={data.clients} />
 
           <section className="pc-card">
             <h2>D’où viennent vos clients</h2>
@@ -218,6 +295,15 @@ export default function ComptesPage() {
             {data.transactions.length > shown && (
               <button type="button" className="btn btn-s pc-more" onClick={() => setShown((n) => n + 50)}>Voir plus</button>
             )}
+          </section>
+
+          <section className="pc-card pc-report">
+            <h2>Rapport du mois</h2>
+            <p className="pc-note">À imprimer ou à enregistrer en PDF, aux couleurs Belchicken.</p>
+            <div className="pc-report-links">
+              <Link className="btn btn-s" to={`/equipe/comptes/rapport?mois=${thisMonth}`}>Ce mois-ci</Link>
+              <Link className="btn btn-s" to={`/equipe/comptes/rapport?mois=${previousMonth(thisMonth)}`}>Mois dernier</Link>
+            </div>
           </section>
 
           <p className="pc-foot">

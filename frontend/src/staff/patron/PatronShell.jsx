@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useStaff } from '../StaffContext.jsx';
 import InstallBanner from '../../components/InstallBanner.jsx';
-import { patronTabs } from './patron-simple.js';
+import { PATRON_APP, patronTabs } from './patron-simple.js';
 import './patron.css';
 
 const ICONS = {
@@ -29,6 +29,24 @@ export default function PatronShell() {
     window.scrollTo(0, 0);
   }, [pathname]);
 
+  // Lot B : application installable « BC Patron » (icône Belchicken, ouverte sur Comptes) à la place de « Belchicken
+  // Équipe » tant que ce compte est affiché ; remis comme avant en quittant (déconnexion, interrupteur refermé)
+  useEffect(() => {
+    const swap = (id, attr, value) => {
+      const el = document.getElementById(id);
+      if (!el) return () => {};
+      const old = el.getAttribute(attr);
+      el.setAttribute(attr, value);
+      return () => el.setAttribute(attr, old);
+    };
+    const undo = [
+      swap('pwa-manifest', 'href', PATRON_APP.manifest),
+      swap('pwa-apple-icon', 'href', PATRON_APP.appleIcon),
+      swap('pwa-apple-title', 'content', PATRON_APP.appleTitle),
+    ];
+    return () => undo.forEach((f) => f());
+  }, []);
+
   return (
     <div className="st-app pt-app">
       <header className="pt-top">
@@ -49,7 +67,7 @@ export default function PatronShell() {
         </nav>
       </header>
       <main className="st-wrap st-main pt-main">
-        <InstallBanner app="equipe" />
+        <InstallBanner app="patron" />
         <Outlet />
       </main>
     </div>

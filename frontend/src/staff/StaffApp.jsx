@@ -47,6 +47,7 @@ import { isPatronSimple, PATRON_HOME } from './patron/patron-simple.js';
 const PatronShell = lazy(() => import('./patron/PatronShell.jsx'));
 const ComptesPage = lazy(() => import('./patron/ComptesPage.jsx'));
 const PatronAccountPage = lazy(() => import('./patron/PatronAccountPage.jsx'));
+const RapportPage = lazy(() => import('./patron/RapportPage.jsx'));
 import InstallBanner from '../components/InstallBanner.jsx';
 import './staff.css';
 
@@ -110,6 +111,8 @@ function PatronRoutes() {
         <Route path="alertes" element={<AlertsPage />} />
         <Route path="mot-de-passe" element={<PasswordPage />} />
       </Route>
+      {/* Lot B : rapport du mois à imprimer ou enregistrer en PDF : page seule */}
+      <Route path="comptes/rapport" element={lazyPage(RapportPage)} />
       <Route path="*" element={<Navigate to={PATRON_HOME} replace />} />
     </Routes>
   );
@@ -182,6 +185,10 @@ function TeamRoutes() {
       {/* Lot 6 : ventes à imprimer ou enregistrer en PDF : page seule (Patron et Prestataire, VENTES ouvert) */}
       <Route element={<RequirePatron />}>
         <Route path="ventes/imprimer" element={<RequireFeature feature="VENTES"><SalesPrint /></RequireFeature>} />
+      </Route>
+      {/* Compte Patron simplifié, lot B : rapport du mois vu par le Prestataire */}
+      <Route element={<RequirePatron />}>
+        <Route path="comptes/rapport" element={<RequireFeature feature="COMPTE_PATRON_SIMPLE"><Suspense fallback={null}><RapportPage /></Suspense></RequireFeature>} />
       </Route>
       {/* Bon de commande à imprimer : page seule, sans l'en-tête de l'espace équipe */}
       <Route path="commandes/:reference/bon" element={<OrderSlip />} />

@@ -17,7 +17,8 @@ import { PAID, periodRange } from './dashboard.js';
 import { verificationOf } from './sales.js';
 import { topProducts } from './today.js';
 import { AUTO_NAME } from './payment-sms.js';
-import { PAYMENT_LABELS } from '../utils/format.js';
+import { average } from './review.js';
+import { formatFcfa, PAYMENT_LABELS } from '../utils/format.js';
 import { DAY, dayKey, parsePeriod } from './statement.js';
 
 export const KINDS = ['jour', 'semaine', 'mois', 'dates'];
@@ -187,6 +188,74 @@ export function clientZones(list, { size = ZONE_DEG, min = MIN_ZONE } = {}) {
   return { total, zones, hidden: total - shown, sizeKm: 1 };
 }
 
+// ─── Lot B ───
+
+// Objectif du mois : « AAAA-MM » du mois d'une date (heure du Burkina = UTC)
+export const monthKey = (t = new Date()) => new Date(t).toISOString().slice(0, 7);
+export const MAX_GOAL = 1_000_000_000;
+const roundUp = (n, step = 100) => Math.ceil(n / step) * step;
+
+// Progression vers l'objectif du mois : revenue = ventes des repas du mois jusqu'à maintenant. Jours restants :
+// aujourd'hui compris. Montant par jour arrondi aux 100 F au-dessus. null sans objectif.
+export function goalProgress(amount, revenue, now = new Date()) {
+  if (!amount || amount <= 0) return null;
+  const end = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
+  const daysLeft = Math.max(1, Math.ceil((end - startOfDay(now)) / DAY));
+  const remaining = Math.max(0, amount - revenue);
+  const pctDone = Math.min(100, Math.floor((revenue / amount) * 100));
+  const perDay = remaining ? roundUp(remaining / daysLeft) : 0;
+  return {
+    month: monthKey(now), amount, revenue, pct: pctDone, remaining, daysLeft, perDay, reached: remaining === 0,
+    text: remaining === 0
+      ? `Objectif du mois atteint : ${formatFcfa(revenue)} sur ${formatFcfa(amount)}`
+      : `Encore ${formatFcfa(remaining)} en ${daysLeft} jour${daysLeft > 1 ? 's' : ''}, soit ${formatFcfa(perDay)} par jour`,
+  };
+}
+
+// Clients fidèles, sans aucune donnée personnelle : les commandes payées sont regroupées par numéro du client, mais le
+// numéro ne sort jamais d'ici. earlier : numéros qui avaient déjà une commande payée avant la période.
+// Habitué = déjà venu avant la période, ou au moins 2 commandes dans la période. Meilleurs clients : rang seulement.
+export const TOP_CLIENTS = 5;
+export const MIN_CLIENTS = 10; // phrase « 38 clients sont revenus » : au moins 10 clients sur la période
+export function loyalty(sales, earlier = new Set(), size = TOP_CLIENTS) {
+  const byClient = new Map();
+  for (const o of sales) {
+    if (!o.customerPhone) continue;
+    const cur = byClient.get(o.customerPhone) || { orders: 0, revenue: 0 };
+    cur.orders += 1;
+    cur.revenue += o.itemsTotal;
+    byClient.set(o.customerPhone, cur);
+  }
+  let returning = 0;
+  let repeat = 0;
+  let loyalOrders = 0;
+  for (const [phone, c] of byClient) {
+    const before = earlier.has(phone);
+    if (before) returning += 1;
+    if (c.orders >= 2) repeat += 1;
+    if (before || c.orders >= 2) loyalOrders += c.orders;
+  }
+  const counted = [...byClient.values()].reduce((s, c) => s + c.orders, 0);
+  return {
+    customers: byClient.size,
+    newCustomers: byClient.size - returning,
+    returning,
+    repeat,
+    loyalShare: counted ? Math.round((loyalOrders / counted) * 100) : 0,
+    top: [...byClient.values()]
+      .filter((c) => c.orders >= 2)
+      .sort((a, b) => b.orders - a.orders || b.revenue - a.revenue)
+      .slice(0, size)
+      .map((c, i) => ({ rank: i + 1, orders: c.orders, revenue: c.revenue })),
+  };
+}
+
+// Note des avis reçus sur la période : moyenne de toutes les notes données (call center, restaurant, livraison)
+export function reviewsSummary(reviews = []) {
+  const values = reviews.flatMap((r) => [r.callCenterRating, r.foodRating, r.deliveryRating]);
+  return { count: reviews.length, average: average(values), low: reviews.filter((r) => r.lowRating).length };
+}
+
 const hourText = (h) => `${h} h – ${(h + 1) % 24} h`;
 const COMPARED = {
   jour: (current) => (current ? 'à hier à la même heure' : 'à la veille'),
@@ -197,7 +266,7 @@ const COMPARED = {
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // Phrases calculées par le serveur, seulement quand il y a assez de données. { key, text, tone } ; tone : good, bad, info.
-export function insights({ summary, previous, rhythm: r, top, range }) {
+export function insights({ summary, previous, rhythm: r, top, range, clients }) {
   const out = [];
   if (summary.paid >= MIN_SALES_TREND && previous.paid >= MIN_SALES_TREND) {
     const p = pct(summary.revenue, previous.revenue);
@@ -225,6 +294,10 @@ export function insights({ summary, previous, rhythm: r, top, range }) {
     const share = Math.round((summary.pickup.count / summary.paid) * 100);
     out.push({ key: 'recuperer', tone: 'info', text: `${share} % des commandes sont à récupérer au restaurant` });
   }
+  // Lot B : clients revenus (déjà venus avant la période)
+  if (clients && clients.customers >= MIN_CLIENTS && clients.returning > 0) {
+    out.push({ key: 'fideles', tone: 'good', text: `${clients.returning} client${clients.returning > 1 ? 's sont revenus' : ' est revenu'} sur ${clients.customers}` });
+  }
   return out;
 }
 
@@ -232,7 +305,9 @@ export function insights({ summary, previous, rhythm: r, top, range }) {
 export const countedFrom = (since) => (o) => !since || new Date(o.createdAt) >= since;
 
 // Page « Comptes ». orders : commandes de la période et de la période de comparaison.
-export function buildAccounts(orders, range, { since = null, now = new Date() } = {}) {
+// Lot B : earlier (numéros déjà venus avant la période), reviews (avis reçus sur la période), goal (progression de
+// l'objectif du mois, goalProgress, calculé à part sur tout le mois en cours).
+export function buildAccounts(orders, range, { since = null, now = new Date(), earlier = new Set(), reviews = [], goal = null } = {}) {
   const counted = orders.filter(countedFrom(since));
   const inRange = (from, to) => (o) => new Date(o.createdAt) >= from && new Date(o.createdAt) < to;
   const current = counted.filter(inRange(range.start, range.cutoff));
@@ -242,6 +317,7 @@ export function buildAccounts(orders, range, { since = null, now = new Date() } 
   const sales = current.filter(isSale);
   const r = rhythm(sales, range);
   const top = topDishes(sales);
+  const clients = loyalty(sales, earlier);
   return {
     period: {
       kind: range.kind, du: dayKey(range.start), au: dayKey(new Date(range.end.getTime() - DAY)),
@@ -260,7 +336,10 @@ export function buildAccounts(orders, range, { since = null, now = new Date() } 
     // Trop tôt pour comparer : moins de 5 ventes dans la période d'avant au même moment
     comparable: previous.paid >= MIN_SALES_TREND,
     restaurantFees: restaurantFees(current),
-    insights: insights({ summary, previous, rhythm: r, top, range }),
+    insights: insights({ summary, previous, rhythm: r, top, range, clients }),
+    clients,
+    reviews: reviewsSummary(reviews),
+    goal,
     hours: r.hours,
     days: r.days,
     top,

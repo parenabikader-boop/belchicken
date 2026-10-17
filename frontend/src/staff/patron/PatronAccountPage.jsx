@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { canPromptInstall, isIos, isStandalone, promptInstall, subscribeInstall } from '../../pwa.js';
 import { Link } from 'react-router-dom';
 import { staffApi } from '../../api/client.js';
 import { useStaff } from '../StaffContext.jsx';
@@ -8,6 +9,23 @@ import './patron.css';
 // résumés, mot de passe, déconnexion. Résumé du soir : ventes, commandes, meilleur plat, note des avis ; résumé de la
 // semaine : le lundi. Alertes : seulement les mauvais avis et les plats en rupture depuis plus de 24 heures.
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
+
+// Lot B : installer « BC Patron » sur l'écran d'accueil (icône Belchicken, s'ouvre sur Comptes). Android : la fenêtre
+// d'installation du téléphone ; iPhone : le petit guide ; déjà installée : rien.
+function InstallApp() {
+  const [, refresh] = useState(0);
+  const [guide, setGuide] = useState(false);
+  useEffect(() => subscribeInstall(() => refresh((n) => n + 1)), []);
+  if (isStandalone()) return <p className="pc-ok">Application installée sur ce téléphone.</p>;
+  if (canPromptInstall()) return <button type="button" className="btn btn-s" onClick={() => promptInstall()}>Installer l’application sur ce téléphone</button>;
+  if (!isIos()) return <p className="pc-note">Pour installer l’application : menu du navigateur, puis « Installer l’application » ou « Ajouter à l’écran d’accueil ».</p>;
+  return (
+    <>
+      <button type="button" className="btn btn-s" onClick={() => setGuide((g) => !g)}>Installer l’application sur ce téléphone</button>
+      {guide && <p className="pc-note">Touchez le bouton Partager de Safari (carré avec une flèche), puis « Sur l’écran d’accueil ».</p>}
+    </>
+  );
+}
 
 export default function PatronAccountPage() {
   const { user, logout } = useStaff();
@@ -46,6 +64,7 @@ export default function PatronAccountPage() {
         <p className="pc-note">Patron</p>
         <div className="pc-links">
           <Link className="btn btn-p" to="/equipe/alertes">Recevoir les résumés sur ce téléphone</Link>
+          <InstallApp />
           <Link className="btn btn-s" to="/equipe/mot-de-passe">Mon mot de passe</Link>
           <button type="button" className="btn btn-s" onClick={logout}>Déconnexion</button>
         </div>
@@ -74,6 +93,10 @@ export default function PatronAccountPage() {
               <select value={form.weeklyHour} onChange={(e) => set('weeklyHour', Number(e.target.value))} disabled={!form.weeklyOn}>
                 {HOURS.map((h) => <option key={h} value={h}>{h} h</option>)}
               </select>
+            </label>
+            <label className="pc-check">
+              <input type="checkbox" checked={form.monthlyOn ?? true} onChange={(e) => set('monthlyOn', e.target.checked)} />
+              <span><b>Rapport du mois</b><small>Le 1er du mois, à l’heure du résumé de la semaine</small></span>
             </label>
             <button type="submit" className="btn btn-p" disabled={state.busy || missing}>{state.busy ? 'Enregistrement…' : 'Enregistrer'}</button>
             {state.saved && <p className="pc-ok" role="status">Enregistré.</p>}

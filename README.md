@@ -1232,10 +1232,27 @@ Prestataire referme). Plus de son ni d'alerte de nouvelle commande ou de command
   `X-Cle: <RESUME_PATRON_CLE>` (ou `?cle=`), clé de 24 caractères au moins, sur Render seulement. Chaque résumé est
   réservé en base avant l'envoi (jamais deux fois) ; plus de 3 heures de retard, il n'est plus envoyé. Clé fausse :
   401 ; interrupteur fermé : 404. Ces appels gardent aussi le serveur éveillé (≈ 744 h par mois, sous les 750 h gratuites).
-- **Migration** `20261017120000_compte_patron` (table neuve `PatronAccount`, une ligne : heures, résumés déjà envoyés,
-  ruptures vues), **rangée dans `backend/prisma/migrations-en-attente/`**, appliquée nulle part. Sans elle : la page
-  Comptes marche, les heures restent celles par défaut (enregistrement refusé avec un message clair), le réveil
-  n'envoie rien (`migration: false`).
+- **Lot B** (même interrupteur) :
+  - **Objectif du mois** : le Patron tape un montant dans Comptes (`PUT /api/staff/comptes/objectif`, 0 = retiré,
+    gardé par mois dans `PatronAccount.goals`) ; barre de progression et phrase du serveur (`goalProgress()` : « Encore
+    320 000 F en 15 jours, soit 21 400 F par jour », aujourd'hui compris, arrondi aux 100 F au-dessus) ; « Objectif du
+    mois : 62 % » dans le résumé du soir.
+  - **Rapport du mois** `/equipe/comptes/rapport?mois=AAAA-MM` (`RapportPage.jsx`) : page A4 aux couleurs Belchicken (logo,
+    ventes et évolution, tuiles, phrases, heures, jours, plats, clients), « Imprimer · PDF ». Mêmes chiffres que Comptes
+    (période du 1er au dernier jour). Le 1er du mois, à l'heure du résumé de la semaine, notification « Votre rapport de
+    septembre est prêt » (réglage « Rapport du mois » dans Mon compte, `lastMonthlyFor`).
+  - **Application « BC Patron »** : `public/patron.webmanifest` (icône Belchicken du site client, ouverte sur
+    `/equipe/comptes`), mis à la place du manifeste « Belchicken Équipe » tant que le compte Patron simplifié est
+    affiché (`PatronShell.jsx`) ; bandeau et bouton « Installer l'application » dans Mon compte. À essayer sur un vrai
+    téléphone (Android et iPhone).
+  - **Clients fidèles** (`loyalty()`) : clients, nouveaux, revenus (déjà une commande payée avant la période), part des
+    commandes d'habitués, meilleurs clients **en rang seulement** (« Client n° 1 : 4 commandes · 30 000 F ») ; regroupés
+    par numéro sur le serveur, le numéro n'est jamais renvoyé ; phrase « 151 clients sont revenus sur 172 » à partir de
+    10 clients. Note des avis de la période (`reviewsSummary()`) en tuile.
+- **Migration** `20261017120000_compte_patron` (table neuve `PatronAccount`, une ligne : heures, résumés et rapports
+  déjà annoncés, objectifs du mois, ruptures vues), **rangée dans `backend/prisma/migrations-en-attente/`**, appliquée
+  nulle part. Sans elle : la page Comptes marche (sans objectif), les heures restent celles par défaut et l'objectif ne
+  s'enregistre pas (message clair), le réveil n'envoie rien (`migration: false`).
 
 ## Démonstration commerciale (base dev seulement)
 

@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { requireStaff } from '../middlewares/staff-auth.js';
 import { requireFeature } from '../middlewares/feature.js';
-import { getAccounts, getDigestSettings, saveDigestSettings } from '../services/patron-accounts.service.js';
+import { getAccounts, getDigestSettings, saveDigestSettings, saveGoal } from '../services/patron-accounts.service.js';
 import { accountsFileName, accountsWorkbook } from '../services/patron-accounts-excel.js';
-import { digestSettingsSchema } from '../services/patron-digest.js';
+import { digestSettingsSchema, goalSchema } from '../services/patron-digest.js';
 
 // Compte Patron simplifié (/api/staff/comptes) : page Comptes, son export Excel et l'heure des résumés. Patron et
 // Prestataire seulement ; jamais l'Opérateur, le Livreur ni le Responsable livraison (test/route-access.test.js).
@@ -41,4 +41,9 @@ staffAccountsRouter.get('/resumes', handle(async (req, res) => {
 
 staffAccountsRouter.put('/resumes', handle(async (req, res) => {
   res.json({ resumes: await saveDigestSettings(digestSettingsSchema.parse(req.body), req.staff) });
+}));
+
+// Lot B : objectif de ventes du mois en cours (montant 0 = retiré)
+staffAccountsRouter.put('/objectif', handle(async (req, res) => {
+  res.json({ objectif: await saveGoal(goalSchema.parse(req.body).montant, req.staff) });
 }));

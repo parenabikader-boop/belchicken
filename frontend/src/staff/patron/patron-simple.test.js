@@ -28,3 +28,13 @@ test('période, évolution et heures montrées', () => {
   assert.equal(w[0].hour, 2);
   assert.equal(w.at(-1).hour, 23);
 });
+
+test('lot B : rapport du mois (mois fini ou en cours), mois d’avant', async () => {
+  const { monthRange, previousMonth } = await import('./patron-simple.js');
+  assert.deepEqual(monthRange('2026-09', '2026-10-17'), { du: '2026-09-01', au: '2026-09-30', complete: true });
+  assert.deepEqual(monthRange('2026-10', '2026-10-17'), { du: '2026-10-01', au: '2026-10-17', complete: false });
+  assert.deepEqual(monthRange('2024-02', '2026-10-17'), { du: '2024-02-01', au: '2024-02-29', complete: true });
+  assert.equal(monthRange('2026-11', '2026-10-17'), null);
+  assert.equal(monthRange('2026-13', '2026-10-17'), null);
+  assert.equal(previousMonth('2026-01'), '2025-12');
+});
