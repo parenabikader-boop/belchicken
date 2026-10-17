@@ -916,7 +916,8 @@ frais de notre équipe absents.
 - [x] Tests (backend 420, frontend 63), construction, page vue avec des données inventées (faux serveur, aucune base).
 - [x] Migration `20261017120000_compte_patron` écrite, rangée dans `migrations-en-attente/`, appliquée nulle part.
 - [ ] Essai par le client ; choix de la date `COMPTES_PATRON_DEPUIS` ; compte cron-job.org et clé sur Render.
-- [ ] Migration (sauvegarde Neon, accord écrit), puis envoi sur GitHub avec l'accord écrit du client.
+- [x] Migration et envoi sur GitHub avec l'accord écrit du client (17 octobre 2026, sauvegarde de production
+  « sauvegarde-prod-avant-compte-patron »), interrupteur toujours fermé.
 
 ### Compte Patron, lot B (17 octobre 2026, pas encore en ligne)
 
@@ -927,7 +928,8 @@ Même interrupteur `COMPTE_PATRON_SIMPLE`. Détails : README « Compte Patron si
 - [x] Tests (backend 427, frontend 64), construction, pages vues avec des données inventées (faux serveur, aucune base).
 - [x] Migration du lot A complétée (même table neuve `PatronAccount`, jamais appliquée), toujours en attente.
 - [ ] Essai de l'installation « BC Patron » sur un vrai téléphone Android et un iPhone.
-- [ ] Essai par le client, puis migration et envoi sur GitHub avec son accord écrit.
+- [x] Envoi sur GitHub avec le lot A (17 octobre 2026).
+- [ ] Essai par le client (interrupteur à ouvrir par le Prestataire).
 
 Plan d'origine :
 

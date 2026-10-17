@@ -1250,8 +1250,8 @@ Prestataire referme). Plus de son ni d'alerte de nouvelle commande ou de command
     par numéro sur le serveur, le numéro n'est jamais renvoyé ; phrase « 151 clients sont revenus sur 172 » à partir de
     10 clients. Note des avis de la période (`reviewsSummary()`) en tuile.
 - **Migration** `20261017120000_compte_patron` (table neuve `PatronAccount`, une ligne : heures, résumés et rapports
-  déjà annoncés, objectifs du mois, ruptures vues), **rangée dans `backend/prisma/migrations-en-attente/`**, appliquée
-  nulle part. Sans elle : la page Comptes marche (sans objectif), les heures restent celles par défaut et l'objectif ne
+  déjà annoncés, objectifs du mois, ruptures vues), dans `backend/prisma/migrations/` (appliquée par Render au déploiement
+  du 17 octobre 2026, sauvegarde « sauvegarde-prod-avant-compte-patron » ; dev non migrée). Sans elle : la page Comptes marche (sans objectif), les heures restent celles par défaut et l'objectif ne
   s'enregistre pas (message clair), le réveil n'envoie rien (`migration: false`).
 
 ## Démonstration commerciale (base dev seulement)

@@ -2,8 +2,8 @@
 -- seule ligne (heures des résumés, résumés et rapports déjà annoncés, objectifs du mois, ruptures de stock vues).
 -- Aucune table existante modifiée, aucune donnée écrite : le code tourne sans elle (les heures et l'objectif ne
 -- s'enregistrent pas, aucun résumé n'est envoyé).
--- RANGÉE DANS migrations-en-attente/ : Prisma ne la lit pas, Render ne l'applique pas. Pour l'appliquer : sauvegarde
--- Neon, accord écrit du client, la déplacer dans prisma/migrations/, puis npm run db:deploy (ou envoi sur GitHub).
+-- Appliquée par Render au déploiement du 17 octobre 2026 (sauvegarde de production « sauvegarde-prod-avant-compte-patron »,
+-- accord écrit du client). Dev non migrée.
 
 -- CreateTable
 CREATE TABLE "PatronAccount" (

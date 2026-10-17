@@ -856,8 +856,8 @@ model AutoPayment {
 // Compte Patron simplifié (interrupteur COMPTE_PATRON_SIMPLE, fermé par défaut) : une seule ligne (id = 1), créée au
 // premier enregistrement ou au premier réveil. Heures du résumé du soir et du résumé de la semaine (lundi), dernier
 // jour / dernière semaine envoyés (jamais deux fois), objectifs du mois (lot B), et ruptures de stock vues ({ idDuPlat: { since, alerted } }).
-// Lue seulement quand l'interrupteur est ouvert. MIGRATION EN ATTENTE (prisma/migrations-en-attente/) : sans elle,
-// la page Comptes marche, mais les heures ne s'enregistrent pas et aucun résumé n'est envoyé.
+// Lue seulement quand l'interrupteur est ouvert. Migration 20261017120000_compte_patron (production : appliquée par Render ;
+// dev non migrée) : sans elle, la page Comptes marche, mais les heures ne s'enregistrent pas et aucun résumé n'est envoyé.
 model PatronAccount {
   id             Int      @id @default(1)
   eveningOn      Boolean  @default(true)
